@@ -18,111 +18,67 @@ function App() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
   useEffect(() => {
-    // Check for Telegram auth and existing session
-    const checkAuth = async () => {
-      try {
-        // Check localStorage for onboarding completion
-        const onboardingComplete = localStorage.getItem('axum_onboarding_complete');
-        setHasSeenOnboarding(!!onboardingComplete);
+    const onboardingComplete = localStorage.getItem('axum_onboarding_complete');
+    setHasSeenOnboarding(!!onboardingComplete);
 
-        // Check for existing session
-        const token = localStorage.getItem('axum_token');
-        if (token) {
-          // Validate token and fetch user data
-          const response = await fetch('/api/auth/me', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            localStorage.removeItem('axum_token');
-          }
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const token = localStorage.getItem('axum_token');
+    if (token) {
+      setUser({ token });
+    }
 
-    checkAuth();
+    setLoading(false);
   }, []);
 
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('axum_onboarding_complete', 'true');
-    setHasSeenOnboarding(true);
-  };
-
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner"></div>
-        <p className="loading-text">Loading Axum...</p>
-      </div>
-    );
-  }
+  if (loading) return <div>Loading...</div>;
 
   return (
     <Router>
       <div className="app-container">
         {user && hasSeenOnboarding && <Navbar />}
-        
+
         <main className="main-content">
           <Routes>
             <Route path="/" element={
-              !user ? <HomePage setUser={setUser} /> : 
+              !user ? <HomePage setUser={setUser} /> :
               !hasSeenOnboarding ? <Navigate to="/onboarding" /> :
               <Navigate to="/dashboard" />
             } />
-            
+
             <Route path="/onboarding" element={
-              user && !hasSeenOnboarding ? 
-              <OnboardingPage onComplete={handleOnboardingComplete} /> : 
-              <Navigate to={user ? "/dashboard" : "/"} />
+              user && !hasSeenOnboarding ?
+              <OnboardingPage onComplete={() => {
+                localStorage.setItem('axum_onboarding_complete', 'true');
+                setHasSeenOnboarding(true);
+              }} /> :
+              <Navigate to="/" />
             } />
-            
+
             <Route path="/dashboard" element={
-              user && hasSeenOnboarding ? 
-              <DashboardPage user={user} /> : 
-              <Navigate to="/" />
+              user ? <DashboardPage user={user} /> : <Navigate to="/" />
             } />
-            
+
             <Route path="/game" element={
-              user && hasSeenOnboarding ? 
-              <GamePage user={user} /> : 
-              <Navigate to="/" />
+              user ? <GamePage user={user} /> : <Navigate to="/" />
             } />
-            
+
             <Route path="/leaderboard" element={
-              user && hasSeenOnboarding ? 
-              <LeaderboardPage /> : 
-              <Navigate to="/" />
+              user ? <LeaderboardPage /> : <Navigate to="/" />
             } />
-            
+
             <Route path="/rewards" element={
-              user && hasSeenOnboarding ? 
-              <RewardsPage user={user} /> : 
-              <Navigate to="/" />
+              user ? <RewardsPage user={user} /> : <Navigate to="/" />
             } />
-            
+
             <Route path="/tasks" element={
-              user && hasSeenOnboarding ? 
-              <TasksPage user={user} /> : 
-              <Navigate to="/" />
+              user ? <TasksPage user={user} /> : <Navigate to="/" />
             } />
-            
+
             <Route path="/sponsors" element={
-              user && hasSeenOnboarding ? 
-              <SponsorsPage /> : 
-              <Navigate to="/" />
+              user ? <SponsorsPage /> : <Navigate to="/" />
             } />
           </Routes>
         </main>
-        
+
         {user && hasSeenOnboarding && <Footer />}
       </div>
     </Router>
