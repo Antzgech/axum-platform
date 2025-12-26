@@ -59,6 +59,7 @@ async function handleUpdate(update) {
 // Telegram webhook endpoint
 app.post('/webhook', async (req, res) => {
   try {
+    console.log("Incoming update:", JSON.stringify(req.body, null, 2));
     await handleUpdate(req.body);
     res.sendStatus(200);
   } catch (err) {
@@ -66,6 +67,7 @@ app.post('/webhook', async (req, res) => {
     res.sendStatus(500);
   }
 });
+
 
 
 // ===============================
