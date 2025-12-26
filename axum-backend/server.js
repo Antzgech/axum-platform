@@ -9,54 +9,22 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ===============================
-// 🔧 MIDDLEWARE (must be first)
+// 🔧 MIDDLEWARE
 // ===============================
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json()); // REQUIRED for Telegram webhook
-
+app.use(express.json());
 
 // ===============================
-// 🤖 TELEGRAM BOT LOGIC
+// 🤖 IMPORT REAL BOT HANDLER
 // ===============================
+const { handleUpdate } = require('./bot');
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const BOT_USERNAME = process.env.BOT_USERNAME || "SabaQuest_bot";
-const WEBAPP_URL = process.env.FRONTEND_URL;
-
-async function sendStartMessage(chatId) {
-  const payload = {
-    chat_id: chatId,
-    text: "Welcome to SabaQuest! Tap below to begin your journey.",
-    reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: "Open SabaQuest",
-            web_app: { url: WEBAPP_URL }
-          }
-        ]
-      ]
-    }
-  };
-
-  await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, payload);
-}
-
-async function handleUpdate(update) {
-  try {
-    if (update.message && update.message.text === "/start") {
-      const chatId = update.message.chat.id;
-      await sendStartMessage(chatId);
-    }
-  } catch (err) {
-    console.error("Bot error:", err.response?.data || err.message);
-  }
-}
-
-// Telegram webhook endpoint
+// ===============================
+// 🧪 WEBHOOK ENDPOINT
+// ===============================
 app.post('/webhook', async (req, res) => {
   try {
     console.log("Incoming update:", JSON.stringify(req.body, null, 2));
@@ -68,12 +36,9 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-
-
 // ===============================
 // 🗄️ IN-MEMORY DATABASE
 // ===============================
-
 const users = new Map();
 const tasks = new Map();
 const rewards = new Map();
@@ -88,11 +53,9 @@ const defaultTasks = [
 
 defaultTasks.forEach(task => tasks.set(task.id, task));
 
-
 // ===============================
 // 🔐 AUTH HELPERS
 // ===============================
-
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -157,11 +120,9 @@ const getOrCreateUser = (telegramData) => {
   return users.get(userId);
 };
 
-
 // ===============================
 // 🌐 API ROUTES
 // ===============================
-
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Axum backend is running' });
 });
@@ -201,19 +162,17 @@ app.post('/api/auth/telegram', (req, res) => {
   }
 });
 
-
 // ===============================
 // 🏁 START SERVER
 // ===============================
-
 app.listen(PORT, () => {
   console.log(`
   ⚜️  Axum Backend Server
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🚀 Server running on port ${PORT}
   🌍 Environment: ${process.env.NODE_ENV || 'development'}
-  📡 WebApp URL: ${WEBAPP_URL}
-  🤖 Bot username: ${BOT_USERNAME}
+  📡 WebApp URL: ${process.env.FRONTEND_URL}
+  🤖 Bot username: ${process.env.BOT_USERNAME}
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   `);
 });
