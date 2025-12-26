@@ -1,3 +1,4 @@
+const { handleUpdate } = require('./bot');
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
@@ -7,6 +8,15 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+app.post('/webhook', async (req, res) => {
+  try {
+    await handleUpdate(req.body);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Webhook error:", err);
+    res.sendStatus(500);
+  }
+});
 
 // Middleware
 app.use(cors({
