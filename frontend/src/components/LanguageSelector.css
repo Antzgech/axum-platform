@@ -1,0 +1,22 @@
+.language-selector {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+  color: var(--gold-primary);
+  font-family: var(--font-display);
+}
+
+.lang-btn {
+  margin: 1rem;
+  padding: 1rem 2rem;
+  font-size: 1.25rem;
+  background: var(--gold-primary);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+}
