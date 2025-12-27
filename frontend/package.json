@@ -1,6 +1,6 @@
 {
   "name": "axum-frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Axum - Queen Makeda's Quest - Gamified Social Media Growth Platform",
   "private": true,
   "dependencies": {
