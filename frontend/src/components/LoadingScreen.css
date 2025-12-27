@@ -1,27 +1,35 @@
 .loading-screen {
   height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
   color: var(--gold-light);
   font-family: var(--font-display);
+  animation: fadeIn 0.8s ease-out;
 }
 
 .loading-icon {
-  font-size: 4rem;
+  font-size: 5rem;
+  filter: drop-shadow(0 0 30px var(--gold-primary));
   animation: float 4s ease-in-out infinite;
-  filter: drop-shadow(0 0 20px var(--gold-primary));
 }
 
 .loading-text {
+  margin-top: 1.5rem;
   font-size: 1.25rem;
-  margin-top: 1rem;
-  opacity: 0.8;
+  opacity: 0.85;
+  letter-spacing: 0.05em;
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-15px); }
+  50% { transform: translateY(-18px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
