@@ -1,0 +1,27 @@
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+  color: var(--gold-light);
+  font-family: var(--font-display);
+}
+
+.loading-icon {
+  font-size: 4rem;
+  animation: float 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px var(--gold-primary));
+}
+
+.loading-text {
+  font-size: 1.25rem;
+  margin-top: 1rem;
+  opacity: 0.8;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
