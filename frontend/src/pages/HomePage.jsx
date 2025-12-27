@@ -1,430 +1,248 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import './HomePage.css';
 
-function HomePage() {
+const API_URL = process.env.REACT_APP_API_URL || 'https://axum-backend-production.up.railway.app';
+const BOT_USERNAME = process.env.REACT_APP_TELEGRAM_BOT_USERNAME || 'SabaQuest_bot';
+const COMPANY_NAME = process.env.REACT_APP_COMPANY_NAME || 'Sabawians Company';
+const SUPPORT_EMAIL = process.env.REACT_APP_SUPPORT_EMAIL || 'sabawians@gmail.com';
+
+const HomePage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [telegramUser, setTelegramUser] = useState(null);
+  const [isInTelegram, setIsInTelegram] = useState(false);
 
-  // Auto-login when component mounts
   useEffect(() => {
-    attemptAutoLogin();
+    console.log('🚀 HomePage mounted');
+    console.log('📡 API_URL:', API_URL);
+    console.log('🤖 Bot:', BOT_USERNAME);
+    
+    checkTelegramEnvironment();
   }, []);
 
-  const attemptAutoLogin = async () => {
+  const checkTelegramEnvironment = async () => {
     try {
-      console.log('🔍 Checking for auto-login...');
-
-      // Method 1: Check if running inside Telegram WebApp
-      if (window.Telegram?.WebApp) {
-        console.log('✅ Telegram WebApp detected');
-        const tg = window.Telegram.WebApp;
+      // Check if we're in Telegram WebApp
+      const tg = window.Telegram?.WebApp;
+      
+      console.log('🔍 Checking Telegram environment...');
+      console.log('Telegram object:', window.Telegram);
+      console.log('WebApp object:', tg);
+      
+      if (tg && tg.initData) {
+        console.log('✅ Running in Telegram WebApp');
+        console.log('Init data:', tg.initData);
+        console.log('User data:', tg.initDataUnsafe?.user);
+        
+        setIsInTelegram(true);
         tg.ready();
         tg.expand();
-
+        
         const user = tg.initDataUnsafe?.user;
         
-        if (user) {
-          console.log('👤 User data from Telegram:', user);
+        if (user && user.id) {
+          console.log('👤 User detected:', user);
           setTelegramUser(user);
-          await handleTelegramAuth(user, 'webapp-auth');
-          return;
-        }
-      }
-
-      // Method 2: Check for existing token
-      const existingToken = localStorage.getItem('authToken');
-      if (existingToken) {
-        console.log('🔑 Found existing token, verifying...');
-        const isValid = await verifyToken(existingToken);
-        if (isValid) {
-          console.log('✅ Token valid, redirecting to dashboard');
-          navigate('/dashboard');
-          return;
+          
+          // Auto-login immediately
+          await handleTelegramAuth(user);
         } else {
-          console.log('❌ Token invalid, clearing...');
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('user');
+          console.log('⚠️ No user data in Telegram');
+          setLoading(false);
         }
+      } else {
+        console.log('❌ Not in Telegram WebApp - showing login button');
+        setIsInTelegram(false);
+        setLoading(false);
       }
-
-      // No auto-login available
-      console.log('ℹ️ No auto-login method available');
-      setLoading(false);
-    } catch (error) {
-      console.error('❌ Auto-login error:', error);
-      setError('Auto-login failed. Please use the login button.');
+    } catch (err) {
+      console.error('❌ Error checking Telegram:', err);
+      setError('Failed to initialize');
       setLoading(false);
     }
   };
 
-  const verifyToken = async (token) => {
+  const handleTelegramAuth = async (user) => {
     try {
-      const response = await fetch('https://axum-backend-production.up.railway.app/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      return response.ok;
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      return false;
-    }
-  };
-
-  const handleTelegramAuth = async (userData, hashType = 'webapp-auth') => {
-    try {
-      setLoading(true);
-      console.log('🔐 Authenticating with backend...');
-
-      const authPayload = {
-        id: userData.id,
-        first_name: userData.first_name || 'User',
-        last_name: userData.last_name || '',
-        username: userData.username || '',
-        photo_url: userData.photo_url || '',
-        auth_date: Math.floor(Date.now() / 1000),
-        hash: hashType
+      console.log('🔐 Starting authentication...');
+      console.log('User data:', user);
+      
+      const authData = {
+        id: user.id,
+        first_name: user.first_name || 'User',
+        last_name: user.last_name || '',
+        username: user.username || user.first_name || 'User',
+        photo_url: user.photo_url || '',
+        hash: 'webapp-auth'
       };
 
-      console.log('📤 Sending auth request:', authPayload);
+      console.log('📤 Sending auth request to:', `${API_URL}/api/auth/telegram`);
+      console.log('Auth data:', authData);
 
-      const response = await fetch('https://axum-backend-production.up.railway.app/api/auth/telegram', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(authPayload)
-      });
+      const response = await axios.post(`${API_URL}/api/auth/telegram`, authData);
+      
+      console.log('✅ Auth response:', response.data);
 
-      const data = await response.json();
-      console.log('📥 Auth response:', data);
-
-      if (data.success && data.token) {
-        console.log('✅ Authentication successful!');
+      if (response.data.success && response.data.token) {
+        // Store token
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         
-        // Store token and user data
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        console.log('✅ Token stored, redirecting to dashboard...');
         
-        // Show success message briefly
-        setError(null);
-        
-        // Navigate to onboarding or dashboard
+        // Redirect to dashboard (or onboarding if needed)
         setTimeout(() => {
-          const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-          if (hasSeenOnboarding) {
-            navigate('/dashboard');
-          } else {
-            navigate('/onboarding');
-          }
+          navigate('/dashboard');
         }, 500);
       } else {
-        throw new Error(data.error || 'Authentication failed');
+        console.error('❌ Auth failed: No token received');
+        setError('Authentication failed');
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Authentication error:', error);
-      setError(`Login failed: ${error.message}`);
+    } catch (err) {
+      console.error('❌ Auth error:', err);
+      console.error('Error details:', err.response?.data);
+      setError(`Login failed: ${err.response?.data?.error || err.message}`);
       setLoading(false);
     }
   };
 
   const handleDemoLogin = async () => {
-    const demoUser = {
-      id: Math.floor(Math.random() * 1000000),
-      first_name: 'Demo User',
-      username: 'demo_user',
-      photo_url: ''
-    };
-    await handleTelegramAuth(demoUser, 'auto-login');
+    try {
+      console.log('🎮 Demo login clicked');
+      
+      // Create demo user
+      const demoUser = {
+        id: Math.floor(Math.random() * 1000000),
+        first_name: 'Demo',
+        last_name: 'User',
+        username: 'demo_user',
+        photo_url: '',
+        hash: 'webapp-auth'
+      };
+
+      await handleTelegramAuth(demoUser);
+    } catch (err) {
+      console.error('Demo login error:', err);
+      setError('Demo login failed');
+    }
   };
 
-  const handleManualTelegramLogin = () => {
-    // This will be called by the Telegram Login Widget
-    window.onTelegramAuth = (user) => {
-      handleTelegramAuth(user, user.hash);
-    };
+  const handleTelegramLogin = () => {
+    window.open(`https://t.me/${BOT_USERNAME}`, '_blank');
   };
 
-  // Loading screen
   if (loading) {
     return (
-      <div className="home-page loading-screen">
-        <div className="loading-content">
-          <div className="spinner"></div>
-          <h2>🔐 Connecting to Sabawians Quest...</h2>
-          <p>Authenticating with Telegram</p>
+      <div className="homepage">
+        <div className="loading-container">
+          <div className="loader"></div>
+          <p>Loading...</p>
+          {telegramUser && <p>Logging in as {telegramUser.first_name}...</p>}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="home-page">
-      {/* Hero Section */}
-      <section className="hero">
+    <div className="homepage">
+      <div className="hero-section">
         <div className="hero-content">
-          <div className="brand-logo">⚔️</div>
-          <h1 className="hero-title">Queen Makeda's Quest</h1>
-          <p className="hero-subtitle">
-            Join the legendary journey from Axum to Jerusalem
-          </p>
-          <p className="hero-description">
-            Complete quests, earn rewards, and compete with players worldwide
+          <h1 className="title">
+            <span className="gold">Queen Makeda's</span>
+            <br />
+            <span className="emerald">Quest</span>
+          </h1>
+          
+          <p className="subtitle">
+            Journey from Axum to Jerusalem
           </p>
 
-          {error && (
-            <div className="error-message">
-              <span>⚠️</span> {error}
+          <p className="description">
+            Embark on an epic adventure inspired by the legendary Queen of Sheba.
+            Complete quests, earn rewards, and compete with players worldwide!
+          </p>
+
+          <div className="features-grid">
+            <div className="feature-card">
+              <div className="feature-icon">🏆</div>
+              <h3>6 Epic Levels</h3>
+              <p>Progress through increasingly challenging quests</p>
             </div>
-          )}
+            <div className="feature-card">
+              <div className="feature-icon">💰</div>
+              <h3>Real Rewards</h3>
+              <p>Earn cash prizes and exclusive badges</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">📊</div>
+              <h3>Leaderboards</h3>
+              <p>Compete to become a finalist and win big</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">🎯</div>
+              <h3>Daily Tasks</h3>
+              <p>Complete missions to earn points and level up</p>
+            </div>
+          </div>
 
-          <div className="cta-buttons">
-            {/* Telegram Login Button - Only show if not in WebApp */}
-            {!window.Telegram?.WebApp && (
+          <div className="cta-section">
+            {error && (
+              <div className="error-message">
+                <p>{error}</p>
+                <button onClick={() => setError(null)}>Dismiss</button>
+              </div>
+            )}
+
+            {!isInTelegram && (
               <>
-                <div className="telegram-login-wrapper">
-                  <script 
-                    async 
-                    src="https://telegram.org/js/telegram-widget.js?22"
-                    data-telegram-login="SabaQuest_bot"
-                    data-size="large"
-                    data-onauth="onTelegramAuth(user)"
-                    data-request-access="write"
-                  ></script>
-                </div>
-                <div className="divider">OR</div>
+                <button className="cta-button primary" onClick={handleTelegramLogin}>
+                  <span className="button-icon">✈️</span>
+                  Login with Telegram
+                </button>
+                <button className="cta-button secondary" onClick={handleDemoLogin}>
+                  <span className="button-icon">🎮</span>
+                  Try Demo Mode
+                </button>
+                <p className="helper-text">
+                  For the best experience, open this game from Telegram bot: @{BOT_USERNAME}
+                </p>
               </>
             )}
-            
-            <button className="btn-demo" onClick={handleDemoLogin}>
-              🎮 Try Demo Mode
-            </button>
           </div>
 
-          {window.Telegram?.WebApp && (
-            <div className="webapp-notice">
-              <p>✨ You're using Telegram WebApp!</p>
-              <p>Auto-login should happen automatically</p>
+          <div className="social-links">
+            <h3>Follow {COMPANY_NAME}</h3>
+            <div className="social-buttons">
+              <a href={process.env.REACT_APP_YOUTUBE_URL || 'https://www.youtube.com/@metenofficial'} target="_blank" rel="noopener noreferrer" className="social-btn youtube">
+                <span className="social-icon">▶️</span> YouTube
+              </a>
+              <a href={process.env.REACT_APP_TELEGRAM_GROUP_URL || 'https://t.me/+IoT_cwfs6EBjMTQ0'} target="_blank" rel="noopener noreferrer" className="social-btn telegram">
+                <span className="social-icon">✈️</span> Telegram
+              </a>
+              <a href={process.env.REACT_APP_FACEBOOK_URL || 'https://facebook.com/profile.php?id=61578048881192'} target="_blank" rel="noopener noreferrer" className="social-btn facebook">
+                <span className="social-icon">👍</span> Facebook
+              </a>
+              <a href={process.env.REACT_APP_TIKTOK_URL || 'https://tiktok.com/@metenofficials'} target="_blank" rel="noopener noreferrer" className="social-btn tiktok">
+                <span className="social-icon">🎵</span> TikTok
+              </a>
+              <a href={process.env.REACT_APP_INSTAGRAM_URL || 'https://instagram.com/metenofficial'} target="_blank" rel="noopener noreferrer" className="social-btn instagram">
+                <span className="social-icon">📸</span> Instagram
+              </a>
             </div>
-          )}
-        </div>
-
-        <div className="hero-image">
-          <div className="animated-icon">👑</div>
-          <div className="subtitle-text">Sabawians Company</div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="features">
-        <h2>Why Join the Quest?</h2>
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">🎮</div>
-            <h3>6 Epic Levels</h3>
-            <p>Progress through Queen Makeda's legendary journey</p>
           </div>
-          <div className="feature-card">
-            <div className="feature-icon">🏆</div>
-            <h3>Real Rewards</h3>
-            <p>Earn cash prizes, badges, and exclusive perks</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">📊</div>
-            <h3>Compete & Win</h3>
-            <p>Climb leaderboards and become a finalist</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🌟</div>
-            <h3>Social Growth</h3>
-            <p>Connect on YouTube, Instagram, TikTok & more</p>
-          </div>
+
+          <footer className="homepage-footer">
+            <p>Built with ⚔️ by {COMPANY_NAME}</p>
+            <p>Support: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></p>
+          </footer>
         </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="how-it-works">
-        <h2>How It Works</h2>
-        <div className="steps">
-          <div className="step">
-            <div className="step-number">1</div>
-            <h3>Login via Telegram</h3>
-            <p>Quick & secure authentication</p>
-          </div>
-          <div className="step">
-            <div className="step-number">2</div>
-            <h3>Complete Quests</h3>
-            <p>Subscribe, follow, and invite friends</p>
-          </div>
-          <div className="step">
-            <div className="step-number">3</div>
-            <h3>Earn Points</h3>
-            <p>Progress through 6 exciting levels</p>
-          </div>
-          <div className="step">
-            <div className="step-number">4</div>
-            <h3>Win Rewards</h3>
-            <p>Top players earn amazing prizes</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Social Media Section */}
-      <section className="social-media">
-        <h2>Join Our Community</h2>
-        <div className="social-links">
-          <a href="https://www.youtube.com/@metenofficial" target="_blank" rel="noopener noreferrer" className="social-link youtube">
-            <span className="icon">▶️</span>
-            <span>YouTube</span>
-          </a>
-          <a href="https://t.me/+IoT_cwfs6EBjMTQ0" target="_blank" rel="noopener noreferrer" className="social-link telegram">
-            <span className="icon">✈️</span>
-            <span>Telegram</span>
-          </a>
-          <a href="https://facebook.com/profile.php?id=61578048881192" target="_blank" rel="noopener noreferrer" className="social-link facebook">
-            <span className="icon">👍</span>
-            <span>Facebook</span>
-          </a>
-          <a href="https://tiktok.com/@metenofficials" target="_blank" rel="noopener noreferrer" className="social-link tiktok">
-            <span className="icon">🎵</span>
-            <span>TikTok</span>
-          </a>
-          <a href="https://instagram.com/metenofficial" target="_blank" rel="noopener noreferrer" className="social-link instagram">
-            <span className="icon">📸</span>
-            <span>Instagram</span>
-          </a>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="stats">
-        <div className="stat">
-          <div className="stat-number">6</div>
-          <div className="stat-label">Epic Levels</div>
-        </div>
-        <div className="stat">
-          <div className="stat-number">30</div>
-          <div className="stat-label">Finalists</div>
-        </div>
-        <div className="stat">
-          <div className="stat-number">💰</div>
-          <div className="stat-label">Real Prizes</div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="final-cta">
-        <h2>Ready to Begin Your Quest?</h2>
-        <p>Join thousands of players on Queen Makeda's legendary journey</p>
-        <button className="btn-primary" onClick={handleDemoLogin}>
-          Start Playing Now
-        </button>
-        <p className="company-info">Powered by Sabawians Company</p>
-      </section>
-
-      {/* Inline Styles */}
-      <style jsx>{`
-        .loading-screen {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 100vh;
-          background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
-        }
-
-        .loading-content {
-          text-align: center;
-          padding: 2rem;
-        }
-
-        .spinner {
-          width: 60px;
-          height: 60px;
-          border: 4px solid rgba(212, 175, 55, 0.1);
-          border-top: 4px solid var(--gold-primary);
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin: 0 auto 2rem;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .error-message {
-          background: rgba(139, 26, 26, 0.2);
-          border: 1px solid #8B1A1A;
-          padding: 1rem;
-          border-radius: 8px;
-          margin: 1rem 0;
-          color: #ff6b6b;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .telegram-login-wrapper {
-          display: flex;
-          justify-content: center;
-          margin: 1rem 0;
-        }
-
-        .divider {
-          color: var(--text-secondary);
-          margin: 1rem 0;
-          font-size: 0.9rem;
-        }
-
-        .btn-demo {
-          background: linear-gradient(135deg, #D4AF37 0%, #F4E4B8 100%);
-          color: #000;
-          border: none;
-          padding: 1rem 2rem;
-          border-radius: 8px;
-          font-size: 1.1rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .btn-demo:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
-        }
-
-        .webapp-notice {
-          background: rgba(30, 95, 62, 0.2);
-          border: 1px solid #1E5F3E;
-          padding: 1rem;
-          border-radius: 8px;
-          margin-top: 1rem;
-        }
-
-        .webapp-notice p {
-          margin: 0.5rem 0;
-          color: #4ade80;
-        }
-
-        .company-info {
-          margin-top: 1rem;
-          color: var(--text-secondary);
-          font-size: 0.9rem;
-        }
-      `}</style>
+      </div>
     </div>
   );
-}
-
-// Setup Telegram callback
-if (typeof window !== 'undefined') {
-  window.onTelegramAuth = function(user) {
-    console.log('Telegram auth callback triggered:', user);
-    // This will be handled by the component
-  };
-}
+};
 
 export default HomePage;
