@@ -21,6 +21,17 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 App State:', {
+      language,
+      langLoading,
+      loading,
+      user: !!user,
+      hasSeenOnboarding
+    });
+  }, [language, langLoading, loading, user, hasSeenOnboarding]);
+
   useEffect(() => {
     // Check for Telegram auth and existing session
     const checkAuth = async () => {
@@ -62,8 +73,8 @@ function AppContent() {
     setHasSeenOnboarding(true);
   };
 
-  // Show loading page while checking auth and language
-  if (loading || langLoading) {
+  // Show loading page while checking auth
+  if (loading) {
     return <LoadingPage />;
   }
 
