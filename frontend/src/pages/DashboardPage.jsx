@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
+<button onClick={() => {
+  const newLang = localStorage.getItem('axum_lang') === 'en' ? 'am' : 'en';
+  localStorage.setItem('axum_lang', newLang);
+  window.location.reload();
+}} className="lang-switch-btn">
+  🌐 Change Language
+</button>
 
 function DashboardPage({ user }) {
   const [stats, setStats] = useState(null);
