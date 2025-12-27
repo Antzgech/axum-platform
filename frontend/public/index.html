@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#D4AF37" />
+    <meta name="description" content="Axum - Queen Makeda's Quest. Join the legendary journey from Axum to Jerusalem. By Sabawians Company." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axum - Queen Makeda's Quest" />
+    <meta property="og:description" content="Complete quests, earn rewards, and compete with players worldwide" />
+    <meta property="og:site_name" content="Sabawians Quest" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Axum - Queen Makeda's Quest" />
+    <meta name="twitter:description" content="Complete quests, earn rewards, and compete with players worldwide" />
+    
+    <!-- PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <title>Axum - Queen Makeda's Quest | Sabawians Company</title>
+    
+    <!-- CRITICAL: Telegram WebApp SDK - Must load first for auto-login -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Critical CSS for immediate render */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Cormorant Garamond', serif;
+        background-color: #0f0f0f;
+        color: #f5f5f5;
+        overscroll-behavior: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      #root {
+        min-height: 100vh;
+      }
+      
+      /* Hide Telegram default elements */
+      .tg-bottom-bar {
+        display: none !important;
+      }
+      
+      /* Loading screen */
+      .initial-loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      }
+      
+      .initial-loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(212, 175, 55, 0.1);
+        border-top: 4px solid #D4AF37;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <div style="text-align: center; padding: 2rem; color: #D4AF37;">
+        <h1>⚠️ JavaScript Required</h1>
+        <p>Please enable JavaScript to play Axum - Queen Makeda's Quest</p>
+      </div>
+    </noscript>
+    
+    <div id="root">
+      <div class="initial-loading">
+        <div class="initial-loading-spinner"></div>
+      </div>
+    </div>
+    
+    <!-- Telegram WebApp Initialization -->
+    <script>
+      console.log('🚀 Initializing Axum - Sabawians Company');
+      
+      // Initialize Telegram WebApp if available
+      if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        
+        try {
+          // Configure WebApp
+          tg.ready();
+          tg.expand();
+          
+          // Set theme colors
+          tg.setHeaderColor('#1a1a1a');
+          tg.setBackgroundColor('#0f0f0f');
+          
+          // Enable closing confirmation
+          tg.enableClosingConfirmation();
+          
+          // Log user data (for debugging)
+          console.log('✅ Telegram WebApp initialized');
+          console.log('👤 User:', tg.initDataUnsafe?.user);
+          console.log('🎨 Theme:', tg.colorScheme);
+          console.log('📱 Platform:', tg.platform);
+          
+          // Make WebApp data available globally
+          window.telegramWebApp = {
+            user: tg.initDataUnsafe?.user,
+            initData: tg.initData,
+            colorScheme: tg.colorScheme,
+            platform: tg.platform,
+            version: tg.version
+          };
+          
+          // Set up back button if needed
+          tg.BackButton.onClick(function() {
+            window.history.back();
+          });
+          
+        } catch (error) {
+          console.error('❌ Telegram WebApp initialization error:', error);
+        }
+      } else {
+        console.log('ℹ️ Running outside Telegram WebApp');
+        window.telegramWebApp = null;
+      }
+      
+      // Log environment info
+      console.log('📊 Environment:', {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        online: navigator.onLine
+      });
+    </script>
+    
+    <!-- Telegram Login Widget Script -->
+    <script async src="https://telegram.org/js/telegram-widget.js?22"></script>
+    
+    <!-- Global callback for Telegram Login Widget -->
+    <script>
+      function onTelegramAuth(user) {
+        console.log('🔐 Telegram Login Widget callback:', user);
+        // This will be handled by React component
+        if (window.handleTelegramLogin) {
+          window.handleTelegramLogin(user);
+        }
+      }
+    </script>
+    
+    <!-- Service Worker Registration (optional, for PWA) -->
+    <script>
+      if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+        window.addEventListener('load', () => {
+          // navigator.serviceWorker.register('/service-worker.js')
+          //   .then(reg => console.log('✅ Service Worker registered'))
+          //   .catch(err => console.log('❌ Service Worker registration failed:', err));
+        });
+      }
+    </script>
+  </body>
+</html>
