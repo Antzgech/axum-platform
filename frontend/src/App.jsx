@@ -1,34 +1,17 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
-// Import other pages when ready
-// import OnboardingPage from './pages/OnboardingPage';
-// import DashboardPage from './pages/DashboardPage';
-// import GamePage from './pages/GamePage';
-// import LeaderboardPage from './pages/LeaderboardPage';
-// import TasksPage from './pages/TasksPage';
-// import RewardsPage from './pages/RewardsPage';
-// import SponsorsPage from './pages/SponsorsPage';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        
-        {/* Uncomment when pages are ready */}
-        {/* <Route path="/onboarding" element={<OnboardingPage />} /> */}
-        {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
-        {/* <Route path="/game" element={<GamePage />} /> */}
-        {/* <Route path="/leaderboard" element={<LeaderboardPage />} /> */}
-        {/* <Route path="/tasks" element={<TasksPage />} /> */}
-        {/* <Route path="/rewards" element={<RewardsPage />} /> */}
-        {/* <Route path="/sponsors" element={<SponsorsPage />} /> */}
-        
-        {/* Catch all - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="*" element={<HomePage />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
