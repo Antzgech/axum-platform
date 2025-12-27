@@ -5,7 +5,7 @@ function LanguageSelector({ onSelectLanguage }) {
   return (
     <div className="language-selector-page">
       <div className="language-background"></div>
-      
+
       <div className="language-container">
         <div className="language-header">
           <span className="language-icon">⚜️</span>
