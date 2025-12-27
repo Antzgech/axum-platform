@@ -8,6 +8,16 @@
   align-items: center;
   padding: 1rem;
 }
+.lang-switch-btn {
+  font-size: 0.875rem;
+  background: rgba(26, 26, 26, 0.6);
+  color: var(--gold-light);
+  border: 1px solid var(--gold-primary);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-left: auto;
+}
 
 /* Top Bar */
 .top-bar {
