@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../i18n/LanguageContext';
 import './DashboardPage.css';
-<button onClick={() => {
-  const newLang = localStorage.getItem('axum_lang') === 'en' ? 'am' : 'en';
-  localStorage.setItem('axum_lang', newLang);
-  window.location.reload();
-}} className="lang-switch-btn">
-  🌐 Change Language
-</button>
 
 function DashboardPage({ user }) {
+  const { language, changeLanguage, t } = useLanguage();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,40 +41,47 @@ function DashboardPage({ user }) {
   const totalPoints = stats?.totalPoints || 0;
   const username = user?.username || 'Traveler';
 
+  const toggleLanguage = () => {
+    changeLanguage(language === 'en' ? 'am' : 'en');
+  };
+
   return (
     <div className="dashboard-hamster-layout">
       {/* Top Bar */}
       <div className="top-bar">
         <span className="username">{username}</span>
-        <span className="score">Score: {totalPoints}</span>
+        <button className="language-toggle-btn" onClick={toggleLanguage} title={t('common.change_language')}>
+          {language === 'en' ? '🇪🇹 አማ' : '🌍 EN'}
+        </button>
+        <span className="score">{t('dashboard.score')}: {totalPoints}</span>
       </div>
 
       {/* Daily Challenges */}
       <div className="daily-challenges">
-        <div className="challenge-card">🎁 Daily Reward</div>
-        <div className="challenge-card">🧩 Daily Cipher</div>
-        <div className="challenge-card">🔥 Daily Combo</div>
+        <div className="challenge-card">🎁 {t('dashboard.daily_reward')}</div>
+        <div className="challenge-card">🧩 {t('dashboard.daily_cipher')}</div>
+        <div className="challenge-card">🔥 {t('dashboard.daily_combo')}</div>
       </div>
 
       {/* Floating Queen */}
       <div className="queen-section">
-        <div className="level-indicator">Level {currentLevel}</div>
+        <div className="level-indicator">{t('dashboard.level')} {currentLevel}</div>
         <div className="queen-avatar">👑</div>
         <div className="queen-label">Queen Makeda</div>
       </div>
 
       {/* Bottom Stats */}
       <div className="bottom-stats">
-        <button className="boost-button">⚡ Boost</button>
-        <div className="energy-bar">Energy: 1000 / 1000</div>
+        <button className="boost-button">⚡ {t('dashboard.boost')}</button>
+        <div className="energy-bar">{t('dashboard.energy')}: 1000 / 1000</div>
       </div>
 
       {/* Navigation */}
       <div className="nav-bar">
-        <Link to="/exchange" className="nav-item">Exchange</Link>
-        <Link to="/mine" className="nav-item">Mine</Link>
-        <Link to="/tasks" className="nav-item">Tasks</Link>
-        <Link to="/shop" className="nav-item">Shop</Link>
+        <Link to="/exchange" className="nav-item">{t('dashboard.exchange')}</Link>
+        <Link to="/mine" className="nav-item">{t('dashboard.mine')}</Link>
+        <Link to="/tasks" className="nav-item">{t('dashboard.tasks')}</Link>
+        <Link to="/shop" className="nav-item">{t('dashboard.shop')}</Link>
       </div>
     </div>
   );
