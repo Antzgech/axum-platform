@@ -2,24 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enhanced CORS
-const allowedOrigins = [
-  'https://axum-frontend-production.up.railway.app',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
+// CORS Configuration
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    callback(null, true);
-  },
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -29,32 +20,22 @@ app.use(express.json());
 app.set('trust proxy', 1);
 
 // PostgreSQL Connection
-let pool = null;
-let dbConnected = false;
+const DATABASE_URL = process.env.DATABASE_URL;
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-async function connectDatabase() {
-  try {
-    const { Pool } = require('pg');
-    const DATABASE_URL = process.env.DATABASE_URL;
+// Test database and create tables
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('❌ Database connection failed:', err.message);
+    console.log('⚠️  App will run but data won\'t persist');
+  } else {
+    console.log('✅ PostgreSQL Connected:', res.rows[0].now);
     
-    if (!DATABASE_URL) {
-      console.log('⚠️  No DATABASE_URL found, using in-memory storage');
-      return false;
-    }
-
-    console.log('🔄 Connecting to PostgreSQL...');
-    
-    pool = new Pool({
-      connectionString: DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    });
-
-    // Test connection
-    await pool.query('SELECT NOW()');
-    console.log('✅ PostgreSQL Connected');
-    
-    // Create users table
-    await pool.query(`
+    // Create tables
+    pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         telegram_id BIGINT UNIQUE NOT NULL,
@@ -69,32 +50,23 @@ async function connectDatabase() {
         invited_friends INTEGER DEFAULT 0,
         level_scores JSONB DEFAULT '{"1":0,"2":0,"3":0,"4":0,"5":0,"6":0}'::jsonb,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-    `);
-    console.log('✅ Users table ready');
-    
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
-    `);
-    
-    dbConnected = true;
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection error:', error.message);
-    console.log('⚠️  Running in memory mode');
-    dbConnected = false;
-    return false;
+    `, (err) => {
+      if (err) {
+        console.error('❌ Table creation failed:', err.message);
+      } else {
+        console.log('✅ Users table ready');
+      }
+    });
   }
-}
+});
 
-// In-memory storage fallback
-const users = new Map();
+// In-memory storage
 const tasks = new Map();
 const sessions = new Map();
 
-// Initialize default tasks
+// Initialize tasks
 const defaultTasks = [
   { id: '1', type: 'youtube', title: 'Subscribe to Meten Official YouTube', points: 50, url: 'https://www.youtube.com/@metenofficial', icon: '▶️' },
   { id: '2', type: 'telegram', title: 'Join Sabawians Telegram Group', points: 30, url: 'https://t.me/+IoT_cwfs6EBjMTQ0', icon: '✈️' },
@@ -103,174 +75,111 @@ const defaultTasks = [
   { id: '5', type: 'instagram', title: 'Follow Meten on Instagram', points: 40, url: 'https://instagram.com/metenofficial', icon: '📸' },
   { id: '6', type: 'invite', title: 'Invite 5 Friends', points: 100, url: null, icon: '👥' }
 ];
-
 defaultTasks.forEach(task => tasks.set(task.id, task));
 
-// Middleware: Verify JWT token
+// Middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
+  if (!token) return res.status(401).json({ error: 'Access token required' });
+  
   jwt.verify(token, process.env.JWT_SECRET || 'Saba1212', (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
+    if (err) return res.status(403).json({ error: 'Invalid token' });
     req.user = user;
     next();
   });
 };
 
-// Helper: Verify Telegram authentication
-const verifyTelegramAuth = (data) => {
-  const { hash } = data;
-  if (hash === 'webapp-auth' || hash === 'auto-login') {
-    return true;
-  }
-  return true; // Accept all for now
-};
-
-// Helper: Get or create user
+// Helper functions
 const getOrCreateUser = async (telegramData) => {
   const telegramId = telegramData.id;
   
-  if (dbConnected && pool) {
-    try {
-      // Try database first
-      const checkUser = await pool.query(
-        'SELECT * FROM users WHERE telegram_id = $1',
+  try {
+    // Check if user exists
+    const checkUser = await pool.query(
+      'SELECT * FROM users WHERE telegram_id = $1',
+      [telegramId]
+    );
+    
+    if (checkUser.rows.length > 0) {
+      // Update last active
+      await pool.query(
+        'UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE telegram_id = $1',
         [telegramId]
       );
-      
-      if (checkUser.rows.length > 0) {
-        // Update last active
-        await pool.query(
-          'UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE telegram_id = $1',
-          [telegramId]
-        );
-        
-        const user = checkUser.rows[0];
-        console.log(`👋 User returned from DB: ${user.username}`);
-        
-        return {
-          telegramId: user.telegram_id,
-          username: user.username,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          photo_url: user.photo_url,
-          points: user.points,
-          currentLevel: user.current_level,
-          badges: user.badges || [],
-          completedTasks: user.completed_tasks || [],
-          invitedFriends: user.invited_friends,
-          levelScores: user.level_scores || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
-        };
-      } else {
-        // Create new user
-        const newUser = await pool.query(
-          `INSERT INTO users (telegram_id, username, first_name, last_name, photo_url)
-           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-          [
-            telegramId,
-            telegramData.username || telegramData.first_name || 'User',
-            telegramData.first_name || 'User',
-            telegramData.last_name || '',
-            telegramData.photo_url || ''
-          ]
-        );
-        
-        const user = newUser.rows[0];
-        console.log(`✨ New user created in DB: ${user.username}`);
-        
-        return {
-          telegramId: user.telegram_id,
-          username: user.username,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          photo_url: user.photo_url,
-          points: user.points,
-          currentLevel: user.current_level,
-          badges: user.badges || [],
-          completedTasks: user.completed_tasks || [],
-          invitedFriends: user.invited_friends,
-          levelScores: user.level_scores || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
-        };
-      }
-    } catch (error) {
-      console.error('Database error, using memory:', error.message);
+      const user = checkUser.rows[0];
+      console.log(`👋 ${user.username} logged in`);
+      return {
+        telegramId: user.telegram_id,
+        username: user.username,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        photo_url: user.photo_url,
+        points: user.points,
+        currentLevel: user.current_level,
+        badges: user.badges || [],
+        completedTasks: user.completed_tasks || [],
+        invitedFriends: user.invited_friends,
+        levelScores: user.level_scores || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+      };
     }
-  }
-  
-  // Fallback to in-memory
-  const userId = telegramId.toString();
-  if (!users.has(userId)) {
-    const newUser = {
-      telegramId,
-      username: telegramData.username || telegramData.first_name || 'User',
-      first_name: telegramData.first_name || 'User',
-      last_name: telegramData.last_name || '',
-      photo_url: telegramData.photo_url || '',
-      points: 0,
-      currentLevel: 1,
-      badges: [],
-      completedTasks: [],
-      invitedFriends: 0,
-      levelScores: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+    
+    // Create new user
+    const newUser = await pool.query(
+      `INSERT INTO users (telegram_id, username, first_name, last_name, photo_url)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [
+        telegramId,
+        telegramData.username || telegramData.first_name || 'User',
+        telegramData.first_name || 'User',
+        telegramData.last_name || '',
+        telegramData.photo_url || ''
+      ]
+    );
+    
+    const user = newUser.rows[0];
+    console.log(`✨ NEW USER: ${user.username} (ID: ${telegramId})`);
+    return {
+      telegramId: user.telegram_id,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      photo_url: user.photo_url,
+      points: user.points,
+      currentLevel: user.current_level,
+      badges: user.badges || [],
+      completedTasks: user.completed_tasks || [],
+      invitedFriends: user.invited_friends,
+      levelScores: user.level_scores || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
     };
-    users.set(userId, newUser);
-    console.log(`✨ New user in memory: ${newUser.username}`);
-    return newUser;
+  } catch (error) {
+    console.error('Database error:', error.message);
+    throw error;
   }
-  
-  const user = users.get(userId);
-  console.log(`👋 User from memory: ${user.username}`);
-  return user;
 };
 
 // Routes
-
 app.get('/api/health', (req, res) => {
   res.json({ 
-    status: 'ok', 
-    message: 'Axum backend is running',
-    timestamp: new Date().toISOString(),
-    database: dbConnected ? 'PostgreSQL' : 'In-memory',
-    environment: process.env.NODE_ENV || 'development'
+    status: 'ok',
+    database: 'PostgreSQL',
+    timestamp: new Date().toISOString()
   });
 });
 
 app.post('/api/auth/telegram', async (req, res) => {
   try {
     const telegramData = req.body;
+    console.log(`🔐 Auth: ${telegramData.first_name} (${telegramData.id})`);
     
-    console.log('🔐 Auth:', telegramData.first_name, 'ID:', telegramData.id);
-    
-    const isValid = verifyTelegramAuth(telegramData);
-    if (!isValid) {
-      return res.status(401).json({ error: 'Invalid authentication' });
-    }
-
     const user = await getOrCreateUser(telegramData);
-
     const token = jwt.sign(
-      { 
-        userId: user.telegramId,
-        telegramId: user.telegramId,
-        username: user.username
-      },
+      { userId: user.telegramId, telegramId: user.telegramId, username: user.username },
       process.env.JWT_SECRET || 'Saba1212',
       { expiresIn: '30d' }
     );
 
-    sessions.set(token, {
-      userId: user.telegramId,
-      createdAt: new Date()
-    });
-
-    console.log('✅ Login successful:', user.username);
+    sessions.set(token, { userId: user.telegramId, createdAt: new Date() });
 
     res.json({
       success: true,
@@ -287,120 +196,149 @@ app.post('/api/auth/telegram', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Auth error:', error);
+    console.error('Auth error:', error);
     res.status(500).json({ error: 'Authentication failed' });
   }
 });
 
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    if (dbConnected && pool) {
-      const result = await pool.query(
-        'SELECT * FROM users WHERE telegram_id = $1',
-        [req.user.telegramId]
-      );
-      if (result.rows.length > 0) {
-        const user = result.rows[0];
-        return res.json({
-          id: user.telegram_id,
-          username: user.username,
-          first_name: user.first_name,
-          points: user.points,
-          currentLevel: user.current_level,
-          badges: user.badges || []
-        });
-      }
-    }
-    
-    const userId = req.user.telegramId.toString();
-    const user = users.get(userId);
-    if (!user) {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE telegram_id = $1',
+      [req.user.telegramId]
+    );
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+    const user = result.rows[0];
     res.json({
-      id: user.telegramId,
+      id: user.telegram_id,
       username: user.username,
       first_name: user.first_name,
       points: user.points,
-      currentLevel: user.currentLevel,
-      badges: user.badges
+      currentLevel: user.current_level,
+      badges: user.badges || []
     });
   } catch (error) {
-    console.error('Error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 app.get('/api/stats', async (req, res) => {
   try {
-    let totalUsers = users.size;
-    
-    if (dbConnected && pool) {
-      const result = await pool.query('SELECT COUNT(*) as count FROM users');
-      totalUsers = parseInt(result.rows[0].count);
-    }
-    
+    const result = await pool.query('SELECT COUNT(*) as count FROM users');
     res.json({
-      totalUsers,
+      totalUsers: parseInt(result.rows[0].count),
       activeSessions: sessions.size,
-      database: dbConnected ? 'PostgreSQL' : 'In-memory',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     res.json({
-      totalUsers: users.size,
+      totalUsers: 0,
       activeSessions: sessions.size,
-      database: 'In-memory',
       timestamp: new Date().toISOString()
     });
   }
 });
 
-app.get('/api/tasks', authenticateToken, (req, res) => {
-  const allTasks = Array.from(tasks.values()).map(task => ({
-    ...task,
-    completed: false
-  }));
-  res.json({ tasks: allTasks });
+app.get('/api/tasks', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT completed_tasks FROM users WHERE telegram_id = $1',
+      [req.user.telegramId]
+    );
+    const completedTasks = result.rows[0]?.completed_tasks || [];
+    const allTasks = Array.from(tasks.values()).map(task => ({
+      ...task,
+      completed: completedTasks.includes(task.id)
+    }));
+    res.json({ tasks: allTasks });
+  } catch (error) {
+    const allTasks = Array.from(tasks.values()).map(task => ({...task, completed: false}));
+    res.json({ tasks: allTasks });
+  }
 });
 
-// Start Telegram Bot
+app.post('/api/tasks/:id/complete', authenticateToken, async (req, res) => {
+  const taskId = req.params.id;
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE telegram_id = $1', [req.user.telegramId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    const user = result.rows[0];
+    const task = tasks.get(taskId);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    const completedTasks = user.completed_tasks || [];
+    if (completedTasks.includes(taskId)) {
+      return res.status(400).json({ error: 'Task already completed' });
+    }
+
+    const newCompletedTasks = [...completedTasks, taskId];
+    const newPoints = user.points + task.points;
+    const levelScores = user.level_scores || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    levelScores[user.current_level] = (levelScores[user.current_level] || 0) + task.points;
+
+    await pool.query(
+      `UPDATE users SET completed_tasks = $1, points = $2, level_scores = $3 WHERE telegram_id = $4`,
+      [newCompletedTasks, newPoints, JSON.stringify(levelScores), req.user.telegramId]
+    );
+
+    console.log(`✅ ${user.username} completed: ${task.title} (+${task.points})`);
+
+    res.json({
+      success: true,
+      points: task.points,
+      totalPoints: newPoints,
+      levelProgress: Math.round((levelScores[user.current_level] / 1000) * 100)
+    });
+  } catch (error) {
+    console.error('Task error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/leaderboard', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT telegram_id, username, points, current_level FROM users ORDER BY points DESC LIMIT 50'
+    );
+    const rankings = result.rows.map((user, index) => ({
+      rank: index + 1,
+      username: user.username,
+      points: user.points,
+      level: user.current_level,
+      finalist: index < 30
+    }));
+    res.json({ rankings, finalists: rankings.slice(0, 30) });
+  } catch (error) {
+    res.json({ rankings: [], finalists: [] });
+  }
+});
+
+// Load bot
 try {
-  const bot = require('./bot');
+  require('./bot');
   console.log('✅ Telegram Bot loaded');
 } catch (error) {
-  console.log('⚠️  Bot file not found:', error.message);
-  console.log('   Create bot.js file to enable bot features');
+  console.log('⚠️  Bot file not found - create bot.js to enable bot features');
 }
 
-// 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Not found', path: req.path });
+  res.status(404).json({ error: 'Not found' });
 });
 
-// Initialize and start
-async function start() {
-  await connectDatabase();
-  
-  app.listen(PORT, () => {
-    console.log(`
-  ⚽️  Axum Backend Server - Sabawians Company
+app.listen(PORT, () => {
+  console.log(`
+  ⚽️  Axum Backend - Sabawians Company
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🚀 Server running on port ${PORT}
-  🌍 Environment: ${process.env.NODE_ENV || 'production'}
-  🔐 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '⚠️  Using default'}
-  🤖 Telegram Bot: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ @SabaQuest_bot' : '⚠️  Not configured'}
-  💾 Database: ${dbConnected ? '✅ PostgreSQL' : '⚠️  In-memory'}
-  📡 CORS: ${process.env.FRONTEND_URL || 'https://axum-frontend-production.up.railway.app'}
+  🚀 Port: ${PORT}
+  🔐 JWT: ${process.env.JWT_SECRET ? '✅' : '⚠️'}
+  🤖 Bot: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ @SabaQuest_bot' : '⚠️'}
+  💾 Database: PostgreSQL
+  📡 Frontend: ${process.env.FRONTEND_URL}
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  📊 Health: http://localhost:${PORT}/api/health
-  📈 Stats: http://localhost:${PORT}/api/stats
-  📧 Support: sabawians@gmail.com
-    `);
-  });
-}
-
-start();
+  `);
+});
 
 module.exports = app;
