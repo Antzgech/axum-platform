@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+
 import LoadingPage from './components/LoadingPage';
 import LanguageSelector from './components/LanguageSelector';
+
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+
 import HomePage from './pages/HomePage';
 import OnboardingPage from './pages/OnboardingPage';
 import DashboardPage from './pages/DashboardPage';
@@ -13,43 +17,27 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import RewardsPage from './pages/RewardsPage';
 import TasksPage from './pages/TasksPage';
 import SponsorsPage from './pages/SponsorsPage';
+
 import './App.css';
 
 function AppContent() {
-  const { language, changeLanguage, isLoading: langLoading } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
-  // Debug logging
   useEffect(() => {
-    console.log('🔍 App State:', {
-      language,
-      langLoading,
-      loading,
-      user: !!user,
-      hasSeenOnboarding
-    });
-  }, [language, langLoading, loading, user, hasSeenOnboarding]);
-
-  useEffect(() => {
-    // Check for Telegram auth and existing session
     const checkAuth = async () => {
       try {
-        // Check localStorage for onboarding completion
         const onboardingComplete = localStorage.getItem('axum_onboarding_complete');
         setHasSeenOnboarding(!!onboardingComplete);
 
-        // Check for existing session
         const token = localStorage.getItem('axum_token');
         if (token) {
-          // Validate token and fetch user data
           const response = await fetch('/api/auth/me', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
           });
-          
+
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
@@ -60,7 +48,6 @@ function AppContent() {
       } catch (error) {
         console.error('Auth check failed:', error);
       } finally {
-        // Add a minimum loading time for smooth transition
         setTimeout(() => setLoading(false), 1500);
       }
     };
@@ -73,73 +60,66 @@ function AppContent() {
     setHasSeenOnboarding(true);
   };
 
-  // Show loading page while checking auth
-  if (loading) {
-    return <LoadingPage />;
-  }
-
-  // Show language selector if no language is selected
-  if (!language) {
-    return <LanguageSelector onSelectLanguage={changeLanguage} />;
-  }
+  if (loading) return <LoadingPage />;
+  if (!language) return <LanguageSelector onSelectLanguage={changeLanguage} />;
 
   return (
     <Router>
       <div className="app-container">
         {user && hasSeenOnboarding && <Navbar />}
-        
+
         <main className="main-content">
           <Routes>
             <Route path="/" element={
-              !user ? <HomePage setUser={setUser} /> : 
+              !user ? <HomePage setUser={setUser} language={language} /> :
               !hasSeenOnboarding ? <Navigate to="/onboarding" /> :
               <Navigate to="/dashboard" />
             } />
-            
+
             <Route path="/onboarding" element={
-              user && !hasSeenOnboarding ? 
-              <OnboardingPage onComplete={handleOnboardingComplete} /> : 
+              user && !hasSeenOnboarding ?
+              <OnboardingPage onComplete={handleOnboardingComplete} language={language} /> :
               <Navigate to={user ? "/dashboard" : "/"} />
             } />
-            
+
             <Route path="/dashboard" element={
-              user && hasSeenOnboarding ? 
-              <DashboardPage user={user} /> : 
+              user && hasSeenOnboarding ?
+              <DashboardPage user={user} language={language} /> :
               <Navigate to="/" />
             } />
-            
+
             <Route path="/game" element={
-              user && hasSeenOnboarding ? 
-              <GamePage user={user} /> : 
+              user && hasSeenOnboarding ?
+              <GamePage user={user} language={language} /> :
               <Navigate to="/" />
             } />
-            
+
             <Route path="/leaderboard" element={
-              user && hasSeenOnboarding ? 
-              <LeaderboardPage /> : 
+              user && hasSeenOnboarding ?
+              <LeaderboardPage language={language} /> :
               <Navigate to="/" />
             } />
-            
+
             <Route path="/rewards" element={
-              user && hasSeenOnboarding ? 
-              <RewardsPage user={user} /> : 
+              user && hasSeenOnboarding ?
+              <RewardsPage user={user} language={language} /> :
               <Navigate to="/" />
             } />
-            
+
             <Route path="/tasks" element={
-              user && hasSeenOnboarding ? 
-              <TasksPage user={user} /> : 
+              user && hasSeenOnboarding ?
+              <TasksPage user={user} language={language} /> :
               <Navigate to="/" />
             } />
-            
+
             <Route path="/sponsors" element={
-              user && hasSeenOnboarding ? 
-              <SponsorsPage /> : 
+              user && hasSeenOnboarding ?
+              <SponsorsPage language={language} /> :
               <Navigate to="/" />
             } />
           </Routes>
         </main>
-        
+
         {user && hasSeenOnboarding && <Footer />}
       </div>
     </Router>
