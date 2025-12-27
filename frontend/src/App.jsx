@@ -10,6 +10,8 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import RewardsPage from './pages/RewardsPage';
 import TasksPage from './pages/TasksPage';
 import SponsorsPage from './pages/SponsorsPage';
+import LanguageSelector from './components/LanguageSelector';
+
 import './App.css';
 
 function App() {
