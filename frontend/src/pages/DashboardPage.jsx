@@ -37,48 +37,42 @@ function DashboardPage({ user }) {
 
   const currentLevel = stats?.currentLevel || 1;
   const totalPoints = stats?.totalPoints || 0;
-  const rank = stats?.globalRank || '--';
-  const badges = stats?.badges || [];
+  const username = user?.username || 'Traveler';
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-top">
-        <h1 className="dashboard-greeting">Welcome, {user?.first_name || 'Traveler'}</h1>
-        <p className="dashboard-subtext">Level {currentLevel} • {totalPoints} pts • Rank #{rank}</p>
+    <div className="dashboard-hamster-layout">
+      {/* Top Bar */}
+      <div className="top-bar">
+        <span className="username">{username}</span>
+        <span className="score">Score: {totalPoints}</span>
       </div>
 
-      <div className="dashboard-stats">
-        <div className="stat-box">
-          <div className="stat-emoji">⚔️</div>
-          <div className="stat-label">Points</div>
-          <div className="stat-value">{totalPoints.toLocaleString()}</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-emoji">🎮</div>
-          <div className="stat-label">Level</div>
-          <div className="stat-value">{currentLevel}</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-emoji">👑</div>
-          <div className="stat-label">Rank</div>
-          <div className="stat-value">#{rank}</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-emoji">💎</div>
-          <div className="stat-label">Badges</div>
-          <div className="stat-value">{badges.length}</div>
-        </div>
+      {/* Daily Challenges */}
+      <div className="daily-challenges">
+        <div className="challenge-card">🎁 Daily Reward</div>
+        <div className="challenge-card">🧩 Daily Cipher</div>
+        <div className="challenge-card">🔥 Daily Combo</div>
       </div>
 
-      <div className="dashboard-actions">
-        <Link to="/tasks" className="action-button">📜</Link>
-        <Link to="/leaderboard" className="action-button">👑</Link>
-        <Link to="/rewards" className="action-button">💰</Link>
-        <Link to="/game" className="action-button">🚀</Link>
+      {/* Floating Queen */}
+      <div className="queen-section">
+        <div className="level-indicator">Level {currentLevel}</div>
+        <div className="queen-avatar">👑</div>
+        <div className="queen-label">Queen Makeda</div>
       </div>
 
-      <div className="dashboard-footer">
-        <p className="footer-text">Queen Makeda awaits. Complete tasks to rise in rank.</p>
+      {/* Bottom Stats */}
+      <div className="bottom-stats">
+        <button className="boost-button">⚡ Boost</button>
+        <div className="energy-bar">Energy: 1000 / 1000</div>
+      </div>
+
+      {/* Navigation */}
+      <div className="nav-bar">
+        <Link to="/exchange" className="nav-item">Exchange</Link>
+        <Link to="/mine" className="nav-item">Mine</Link>
+        <Link to="/tasks" className="nav-item">Tasks</Link>
+        <Link to="/shop" className="nav-item">Shop</Link>
       </div>
     </div>
   );
