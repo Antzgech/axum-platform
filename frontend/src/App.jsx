@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+import LoadingPage from './components/LoadingPage';
+import LanguageSelector from './components/LanguageSelector';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -11,37 +13,32 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import RewardsPage from './pages/RewardsPage';
 import TasksPage from './pages/TasksPage';
 import SponsorsPage from './pages/SponsorsPage';
-
-import LanguageSelector from './components/LanguageSelector';
-import LoadingScreen from './components/LoadingScreen';
-
-import './components/LanguageSelector.css';
 import './App.css';
 
-function App() {
-  const [loading, setLoading] = useState(true);
-  const [language, setLanguage] = useState(null);
+function AppContent() {
+  const { language, changeLanguage, isLoading: langLoading } = useLanguage();
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
   useEffect(() => {
-    const initializeApp = async () => {
-      // 1. Load language
-      const savedLang = localStorage.getItem('axum_lang');
-      if (savedLang) setLanguage(savedLang);
-
-      // 2. Load onboarding state
-      const onboardingComplete = localStorage.getItem('axum_onboarding_complete');
-      setHasSeenOnboarding(!!onboardingComplete);
-
-      // 3. Load user session
+    // Check for Telegram auth and existing session
+    const checkAuth = async () => {
       try {
+        // Check localStorage for onboarding completion
+        const onboardingComplete = localStorage.getItem('axum_onboarding_complete');
+        setHasSeenOnboarding(!!onboardingComplete);
+
+        // Check for existing session
         const token = localStorage.getItem('axum_token');
         if (token) {
+          // Validate token and fetch user data
           const response = await fetch('/api/auth/me', {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
           });
-
+          
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
@@ -49,15 +46,15 @@ function App() {
             localStorage.removeItem('axum_token');
           }
         }
-      } catch (err) {
-        console.error('Auth check failed:', err);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      } finally {
+        // Add a minimum loading time for smooth transition
+        setTimeout(() => setLoading(false), 1500);
       }
-
-      // 4. End loading
-      setTimeout(() => setLoading(false), 1200); // smooth loading animation
     };
 
-    initializeApp();
+    checkAuth();
   }, []);
 
   const handleOnboardingComplete = () => {
@@ -65,125 +62,84 @@ function App() {
     setHasSeenOnboarding(true);
   };
 
-  // -----------------------------
-  // 1. Show loading screen first
-  // -----------------------------
-  if (loading) {
-    return <LoadingScreen />;
+  // Show loading page while checking auth and language
+  if (loading || langLoading) {
+    return <LoadingPage />;
   }
 
-  // -----------------------------
-  // 2. Show language selector if first time
-  // -----------------------------
+  // Show language selector if no language is selected
   if (!language) {
-    return <LanguageSelector setLanguage={setLanguage} />;
+    return <LanguageSelector onSelectLanguage={changeLanguage} />;
   }
 
-  // -----------------------------
-  // 3. Normal app routing
-  // -----------------------------
   return (
     <Router>
       <div className="app-container">
         {user && hasSeenOnboarding && <Navbar />}
-
+        
         <main className="main-content">
           <Routes>
-            <Route
-              path="/"
-              element={
-                !user ? (
-                  <HomePage setUser={setUser} language={language} />
-                ) : !hasSeenOnboarding ? (
-                  <Navigate to="/onboarding" />
-                ) : (
-                  <Navigate to="/dashboard" />
-                )
-              }
-            />
-
-            <Route
-              path="/onboarding"
-              element={
-                user && !hasSeenOnboarding ? (
-                  <OnboardingPage onComplete={handleOnboardingComplete} />
-                ) : (
-                  <Navigate to={user ? '/dashboard' : '/'} />
-                )
-              }
-            />
-
-            <Route
-              path="/dashboard"
-              element={
-                user && hasSeenOnboarding ? (
-                  <DashboardPage user={user} language={language} />
-                ) : (
-                  <Navigate to="/" />
-                )
-              }
-            />
-
-            <Route
-              path="/game"
-              element={
-                user && hasSeenOnboarding ? (
-                  <GamePage user={user} language={language} />
-                ) : (
-                  <Navigate to="/" />
-                )
-              }
-            />
-
-            <Route
-              path="/leaderboard"
-              element={
-                user && hasSeenOnboarding ? (
-                  <LeaderboardPage language={language} />
-                ) : (
-                  <Navigate to="/" />
-                )
-              }
-            />
-
-            <Route
-              path="/rewards"
-              element={
-                user && hasSeenOnboarding ? (
-                  <RewardsPage user={user} language={language} />
-                ) : (
-                  <Navigate to="/" />
-                )
-              }
-            />
-
-            <Route
-              path="/tasks"
-              element={
-                user && hasSeenOnboarding ? (
-                  <TasksPage user={user} language={language} />
-                ) : (
-                  <Navigate to="/" />
-                )
-              }
-            />
-
-            <Route
-              path="/sponsors"
-              element={
-                user && hasSeenOnboarding ? (
-                  <SponsorsPage language={language} />
-                ) : (
-                  <Navigate to="/" />
-                )
-              }
-            />
+            <Route path="/" element={
+              !user ? <HomePage setUser={setUser} /> : 
+              !hasSeenOnboarding ? <Navigate to="/onboarding" /> :
+              <Navigate to="/dashboard" />
+            } />
+            
+            <Route path="/onboarding" element={
+              user && !hasSeenOnboarding ? 
+              <OnboardingPage onComplete={handleOnboardingComplete} /> : 
+              <Navigate to={user ? "/dashboard" : "/"} />
+            } />
+            
+            <Route path="/dashboard" element={
+              user && hasSeenOnboarding ? 
+              <DashboardPage user={user} /> : 
+              <Navigate to="/" />
+            } />
+            
+            <Route path="/game" element={
+              user && hasSeenOnboarding ? 
+              <GamePage user={user} /> : 
+              <Navigate to="/" />
+            } />
+            
+            <Route path="/leaderboard" element={
+              user && hasSeenOnboarding ? 
+              <LeaderboardPage /> : 
+              <Navigate to="/" />
+            } />
+            
+            <Route path="/rewards" element={
+              user && hasSeenOnboarding ? 
+              <RewardsPage user={user} /> : 
+              <Navigate to="/" />
+            } />
+            
+            <Route path="/tasks" element={
+              user && hasSeenOnboarding ? 
+              <TasksPage user={user} /> : 
+              <Navigate to="/" />
+            } />
+            
+            <Route path="/sponsors" element={
+              user && hasSeenOnboarding ? 
+              <SponsorsPage /> : 
+              <Navigate to="/" />
+            } />
           </Routes>
         </main>
-
+        
         {user && hasSeenOnboarding && <Footer />}
       </div>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 
