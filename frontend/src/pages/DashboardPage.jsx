@@ -1,6 +1,4 @@
-make it full screen no border and delete the both daily game make the popup for makeda tab nice i modify some in the code 
-// src/pages/DashboardPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
@@ -16,18 +14,18 @@ import iconFriends from '../assets/icon-friends.png';
 import iconEarnCoins from '../assets/icon-earn-coins.png';
 
 export default function DashboardPage({ user = {} }) {
-  const { language, changeLanguage, t } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
 
   // UI state
   const [tapCount, setTapCount] = useState(0);
   const [hintVisible, setHintVisible] = useState(false);
-  const [hintText, setHintText] = useState('');
+  const [hintData, setHintData] = useState({ header: '', items: [] });
+  const hideTimerRef = useRef(null);
 
   // Use user's Telegram avatar path from DB if available
-  const avatarSrc = user.avatarUrl || queenMakeda;
+  const avatarSrc = user.photo_url || user.avatarUrl || queenMakeda;
 
-  // Example: level requirements and user progress
-  // In real app, replace with real data from API / props
+  // Example: level requirements and user progress (replace with real API data)
   const levelRequirements = {
     1: [
       { id: 'collect_coins', label: 'Collect 10,000 coins', amount: 10000 },
@@ -50,36 +48,55 @@ export default function DashboardPage({ user = {} }) {
 
   const currentLevel = user.currentLevel ?? user.current_level ?? 1;
 
-  // Compute remaining requirements for current level
   function computeRemaining(level) {
     const reqs = levelRequirements[level] || [];
-    const remaining = reqs
-      .map(r => {
-        const done = userProgress[r.id] ?? 0;
-        const left = Math.max(0, r.amount - done);
-        return { ...r, done, left };
-      })
-      .filter(r => r.left > 0);
-    return remaining;
+    return reqs.map(r => {
+      const done = userProgress[r.id] ?? 0;
+      const left = Math.max(0, r.amount - done);
+      const percent = Math.min(100, Math.round((done / r.amount) * 100));
+      return { ...r, done, left, percent };
+    });
   }
 
   // When Makeda is tapped: show message for 30s with remaining tasks
   function handleQueenTap() {
     setTapCount(prev => prev + 1);
+
     const remaining = computeRemaining(currentLevel);
-    if (remaining.length === 0) {
-      setHintText(`Level ${currentLevel} complete! You can advance to the next level.`);
+    const incomplete = remaining.filter(r => r.left > 0);
+
+    if (incomplete.length === 0) {
+      setHintData({
+        header: `Level ${currentLevel} complete!`,
+        items: [{ id: 'done', label: 'All requirements met. Ready to advance!', percent: 100 }],
+      });
     } else {
-      const lines = remaining.map(r => `• ${r.label}: ${r.left} left`);
-      setHintText(`To finish Level ${currentLevel}:\n${lines.join('\n')}`);
+      setHintData({
+        header: `Level ${currentLevel} requirements`,
+        items: incomplete,
+      });
     }
+
     setHintVisible(true);
 
-    // Hide after 3 seconds
-    setTimeout(() => {
+    // Clear previous timer and set new 30s hide timer
+    if (hideTimerRef.current) {
+      window.clearTimeout(hideTimerRef.current);
+    }
+    hideTimerRef.current = window.setTimeout(() => {
       setHintVisible(false);
-    }, 3000);
+      hideTimerRef.current = null;
+    }, 30000);
   }
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleLanguageToggle = () => {
     const next = language === 'en' ? 'am' : 'en';
@@ -87,104 +104,111 @@ export default function DashboardPage({ user = {} }) {
   };
 
   return (
-    <div className="saba-dashboard">
-      <div className="frame">
-        {/* Top: avatar + name (coins & gems under it) */}
-        <div className="top-block">
-          <div className="top-left">
-            <div className="avatar-circle">
-              <img src={user.photo_url} alt={user.username || 'PLAYER'} className="avatar-img" />
-            </div>
-            <div className="player-name-box">
-              <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
-            </div>
+    <div className="saba-dashboard full-screen">
+      {/* Top: avatar + name (coins & gems under it) */}
+      <header className="top-block" role="banner">
+        <div className="top-left">
+          <div className="avatar-circle" aria-hidden="false">
+            <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
           </div>
-
-          <div className="top-right">
-            <button
-              className="lang-toggle-btn"
-              onClick={handleLanguageToggle}
-              aria-label="Toggle language"
-              title={language === 'en' ? 'አማርኛ' : 'English'}
-            >
-              <img src={iconGlobe} alt="Language" className="lang-icon" />
-            </button>
-            <span className="axum-logo-emoji" role="img" aria-label="Axum logo">⚜️</span>
+          <div className="player-name-box">
+            <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
           </div>
         </div>
 
-        {/* Coins & Gems under name */}
-        <div className="currency-row logo-style">
-          <div className="currency-item logo-box">
-            <img src={iconCoin} alt="Coins" className="currency-icon" />
-            <div className="currency-value">{(user.coins ?? user.points ?? 27020).toLocaleString()}</div>
-          </div>
-          <div className="currency-item logo-box">
-            <img src={iconGem} alt="Gems" className="currency-icon" />
-            <div className="currency-value">{user.gems ?? 60}</div>
-          </div>
-        </div>
-
-       /* { Daily Game Buttons }
-        <div className="daily-games-row compact">
-          <button className="daily-game-btn compact">
-            <div className="daily-game-icon">🏰</div>
-            <span className="daily-game-text">DAILY GAME</span>
+        <div className="top-right">
+          <button
+            className="lang-toggle-btn"
+            onClick={handleLanguageToggle}
+            aria-label="Toggle language"
+            title={language === 'en' ? 'አማርኛ' : 'English'}
+          >
+            <img src={iconGlobe} alt="Language" className="lang-icon" />
           </button>
-          <button className="daily-game-btn compact">
-            <div className="daily-game-icon">🏰</div>
-            <span className="daily-game-text">DAILY GAME</span>
-          </button>
+          <span className="axum-logo-emoji" role="img" aria-label="Axum logo">⚜️</span>
         </div>
-*/
-        {/* Queen Makeda Section (bigger, floats out of oval) */}
-        <div className="queen-main-section">
-          <div className="queen-oval-frame">
-            <img
-              src={queenMakeda}
-              alt="Queen Makeda"
-              className="queen-main-img floating"
-              onClick={handleQueenTap}
-              role="button"
-              aria-label="Queen Makeda"
-            />
-          </div>
+      </header>
 
-          {/* Hint / Level message popover */}
-          {hintVisible && (
-            <div className="hint-popover" role="status" aria-live="polite">
-              <pre className="hint-text">{hintText}</pre>
-            </div>
-          )}
+      {/* Coins & Gems under name */}
+      <div className="currency-row logo-style" role="region" aria-label="Currency">
+        <div className="currency-item logo-box" aria-hidden="false">
+          <img src={iconCoin} alt="Coins" className="currency-icon" />
+          <div className="currency-value">{(user.coins ?? user.points ?? 27020).toLocaleString()}</div>
         </div>
-
-        {/* Bottom Navigation (links) */}
-        <div className="bottom-nav-bar">
-          <Link to="/rewards" className="nav-btn" aria-label="Store">
-            <div className="nav-btn-circle">
-              <img src={iconStore} alt="Store" className="nav-icon" />
-            </div>
-          </Link>
-
-          <Link to="/game" className="nav-btn" aria-label="Boosts">
-            <div className="nav-btn-circle">
-              <img src={iconBoosts} alt="Boosts" className="nav-icon" />
-            </div>
-          </Link>
-
-          <Link to="/dashboard" className="nav-btn" aria-label="Friends">
-            <div className="nav-btn-circle">
-              <img src={iconFriends} alt="Friends" className="nav-icon" />
-            </div>
-          </Link>
-
-          <Link to="/tasks" className="nav-btn" aria-label="Earn Coins">
-            <div className="nav-btn-circle">
-              <img src={iconEarnCoins} alt="Earn Coins" className="nav-icon" />
-            </div>
-          </Link>
+        <div className="currency-item logo-box" aria-hidden="false">
+          <img src={iconGem} alt="Gems" className="currency-icon" />
+          <div className="currency-value">{user.gems ?? 60}</div>
         </div>
       </div>
+
+      {/* Queen Makeda Section (bigger, floats out of oval) */}
+      <main className="queen-main-section" role="main">
+        <div className="queen-oval-frame" aria-hidden="true">
+          <img
+            src={queenMakeda}
+            alt="Queen Makeda"
+            className="queen-main-img floating"
+            onClick={handleQueenTap}
+            role="button"
+            aria-label="Queen Makeda"
+          />
+        </div>
+
+        {/* Hint / Level message popover (styled) */}
+        {hintVisible && (
+          <aside className="hint-popover" role="status" aria-live="polite">
+            <div className="hint-header">Level {currentLevel} Progress</div>
+
+            <div className="hint-body">
+              {hintData.items.map(item => (
+                <div key={item.id} className="hint-item">
+                  <div className="hint-item-row">
+                    <div className="hint-item-label">{item.label}</div>
+                    <div className="hint-item-meta">{item.left !== undefined ? `${item.left} left` : `${item.percent}%`}</div>
+                  </div>
+                  <div className="hint-progress">
+                    <div className="hint-progress-bar" style={{ width: `${item.percent ?? (item.left === 0 ? 100 : 0)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hint-actions">
+              <Link to="/tasks" className="hint-btn">Go to Tasks</Link>
+              <Link to="/game" className="hint-btn secondary">Open Battles</Link>
+            </div>
+
+            <div className="hint-footer">This message will disappear in 30 seconds</div>
+          </aside>
+        )}
+      </main>
+
+      {/* Bottom Navigation (links) */}
+      <nav className="bottom-nav-bar" role="navigation" aria-label="Quick navigation">
+        <Link to="/rewards" className="nav-btn" aria-label="Store">
+          <div className="nav-btn-circle">
+            <img src={iconStore} alt="Store" className="nav-icon" />
+          </div>
+        </Link>
+
+        <Link to="/game" className="nav-btn" aria-label="Boosts">
+          <div className="nav-btn-circle">
+            <img src={iconBoosts} alt="Boosts" className="nav-icon" />
+          </div>
+        </Link>
+
+        <Link to="/dashboard" className="nav-btn" aria-label="Friends">
+          <div className="nav-btn-circle">
+            <img src={iconFriends} alt="Friends" className="nav-icon" />
+          </div>
+        </Link>
+
+        <Link to="/tasks" className="nav-btn" aria-label="Earn Coins">
+          <div className="nav-btn-circle">
+            <img src={iconEarnCoins} alt="Earn Coins" className="nav-icon" />
+          </div>
+        </Link>
+      </nav>
     </div>
   );
 }
