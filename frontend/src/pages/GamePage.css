@@ -1,53 +1,45 @@
 /* src/pages/GamePage.css */
-.game-page-root {
-  min-height: 100vh;
-  padding: 12px;
-  box-sizing: border-box;
-  background: linear-gradient(180deg,#6B4E9B,#4A3070);
+
+.game-fullscreen {
+  height: 100vh;
+  width: 100vw;
+  background: linear-gradient(180deg, #6B4E9B, #4A3070);
   color: #fff;
-  font-family: Arial, sans-serif;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .game-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .back-btn {
   background: transparent;
   border: none;
   color: #fff;
-  font-weight: 700;
+  font-size: 1.2rem;
   cursor: pointer;
-}
-
-.game-hud {
-  display: flex;
-  gap: 12px;
-  font-weight: 700;
 }
 
 .runner-canvas {
   position: relative;
   width: 100%;
-  max-width: 720px;
-  height: 260px;
-  margin: 0 auto;
-  background: linear-gradient(180deg,#8B6F47,#4A3622);
-  border-radius: 10px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+  height: 65vh;
+  background: linear-gradient(180deg, #8B6F47, #4A3622);
+  border-radius: 12px;
   overflow: hidden;
-  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6);
 }
 
 .runner-ground {
   position: absolute;
+  bottom: 40px;
   left: 0;
   right: 0;
-  bottom: 40px;
   height: 6px;
   background: #2b1b3a;
 }
@@ -56,20 +48,19 @@
   position: absolute;
   left: 10%;
   bottom: 46px;
-  width: 32px;
-  height: 40px;
-  background: linear-gradient(180deg,#F4E4B8,#D4AF37);
-  border-radius: 6px;
+  width: 40px;
+  height: 50px;
+  background: linear-gradient(180deg, #F4E4B8, #D4AF37);
+  border-radius: 8px;
   box-shadow: 0 8px 18px rgba(0,0,0,0.5);
 }
 
 .runner-obstacles {
   position: absolute;
+  bottom: 46px;
   left: 0;
   right: 0;
-  bottom: 46px;
   height: 60px;
-  pointer-events: none;
 }
 
 .runner-obstacle {
@@ -80,40 +71,37 @@
   border-radius: 4px;
 }
 
+.runner-collectibles {
+  position: absolute;
+  bottom: 46px;
+  left: 0;
+  right: 0;
+  height: 80px;
+}
+
+.runner-collectible {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+}
+
 .game-controls {
-  display: flex;
-  justify-content: center;
-  margin-top: 12px;
+  margin-top: 10px;
+  text-align: center;
 }
 
 .start-btn {
-  background: linear-gradient(180deg,#6B4E9B,#5A3D8A);
+  background: linear-gradient(180deg, #6B4E9B, #5A3D8A);
   color: #fff;
   border: none;
-  padding: 10px 18px;
+  padding: 12px 20px;
   border-radius: 10px;
   font-weight: 800;
   cursor: pointer;
 }
 
-.start-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .game-result-panel {
-  margin-top: 12px;
+  margin-top: 10px;
   text-align: center;
   font-weight: 700;
-}
-
-/* Small screens */
-@media (max-width: 420px) {
-  .runner-canvas {
-    height: 220px;
-  }
-  .runner-player {
-    width: 28px;
-    height: 36px;
-  }
 }
