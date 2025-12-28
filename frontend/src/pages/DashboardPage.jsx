@@ -1,5 +1,6 @@
+make it full screen no border and delete the both daily game make the popup for makeda tab nice i modify some in the code 
 // src/pages/DashboardPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
@@ -15,19 +16,18 @@ import iconFriends from '../assets/icon-friends.png';
 import iconEarnCoins from '../assets/icon-earn-coins.png';
 
 export default function DashboardPage({ user = {} }) {
-  const { language, changeLanguage } = useLanguage();
+  const { language, changeLanguage, t } = useLanguage();
 
   // UI state
   const [tapCount, setTapCount] = useState(0);
   const [hintVisible, setHintVisible] = useState(false);
   const [hintText, setHintText] = useState('');
-  const hideTimerRef = useRef<number | null>(null);
 
   // Use user's Telegram avatar path from DB if available
-  const avatarSrc = user.photo_url || user.avatarUrl || queenMakeda;
+  const avatarSrc = user.avatarUrl || queenMakeda;
 
   // Example: level requirements and user progress
-  // Replace with real data from API / props in your app
+  // In real app, replace with real data from API / props
   const levelRequirements = {
     1: [
       { id: 'collect_coins', label: 'Collect 10,000 coins', amount: 10000 },
@@ -66,34 +66,20 @@ export default function DashboardPage({ user = {} }) {
   // When Makeda is tapped: show message for 30s with remaining tasks
   function handleQueenTap() {
     setTapCount(prev => prev + 1);
-
     const remaining = computeRemaining(currentLevel);
     if (remaining.length === 0) {
-      setHintText(`Level ${currentLevel} complete!\nYou can advance to the next level.`);
+      setHintText(`Level ${currentLevel} complete! You can advance to the next level.`);
     } else {
       const lines = remaining.map(r => `• ${r.label}: ${r.left} left`);
       setHintText(`To finish Level ${currentLevel}:\n${lines.join('\n')}`);
     }
-
-    // Show hint and schedule hide after 30s
     setHintVisible(true);
-    if (hideTimerRef.current) {
-      window.clearTimeout(hideTimerRef.current);
-    }
-    hideTimerRef.current = window.setTimeout(() => {
-      setHintVisible(false);
-      hideTimerRef.current = null;
-    }, 30000);
-  }
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current);
-      }
-    };
-  }, []);
+    // Hide after 3 seconds
+    setTimeout(() => {
+      setHintVisible(false);
+    }, 3000);
+  }
 
   const handleLanguageToggle = () => {
     const next = language === 'en' ? 'am' : 'en';
@@ -101,91 +87,103 @@ export default function DashboardPage({ user = {} }) {
   };
 
   return (
-    <div className="saba-dashboard full-screen">
-      {/* Full screen background and no border frame */}
-      <div className="top-block">
-        <div className="top-left">
-          <div className="avatar-circle">
-            <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
+    <div className="saba-dashboard">
+      <div className="frame">
+        {/* Top: avatar + name (coins & gems under it) */}
+        <div className="top-block">
+          <div className="top-left">
+            <div className="avatar-circle">
+              <img src={user.photo_url} alt={user.username || 'PLAYER'} className="avatar-img" />
+            </div>
+            <div className="player-name-box">
+              <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
+            </div>
           </div>
-          <div className="player-name-box">
-            <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
+
+          <div className="top-right">
+            <button
+              className="lang-toggle-btn"
+              onClick={handleLanguageToggle}
+              aria-label="Toggle language"
+              title={language === 'en' ? 'አማርኛ' : 'English'}
+            >
+              <img src={iconGlobe} alt="Language" className="lang-icon" />
+            </button>
+            <span className="axum-logo-emoji" role="img" aria-label="Axum logo">⚜️</span>
           </div>
         </div>
 
-        <div className="top-right">
-          <button
-            className="lang-toggle-btn"
-            onClick={handleLanguageToggle}
-            aria-label="Toggle language"
-            title={language === 'en' ? 'አማርኛ' : 'English'}
-          >
-            <img src={iconGlobe} alt="Language" className="lang-icon" />
+        {/* Coins & Gems under name */}
+        <div className="currency-row logo-style">
+          <div className="currency-item logo-box">
+            <img src={iconCoin} alt="Coins" className="currency-icon" />
+            <div className="currency-value">{(user.coins ?? user.points ?? 27020).toLocaleString()}</div>
+          </div>
+          <div className="currency-item logo-box">
+            <img src={iconGem} alt="Gems" className="currency-icon" />
+            <div className="currency-value">{user.gems ?? 60}</div>
+          </div>
+        </div>
+
+       /* { Daily Game Buttons }
+        <div className="daily-games-row compact">
+          <button className="daily-game-btn compact">
+            <div className="daily-game-icon">🏰</div>
+            <span className="daily-game-text">DAILY GAME</span>
           </button>
-          <span className="axum-logo-emoji" role="img" aria-label="Axum logo">⚜️</span>
+          <button className="daily-game-btn compact">
+            <div className="daily-game-icon">🏰</div>
+            <span className="daily-game-text">DAILY GAME</span>
+          </button>
         </div>
-      </div>
+*/
+        {/* Queen Makeda Section (bigger, floats out of oval) */}
+        <div className="queen-main-section">
+          <div className="queen-oval-frame">
+            <img
+              src={queenMakeda}
+              alt="Queen Makeda"
+              className="queen-main-img floating"
+              onClick={handleQueenTap}
+              role="button"
+              aria-label="Queen Makeda"
+            />
+          </div>
 
-      {/* Coins & Gems under name (logo style boxes) */}
-      <div className="currency-row logo-style">
-        <div className="currency-item logo-box">
-          <img src={iconCoin} alt="Coins" className="currency-icon" />
-          <div className="currency-value">{(user.coins ?? user.points ?? 27020).toLocaleString()}</div>
-        </div>
-        <div className="currency-item logo-box">
-          <img src={iconGem} alt="Gems" className="currency-icon" />
-          <div className="currency-value">{user.gems ?? 60}</div>
-        </div>
-      </div>
-
-      {/* Queen Makeda Section (bigger, floats out of oval) */}
-      <div className="queen-main-section">
-        <div className="queen-oval-frame">
-          <img
-            src={queenMakeda}
-            alt="Queen Makeda"
-            className="queen-main-img floating"
-            onClick={handleQueenTap}
-            role="button"
-            aria-label="Queen Makeda"
-          />
+          {/* Hint / Level message popover */}
+          {hintVisible && (
+            <div className="hint-popover" role="status" aria-live="polite">
+              <pre className="hint-text">{hintText}</pre>
+            </div>
+          )}
         </div>
 
-        {/* Hint / Level message popover (styled) */}
-        {hintVisible && (
-          <div className="hint-popover" role="status" aria-live="polite">
-            <div className="hint-header">Level {currentLevel} Progress</div>
-            <pre className="hint-text">{hintText}</pre>
-            <div className="hint-footer">This message will disappear in 30 seconds</div>
-          </div>
-        )}
-      </div>
+        {/* Bottom Navigation (links) */}
+        <div className="bottom-nav-bar">
+          <Link to="/rewards" className="nav-btn" aria-label="Store">
+            <div className="nav-btn-circle">
+              <img src={iconStore} alt="Store" className="nav-icon" />
+            </div>
+          </Link>
 
-      {/* Bottom Navigation (links) */}
-      <div className="bottom-nav-bar">
-        <Link to="/rewards" className="nav-btn" aria-label="Store">
-          <div className="nav-btn-circle">
-            <img src={iconStore} alt="Store" className="nav-icon" />
-          </div>
-        </Link>
+          <Link to="/game" className="nav-btn" aria-label="Boosts">
+            <div className="nav-btn-circle">
+              <img src={iconBoosts} alt="Boosts" className="nav-icon" />
+            </div>
+          </Link>
 
-        <Link to="/game" className="nav-btn" aria-label="Boosts">
-          <div className="nav-btn-circle">
-            <img src={iconBoosts} alt="Boosts" className="nav-icon" />
-          </div>
-        </Link>
+          <Link to="/dashboard" className="nav-btn" aria-label="Friends">
+            <div className="nav-btn-circle">
+              <img src={iconFriends} alt="Friends" className="nav-icon" />
+            </div>
+          </Link>
 
-        <Link to="/dashboard" className="nav-btn" aria-label="Friends">
-          <div className="nav-btn-circle">
-            <img src={iconFriends} alt="Friends" className="nav-icon" />
-          </div>
-        </Link>
-
-        <Link to="/tasks" className="nav-btn" aria-label="Earn Coins">
-          <div className="nav-btn-circle">
-            <img src={iconEarnCoins} alt="Earn Coins" className="nav-icon" />
-          </div>
-        </Link>
+          <Link to="/tasks" className="nav-btn" aria-label="Earn Coins">
+            <div className="nav-btn-circle">
+              <img src={iconEarnCoins} alt="Earn Coins" className="nav-icon" />
+            </div>
+          </Link>
+        </div>
       </div>
     </div>
   );
