@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import './DashboardPage.css';
 
-// Use these exact filenames in frontend/src/assets/
+// Assets (place axum-logo.png in src/assets/)
 import queenMakeda from '../assets/queen-makeda.png';
 import iconCoin from '../assets/icon-coin.png';
 import iconGem from '../assets/icon-gem.png';
@@ -13,6 +13,7 @@ import iconFriends from '../assets/icon-friends.png';
 import iconEarnCoins from '../assets/icon-earn-coins.png';
 import iconBattle from '../assets/icon-battle.png';
 import btnTapAttack from '../assets/btn-tap-attack.png';
+import axumLogo from '../assets/axum-logo.png'; // the image you provided
 
 function DashboardPage({ user = {} }) {
   const { language, changeLanguage, t } = useLanguage();
@@ -28,9 +29,10 @@ function DashboardPage({ user = {} }) {
     changeLanguage(next);
   };
 
-  const handleQueenTap = () => {
-    setTapCount(prev => prev + 1);
-  };
+  const handleQueenTap = () => setTapCount(prev => prev + 1);
+
+  // Use user's Telegram avatar if available, otherwise fallback to queenMakeda
+  const avatarSrc = user.avatarUrl || queenMakeda;
 
   return (
     <div className="saba-dashboard">
@@ -38,7 +40,7 @@ function DashboardPage({ user = {} }) {
       <div className="saba-top-bar">
         <div className="player-avatar-section">
           <div className="avatar-circle">
-            <img src={queenMakeda} alt={username} className="avatar-img" />
+            <img src={avatarSrc} alt={username} className="avatar-img" />
           </div>
           <div className="player-name-box">
             <span className="player-name">{username}</span>
@@ -46,16 +48,14 @@ function DashboardPage({ user = {} }) {
         </div>
 
         <div className="currency-section">
-          <div className="currency-item">
+          <div className="currency-item" title="Coins">
             <img src={iconCoin} alt="Coins" className="currency-icon" />
             <span className="currency-value">{coins.toLocaleString()}</span>
-            <button className="currency-add-btn" aria-label="Add coins">+</button>
           </div>
 
-          <div className="currency-item">
+          <div className="currency-item" title="Gems">
             <img src={iconGem} alt="Gems" className="currency-icon" />
             <span className="currency-value">{gems}</span>
-            <button className="currency-add-btn" aria-label="Add gems">+</button>
           </div>
         </div>
 
@@ -66,20 +66,22 @@ function DashboardPage({ user = {} }) {
             aria-label="Toggle language"
             title={language === 'en' ? 'አማርኛ' : 'English'}
           >
-            <img src={iconGlobe} alt="" className="lang-icon" />
+            <img src={iconGlobe} alt="Language" className="lang-icon" />
           </button>
-          <span className="axum-title">AXUM</span>
+
+          {/* Use the exact image you provided */}
+          <img src={axumLogo} alt="AXUM" className="axum-logo-img" />
         </div>
       </div>
 
-      {/* Daily Game Buttons Row */}
-      <div className="daily-games-row">
-        <button className="daily-game-btn">
+      {/* Daily Game Buttons Row (minimized) */}
+      <div className="daily-games-row compact">
+        <button className="daily-game-btn compact">
           <div className="daily-game-icon">🏰</div>
           <span className="daily-game-text">DAILY GAME</span>
         </button>
 
-        <button className="daily-game-btn">
+        <button className="daily-game-btn compact">
           <div className="daily-game-icon">🏰</div>
           <span className="daily-game-text">DAILY GAME</span>
         </button>
@@ -90,9 +92,7 @@ function DashboardPage({ user = {} }) {
         <div className="queen-oval-frame">
           <img src={queenMakeda} alt="Queen Makeda" className="queen-main-img" />
         </div>
-        {tapCount > 0 && (
-          <div className="tap-counter">Taps: {tapCount}</div>
-        )}
+        {tapCount > 0 && <div className="tap-counter">Taps: {tapCount}</div>}
       </div>
 
       {/* Bottom Navigation */}
