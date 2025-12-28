@@ -1,52 +1,119 @@
 /* src/pages/GamePage.css */
 .game-page-root {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  padding: 12px;
+  box-sizing: border-box;
   background: linear-gradient(180deg,#6B4E9B,#4A3070);
   color: #fff;
-  padding: 16px;
-  box-sizing: border-box;
+  font-family: Arial, sans-serif;
 }
 
-.game-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-.back-btn { background:transparent; border:none; color:#fff; font-weight:700; cursor:pointer; }
-.game-area { display:flex; flex-direction:column; gap:16px; align-items:center; justify-content:center; flex:1; }
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 
-.game-info { width:100%; max-width:520px; display:flex; flex-direction:column; gap:12px; align-items:center; }
-.status-row { display:flex; gap:18px; }
-.status-item { display:flex; gap:8px; align-items:center; background: rgba(255,255,255,0.06); padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); }
-.status-icon { width:28px; height:28px; }
-.status-value { font-weight:800; }
-
-.timer-row { font-weight:700; }
-
-.game-target-area { display:flex; align-items:center; justify-content:center; width:100%; }
-.game-target {
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #F4E4B8, #D4AF37);
-  color: #2b1b3a;
-  font-weight:900;
-  font-size:2rem;
+.back-btn {
+  background: transparent;
   border: none;
-  box-shadow: 0 18px 40px rgba(0,0,0,0.5);
+  color: #fff;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform .08s ease;
 }
-.game-target.disabled { opacity:0.5; cursor: not-allowed; transform: none; }
-.game-target.active:active { transform: scale(0.96); }
 
-.game-controls { margin-top: 8px; }
+.game-hud {
+  display: flex;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.runner-canvas {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  height: 260px;
+  margin: 0 auto;
+  background: linear-gradient(180deg,#8B6F47,#4A3622);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.runner-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 40px;
+  height: 6px;
+  background: #2b1b3a;
+}
+
+.runner-player {
+  position: absolute;
+  left: 10%;
+  bottom: 46px;
+  width: 32px;
+  height: 40px;
+  background: linear-gradient(180deg,#F4E4B8,#D4AF37);
+  border-radius: 6px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.5);
+}
+
+.runner-obstacles {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 46px;
+  height: 60px;
+  pointer-events: none;
+}
+
+.runner-obstacle {
+  position: absolute;
+  bottom: 0;
+  height: 30px;
+  background: #2b1b3a;
+  border-radius: 4px;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
 .start-btn {
   background: linear-gradient(180deg,#6B4E9B,#5A3D8A);
-  color:#fff; border:none; padding:10px 16px; border-radius:10px; font-weight:800; cursor:pointer;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
 }
-.start-btn:disabled { opacity:0.5; cursor:not-allowed; }
 
-/* Responsive */
+.start-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.game-result-panel {
+  margin-top: 12px;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* Small screens */
 @media (max-width: 420px) {
-  .game-target { width: 180px; height: 180px; font-size:1.6rem; }
-  .status-item { padding:6px 10px; }
+  .runner-canvas {
+    height: 220px;
+  }
+  .runner-player {
+    width: 28px;
+    height: 36px;
+  }
 }
