@@ -1,165 +1,435 @@
+/* ==========================================================================
+   DashboardPage.css
+   Full CSS for Saba Dashboard (assets loaded from src/assets via JS imports)
+   ========================================================================== */
+
+/* Root variables */
 :root {
-  --bg-primary: #0b0710;
-  --bg-secondary: #1a0f2a;
-  --gold-primary: #d4af37;
-  --gold-light: #f6e7b1;
-  --neutral-light: #e9e6e1;
-  --radius-md: 14px;
-  --radius-sm: 8px;
-  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  --bg-primary: #8B6F47;
+  --bg-secondary: #4A3622;
+  --accent-purple-1: #6B4E9B;
+  --accent-purple-2: #4A3070;
+  --gold-primary: #D4AF37;
+  --gold-light: #F4E4B8;
+  --neutral-light: #FFFFFF;
+  --glass: rgba(255,255,255,0.15);
+  --glass-strong: rgba(255,255,255,0.25);
+  --radius-lg: 16px;
+  --radius-md: 8px;
+  --font-sans: 'Arial', sans-serif;
+  --font-serif: 'Georgia', serif;
 }
 
-/* Frame */
-.dashboard-root {
+/* ==========================================================================
+   Global safety and image rules
+   - These ensure imported images from src/assets render reliably and scale
+   ========================================================================== */
+
+/* Ensure all images scale and keep aspect ratio */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent accidental clipping of images inside frames */
+.saba-dashboard { box-sizing: border-box; }
+.queen-oval-frame { overflow: visible; }
+
+/* Explicit sizes for common icons to avoid layout shifts */
+.avatar-img,
+.nav-icon,
+.currency-icon,
+.lang-icon {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+/* Tap button image */
+.tap-img {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* ==========================================================================
+   Saba Dashboard - Main Container
+   ========================================================================== */
+.saba-dashboard {
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(180deg, var(--bg-primary), var(--bg-secondary));
-  padding: 12px;
-  box-sizing: border-box;
-}
-
-.dashboard-frame {
-  width: 100%;
-  max-width: 480px;
-  min-height: 88vh;
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));
-  border-radius: 18px;
-  border: 1px solid rgba(212,175,55,0.18);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.6);
-  padding: 12px;
+  background: linear-gradient(180deg, var(--bg-primary) 0%, #6B5335 50%, var(--bg-secondary) 100%);
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
+  font-family: var(--font-sans);
+  position: relative;
+  overflow: hidden;
+  color: var(--neutral-light);
+}
+
+/* ==========================================================================
+   Top Bar
+   ========================================================================== */
+.saba-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(180deg, var(--accent-purple-1) 0%, var(--accent-purple-2) 100%);
+  border-bottom: 3px solid var(--gold-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Player Avatar Section */
+.player-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid var(--gold-primary);
+  background: linear-gradient(135deg, var(--accent-purple-1), #8B6E9B);
+  padding: 3px;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+.player-name-box {
+  background: var(--glass);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 2px solid rgba(212, 175, 55, 0.5);
+}
+
+.player-name {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--neutral-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================================================
+   Currency Section
+   ========================================================================== */
+.currency-section {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.currency-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--glass);
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
+  border: 2px solid rgba(212, 175, 55, 0.4);
+}
+
+.currency-icon {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.currency-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--neutral-light);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  min-width: 60px;
+}
+
+.currency-add-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #4CAF50;
+  border: 2px solid #FFFFFF;
+  color: #FFFFFF;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.currency-add-btn:hover { background: #45a049; transform: scale(1.1); }
+.currency-add-btn:active { transform: scale(0.95); }
+
+/* ==========================================================================
+   AXUM Logo Section
+   ========================================================================== */
+.axum-logo-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lang-toggle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(212, 175, 55, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.lang-icon { width: 24px; height: 24px; }
+
+.lang-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: var(--gold-primary);
+  transform: scale(1.1);
+}
+
+.axum-title {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--gold-primary);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.15em;
+}
+
+/* ==========================================================================
+   Daily Games Row
+   ========================================================================== */
+.daily-games-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 1.5rem 2rem;
+  gap: 1.5rem;
+}
+
+.daily-game-btn {
+  flex: 1;
+  max-width: 300px;
+  background: linear-gradient(180deg, #8B6E9B 0%, var(--accent-purple-1) 100%);
+  border: 4px solid #9B7EAB;
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
   overflow: hidden;
 }
 
-/* Top bar */
-.dash-top-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.dash-top-left { flex: 1; }
-.dash-top-center { flex: 1.2; display:flex; justify-content:center; }
-.dash-top-right { flex: 0.8; display:flex; justify-content:flex-end; }
-
-.dash-top-title {
-  color: var(--gold-light);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-/* Currency */
-.dash-currency { display:flex; gap:8px; align-items:center; }
-.currency-item {
-  display:flex; align-items:center; gap:6px;
-  background: rgba(12,12,18,0.9);
-  padding: 6px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(212,175,55,0.25);
-}
-.currency-icon { width:18px; height:18px; object-fit:contain; }
-.currency-value { color:#fff; font-weight:600; font-size:0.85rem; }
-.currency-plus {
-  background: transparent; border: none; color: var(--gold-primary);
-  font-weight:700; cursor:pointer; padding:0 6px;
-}
-
-/* Language toggle */
-.lang-toggle-btn {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:6px 8px; border-radius:999px; border:1px solid rgba(212,175,55,0.25);
-  background: rgba(12,12,18,0.9); color:var(--gold-light); cursor:pointer;
-}
-.lang-icon { width:16px; height:16px; object-fit:contain; }
-.lang-label { font-weight:700; font-size:0.78rem; }
-
-/* Level + score */
-.dash-level-bar { display:flex; justify-content:space-between; gap:8px; margin:6px 0; }
-.level-pill, .score-pill {
-  background: rgba(12,12,18,0.9); color:#fff; padding:6px 10px; border-radius:999px;
-  border:1px solid rgba(212,175,55,0.25); font-weight:700; font-size:0.85rem;
-}
-
-/* Battle row */
-.dash-battle-row { display:flex; justify-content:center; margin:6px 0; }
-.battle-button { background:none; border:none; cursor:pointer; padding:0; }
-.battle-img { height:44px; width:auto; object-fit:contain; }
-
-/* Main area */
-.dash-main-area {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 4px;
-  box-sizing: border-box;
-}
-
-/* Radial columns */
-.radial-column { display:flex; flex-direction:column; gap:10px; align-items:center; }
-.radial-btn { display:flex; flex-direction:column; align-items:center; gap:6px; }
-.radial-circle {
-  width:64px; height:64px; border-radius:50%;
-  background: radial-gradient(circle at top, #5b2f9a, #2a1530);
-  border: 2px solid rgba(212,175,55,0.6);
-  display:flex; justify-content:center; align-items:center;
-  box-shadow: 0 6px 18px rgba(212,175,55,0.12);
-}
-.radial-icon, .queen-portrait-icon { width:36px; height:36px; object-fit:contain; }
-.radial-label { font-size:0.78rem; color:var(--neutral-light); text-align:center; max-width:84px; }
-
-/* Queen center */
-.queen-center { display:flex; justify-content:center; align-items:center; }
-.queen-main-img {
-  max-height: 260px;
-  width: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 0 22px rgba(212,175,55,0.45));
-  animation: queenFloat 6s ease-in-out infinite;
+.daily-game-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 50%);
   pointer-events: none;
 }
 
-/* Bottom action */
-.dash-bottom-main { display:flex; justify-content:center; margin-top:8px; }
-.tap-attack-btn { background:none; border:none; cursor:pointer; padding:0; }
-.tap-img { height:56px; width:auto; object-fit:contain; }
-
-/* Footer nav */
-.dash-footer-nav {
-  display:flex; justify-content:space-between; gap:8px; margin-top:10px;
-}
-.footer-item {
-  flex:1; background: rgba(12,12,18,0.9); color:var(--gold-light);
-  border:1px solid rgba(212,175,55,0.18); padding:8px 6px; border-radius:10px;
-  font-weight:700; cursor:pointer;
+.daily-game-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  border-color: var(--gold-primary);
 }
 
-/* Animations */
-@keyframes queenFloat {
-  0%,100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+.daily-game-btn:active { transform: translateY(-2px); }
+
+.daily-game-icon {
+  font-size: 3rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
 
-/* Image scaling safety */
-img { max-width: 100%; height: auto; display:block; object-fit:contain; }
-
-/* z-index safety */
-.queen-center { position: relative; z-index: 5; }
-.radial-column { position: relative; z-index: 6; }
-.dash-top-bar { position: relative; z-index: 10; }
-
-/* Responsive */
-@media (max-width: 420px) {
-  .dashboard-frame { padding: 8px; border-radius: 12px; }
-  .queen-main-img { max-height: 220px; }
-  .radial-circle { width:56px; height:56px; }
-  .radial-icon, .queen-portrait-icon { width:32px; height:32px; }
-  .tap-img { height:48px; }
-  .battle-img { height:36px; }
+.daily-game-text {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--neutral-light);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.1em;
 }
+
+/* ==========================================================================
+   Queen Main Section
+   ========================================================================== */
+.queen-main-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  cursor: pointer;
+}
+
+.queen-oval-frame {
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 3 / 4;
+  background: radial-gradient(ellipse at center, #4A3070 0%, #2D1B4E 100%);
+  border: 8px solid #8B6E9B;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  box-shadow:
+    0 0 30px rgba(139, 110, 155, 0.6),
+    inset 0 0 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.queen-oval-frame:hover {
+  transform: scale(1.02);
+  box-shadow:
+    0 0 40px rgba(139, 110, 155, 0.8),
+    inset 0 0 40px rgba(0, 0, 0, 0.3);
+}
+
+.queen-oval-frame:active { transform: scale(0.98); }
+
+.queen-main-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+}
+
+/* Tap counter */
+.tap-counter {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(212, 175, 55, 0.95);
+  color: #1A1A1A;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================================================
+   Bottom Navigation Bar
+   ========================================================================== */
+.bottom-nav-bar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 1rem 2rem 2rem;
+  background: linear-gradient(180deg, rgba(45, 27, 78, 0.8) 0%, rgba(26, 15, 45, 0.95) 100%);
+  border-top: 3px solid var(--gold-primary);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.nav-btn:hover { transform: translateY(-6px); }
+.nav-btn:active { transform: translateY(-3px); }
+
+.nav-btn-circle {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple-1) 0%, var(--accent-purple-2) 100%);
+  border: 4px solid var(--gold-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.4),
+    inset 0 2px 8px rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.nav-btn:hover .nav-btn-circle {
+  background: linear-gradient(135deg, #7B5EAB 0%, #5A4080 100%);
+  border-color: var(--gold-light);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(212, 175, 55, 0.4),
+    inset 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.nav-icon {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Tap to Attack row */
+.tap-attack-row {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem 1rem 1.5rem;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+@media (max-width: 768px) {
+  .saba-top-bar { flex-wrap: wrap; gap: 0.5rem; }
+  .player-avatar-section { flex: 1; }
+  .currency-section { flex-wrap: wrap; gap: 0.5rem; }
+  .axum-logo-section { width: 100%; justify-content: flex-end; }
+  .daily-games-row { flex-direction: column; padding: 1rem; gap: 1rem; }
+  .daily-game-btn { max-width: none; }
+  .queen-oval-frame { max-width: 350px; }
+  .bottom-nav-bar { padding: 0.75rem 1rem 1.5rem; }
+  .nav-btn-circle { width: 60px; height: 60px; }
+  .nav-icon { width: 32px; height: 32px; }
+}
+
+@media (max-width: 480px) {
+  .avatar-circle { width: 50px; height: 50px; }
+  .player-name { font-size: 0.9rem; }
+  .currency-value { font-size: 0.95rem; min-width: 50px; }
+  .currency-icon { width: 24px; height: 24px; }
+  .axum-title { font-size: 1.25rem; }
+  .daily-game-text { font-size: 1rem; }
+  .queen-oval-frame { max-width: 280px; }
+  .nav-btn-circle { width: 55px; height: 55px; }
+  .nav-icon { width: 28px; height: 28px; }
+}
+
+/* ==========================================================================
+   Loading animation
+   ========================================================================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.saba-dashboard > * { animation: fadeIn 0.5s ease-out; }
