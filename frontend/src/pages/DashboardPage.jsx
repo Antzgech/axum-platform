@@ -74,10 +74,10 @@ export default function DashboardPage({ user = {} }) {
     }
     setHintVisible(true);
 
-    // Hide after 30 seconds
+    // Hide after 3 seconds
     setTimeout(() => {
       setHintVisible(false);
-    }, 30000);
+    }, 3000);
   }
 
   const handleLanguageToggle = () => {
@@ -92,7 +92,7 @@ export default function DashboardPage({ user = {} }) {
         <div className="top-block">
           <div className="top-left">
             <div className="avatar-circle">
-              <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
+              <img src={user.photo_url} alt={user.username || 'PLAYER'} className="avatar-img" />
             </div>
             <div className="player-name-box">
               <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
