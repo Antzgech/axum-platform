@@ -79,14 +79,14 @@ export default function DashboardPage({ user = {} }) {
 
     setHintVisible(true);
 
-    // Clear previous timer and set new 30s hide timer
+    // Clear previous timer and set new 3s hide timer
     if (hideTimerRef.current) {
       window.clearTimeout(hideTimerRef.current);
     }
     hideTimerRef.current = window.setTimeout(() => {
       setHintVisible(false);
       hideTimerRef.current = null;
-    }, 30000);
+    }, 3000);
   }
 
   // Cleanup timer on unmount
