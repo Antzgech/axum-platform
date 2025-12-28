@@ -1,9 +1,10 @@
+// src/pages/DashboardPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 
-// Assets (ensure these exist in src/assets/)
+// Assets
 import queenMakeda from '../assets/queen-makeda.png';
 import iconCoin from '../assets/icon-coin.png';
 import iconGem from '../assets/icon-gem.png';
@@ -13,102 +14,73 @@ import iconBoosts from '../assets/icon-boosts.png';
 import iconFriends from '../assets/icon-friends.png';
 import iconEarnCoins from '../assets/icon-earn-coins.png';
 
-export default function DashboardPage({ user = {} }) {
+export default function DashboardPage({ user = {}, fetchUser }) {
   const { language, changeLanguage } = useLanguage();
 
-  // UI state
-  const [tapCount, setTapCount] = useState(0);
+  // Local currency state (keeps UI responsive)
+  const [coins, setCoins] = useState(user.coins ?? user.points ?? 27020);
+  const [gems, setGems] = useState(user.gems ?? 60);
+
+  // Makeda hint state (3s visibility handled elsewhere)
   const [hintVisible, setHintVisible] = useState(false);
-  const [hintData, setHintData] = useState({ header: '', items: [] });
+  const [hintText, setHintText] = useState('');
   const hideTimerRef = useRef(null);
 
-  // Use user's Telegram avatar path from DB if available
+  // Avatar
   const avatarSrc = user.photo_url || user.avatarUrl || queenMakeda;
 
-  // Example: level requirements and user progress (replace with real API data)
-  const levelRequirements = {
-    1: [
-      { id: 'collect_coins', label: 'Collect 10,000 coins', amount: 10000 },
-      { id: 'win_battles', label: 'Win 3 battles', amount: 3 },
-      { id: 'complete_tasks', label: 'Complete 5 tasks', amount: 5 },
-    ],
-    2: [
-      { id: 'collect_coins', label: 'Collect 25,000 coins', amount: 25000 },
-      { id: 'win_battles', label: 'Win 8 battles', amount: 8 },
-      { id: 'complete_tasks', label: 'Complete 12 tasks', amount: 12 },
-    ],
+  // Language toggle
+  const handleLanguageToggle = () => {
+    const next = language === 'en' ? 'am' : 'en';
+    changeLanguage(next);
   };
 
-  // Example user progress (replace with real user.progress)
-  const userProgress = user.progress || {
-    collect_coins: user.coins ?? 27020,
-    win_battles: user.wins ?? 1,
-    complete_tasks: user.tasksCompleted ?? 2,
-  };
-
-  const currentLevel = user.currentLevel ?? user.current_level ?? 1;
-
-  function computeRemaining(level) {
-    const reqs = levelRequirements[level] || [];
-    return reqs.map(r => {
-      const done = userProgress[r.id] ?? 0;
-      const left = Math.max(0, r.amount - done);
-      const percent = Math.min(100, Math.round((done / r.amount) * 100));
-      return { ...r, done, left, percent };
-    });
-  }
-
-  // When Makeda is tapped: show message for 30s with remaining tasks
+  // Makeda tap: show hint for 3 seconds (user already set 3s)
   function handleQueenTap() {
-    setTapCount(prev => prev + 1);
-
-    const remaining = computeRemaining(currentLevel);
-    const incomplete = remaining.filter(r => r.left > 0);
-
-    if (incomplete.length === 0) {
-      setHintData({
-        header: `Level ${currentLevel} complete!`,
-        items: [{ id: 'done', label: 'All requirements met. Ready to advance!', percent: 100 }],
-      });
-    } else {
-      setHintData({
-        header: `Level ${currentLevel} requirements`,
-        items: incomplete,
-      });
-    }
-
+    // Example hint text — replace with computeRemaining logic if needed
+    setHintText('Complete 3 battles\nCollect 10,000 coins\nFinish 5 tasks');
     setHintVisible(true);
-
-    // Clear previous timer and set new 3s hide timer
-    if (hideTimerRef.current) {
-      window.clearTimeout(hideTimerRef.current);
-    }
+    if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
     hideTimerRef.current = window.setTimeout(() => {
       setHintVisible(false);
       hideTimerRef.current = null;
     }, 3000);
   }
 
-  // Cleanup timer on unmount
+  // Listen for game results saved to localStorage by GamePage and update UI
   useEffect(() => {
-    return () => {
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current);
+    function onStorage(e) {
+      if (e.key === 'gameResult' && e.newValue) {
+        try {
+          const result = JSON.parse(e.newValue);
+          if (result.coinReward) setCoins(prev => prev + Number(result.coinReward));
+          if (result.gemReward) setGems(prev => prev + Number(result.gemReward));
+          // Optionally refetch user from server if fetchUser provided
+          if (typeof fetchUser === 'function') fetchUser();
+        } catch (err) {
+          // ignore parse errors
+        }
       }
-    };
-  }, []);
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [fetchUser]);
 
-  const handleLanguageToggle = () => {
-    const next = language === 'en' ? 'am' : 'en';
-    changeLanguage(next);
-  };
+  // Also poll once on mount to reflect server state (optional)
+  useEffect(() => {
+    if (typeof fetchUser === 'function') {
+      fetchUser().then(updated => {
+        if (updated?.coins !== undefined) setCoins(updated.coins);
+        if (updated?.gems !== undefined) setGems(updated.gems);
+      }).catch(() => {});
+    }
+  }, [fetchUser]);
 
   return (
     <div className="saba-dashboard full-screen">
-      {/* Top: avatar + name (coins & gems under it) */}
       <header className="top-block" role="banner">
         <div className="top-left">
-          <div className="avatar-circle" aria-hidden="false">
+          <div className="avatar-circle">
             <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
           </div>
           <div className="player-name-box">
@@ -129,21 +101,19 @@ export default function DashboardPage({ user = {} }) {
         </div>
       </header>
 
-      {/* Coins & Gems under name */}
       <div className="currency-row logo-style" role="region" aria-label="Currency">
-        <div className="currency-item logo-box" aria-hidden="false">
+        <div className="currency-item logo-box">
           <img src={iconCoin} alt="Coins" className="currency-icon" />
-          <div className="currency-value">{(user.coins ?? user.points ?? 27020).toLocaleString()}</div>
+          <div className="currency-value">{coins.toLocaleString()}</div>
         </div>
-        <div className="currency-item logo-box" aria-hidden="false">
+        <div className="currency-item logo-box">
           <img src={iconGem} alt="Gems" className="currency-icon" />
-          <div className="currency-value">{user.gems ?? 60}</div>
+          <div className="currency-value">{gems}</div>
         </div>
       </div>
 
-      {/* Queen Makeda Section (bigger, floats out of oval) */}
       <main className="queen-main-section" role="main">
-        <div className="queen-oval-frame" aria-hidden="true">
+        <div className="queen-oval-frame">
           <img
             src={queenMakeda}
             alt="Queen Makeda"
@@ -154,36 +124,14 @@ export default function DashboardPage({ user = {} }) {
           />
         </div>
 
-        {/* Hint / Level message popover (styled) */}
         {hintVisible && (
           <aside className="hint-popover" role="status" aria-live="polite">
-            <div className="hint-header">Level {currentLevel} Progress</div>
-
-            <div className="hint-body">
-              {hintData.items.map(item => (
-                <div key={item.id} className="hint-item">
-                  <div className="hint-item-row">
-                    <div className="hint-item-label">{item.label}</div>
-                    <div className="hint-item-meta">{item.left !== undefined ? `${item.left} left` : `${item.percent}%`}</div>
-                  </div>
-                  <div className="hint-progress">
-                    <div className="hint-progress-bar" style={{ width: `${item.percent ?? (item.left === 0 ? 100 : 0)}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="hint-actions">
-              <Link to="/tasks" className="hint-btn">Go to Tasks</Link>
-              <Link to="/game" className="hint-btn secondary">Open Battles</Link>
-            </div>
-
-            <div className="hint-footer">This message will disappear in 30 seconds</div>
+            <div className="hint-header">Quick Hint</div>
+            <pre className="hint-text">{hintText}</pre>
           </aside>
         )}
       </main>
 
-      {/* Bottom Navigation (links) */}
       <nav className="bottom-nav-bar" role="navigation" aria-label="Quick navigation">
         <Link to="/rewards" className="nav-btn" aria-label="Store">
           <div className="nav-btn-circle">
