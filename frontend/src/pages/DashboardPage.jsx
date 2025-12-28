@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 
 // Assets (make sure these files exist in src/assets/)
@@ -11,12 +12,9 @@ import iconStore from '../assets/icon-store.png';
 import iconBoosts from '../assets/icon-boosts.png';
 import iconFriends from '../assets/icon-friends.png';
 import iconTreasure from '../assets/icon-earn-coins.png';
-import btnTapAttack from '../assets/btn-tap-attack.png';
 
 function DashboardPage({ user = {} }) {
   const { language, changeLanguage, t } = useLanguage();
-  const [tapCount, setTapCount] = useState(0);
-
   const username = user.username || user.first_name || 'PLAYER NAME';
   const coins = user.coins ?? user.points ?? 27020;
   const gems = user.gems ?? 60;
@@ -26,8 +24,6 @@ function DashboardPage({ user = {} }) {
     const next = language === 'en' ? 'am' : 'en';
     changeLanguage(next);
   };
-
-  const handleQueenTap = () => setTapCount(prev => prev + 1);
 
   return (
     <div className="saba-dashboard">
@@ -79,44 +75,37 @@ function DashboardPage({ user = {} }) {
       </div>
 
       {/* Queen Makeda Section */}
-      <div className="queen-main-section" onClick={handleQueenTap}>
+      <div className="queen-main-section">
         <div className="queen-oval-frame">
           <img src={queenMakeda} alt="Queen Makeda" className="queen-main-img" />
         </div>
-        {tapCount > 0 && (
-          <div className="tap-counter">Taps: {tapCount}</div>
-        )}
       </div>
 
       {/* Bottom Navigation */}
       <div className="bottom-nav-bar">
-        <button className="nav-btn" aria-label="Store">
+        <Link to="/rewards" className="nav-btn" aria-label="Store">
           <div className="nav-btn-circle">
             <img src={iconStore} alt="Store" className="nav-icon" />
           </div>
-        </button>
-        <button className="nav-btn" aria-label="Boosts">
+        </Link>
+
+        <Link to="/game" className="nav-btn" aria-label="Boosts">
           <div className="nav-btn-circle">
             <img src={iconBoosts} alt="Boosts" className="nav-icon" />
           </div>
-        </button>
-        <button className="nav-btn" aria-label="Friends">
+        </Link>
+
+        <Link to="/dashboard" className="nav-btn" aria-label="Friends">
           <div className="nav-btn-circle">
             <img src={iconFriends} alt="Friends" className="nav-icon" />
           </div>
-        </button>
-        <button className="nav-btn" aria-label="Treasure">
-          <div className="nav-btn-circle">
-            <img src={iconTreasure} alt="Treasure" className="nav-icon" />
-          </div>
-        </button>
-      </div>
+        </Link>
 
-      {/* Tap to Attack */}
-      <div className="tap-attack-row">
-        <button className="tap-attack-btn" aria-label="Tap to Attack">
-          <img src={btnTapAttack} alt="Tap to Attack" className="tap-img" />
-        </button>
+        <Link to="/tasks" className="nav-btn" aria-label="Earn Coins">
+          <div className="nav-btn-circle">
+            <img src={iconTreasure} alt="Earn Coins" className="nav-icon" />
+          </div>
+        </Link>
       </div>
     </div>
   );
