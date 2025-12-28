@@ -321,6 +321,117 @@ app.post("/api/tasks/:id/complete", auth, async (req, res) => {
   }
 });
 
+
+// ---------------------------
+// Game: Dino-style 20s play + cooldown
+// ---------------------------
+
+// 1 minute cooldown
+const GAME_COOLDOWN_MS = 60 * 1000;
+
+// POST /api/game/result
+// Body: { userId, coinReward, gemReward, score, duration }
+app.post("/api/game/result", async (req, res) => {
+  try {
+    const { userId, coinReward = 0, gemReward = 0, score = 0, duration = 20 } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+
+    // Fetch user by telegram_id (your frontend uses telegram_id as user.id)
+    const userRes = await pool.query(
+      "SELECT * FROM users WHERE telegram_id = $1",
+      [userId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = userRes.rows[0];
+
+    // Cooldown check
+    if (user.last_game_played) {
+      const last = new Date(user.last_game_played).getTime();
+      const now = Date.now();
+      if (now - last < GAME_COOLDOWN_MS) {
+        const wait = Math.ceil((GAME_COOLDOWN_MS - (now - last)) / 1000);
+        return res.status(429).json({
+          error: "Cooldown active",
+          waitSeconds: wait,
+        });
+      }
+    }
+
+    // Safe numeric values
+    const coinsToAdd = Number(coinReward) || 0;
+    const gemsToAdd = Number(gemReward) || 0;
+
+    // Update DB
+    const updated = await pool.query(
+      `UPDATE users
+       SET coins = coins + $1,
+           gems = gems + $2,
+           last_game_played = NOW(),
+           last_active = NOW()
+       WHERE telegram_id = $3
+       RETURNING id, telegram_id, username, coins, gems`,
+      [coinsToAdd, gemsToAdd, userId]
+    );
+
+    return res.json({
+      success: true,
+      coinsAdded: coinsToAdd,
+      gemsAdded: gemsToAdd,
+      user: updated.rows[0],
+      cooldownSeconds: 60,
+    });
+
+  } catch (err) {
+    console.error("❌ Game result error:", err.message);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/game/status
+// Returns whether user can play or must wait
+app.get("/api/game/status/:telegramId", async (req, res) => {
+  try {
+    const telegramId = req.params.telegramId;
+
+    const userRes = await pool.query(
+      "SELECT last_game_played FROM users WHERE telegram_id = $1",
+      [telegramId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const last = userRes.rows[0].last_game_played;
+    if (!last) {
+      return res.json({ available: true, waitSeconds: 0 });
+    }
+
+    const now = Date.now();
+    const diff = now - new Date(last).getTime();
+
+    if (diff >= GAME_COOLDOWN_MS) {
+      return res.json({ available: true, waitSeconds: 0 });
+    }
+
+    const wait = Math.ceil((GAME_COOLDOWN_MS - diff) / 1000);
+    return res.json({ available: false, waitSeconds: wait });
+
+  } catch (err) {
+    console.error("❌ Game status error:", err.message);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
 // ---------------------------
 // 404
 // ---------------------------
