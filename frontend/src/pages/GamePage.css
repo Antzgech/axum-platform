@@ -1,3 +1,4 @@
+/* Game Fullscreen Container */
 .game-fullscreen {
   position: fixed;
   top: 0;
@@ -13,6 +14,7 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  z-index: 9999; /* Above everything else */
 }
 
 /* Header */
