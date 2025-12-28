@@ -1,19 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './OnboardingPage.css';
-// src/components/ImageTest.jsx
-import React from 'react';
-import queenMakeda from '../assets/queen-makeda.png';
 
-export default function ImageTest() {
-  return (
-    <div style={{ padding: 20 }}>
-      <h3>Image Test</h3>
-      <img src={queenMakeda} alt="Queen Makeda" style={{ maxWidth: 320, width: '100%', height: 'auto' }} />
-    </div>
-  );
-}
-//
 
 
 
