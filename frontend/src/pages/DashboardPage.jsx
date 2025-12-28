@@ -1,136 +1,132 @@
-// frontend/src/pages/DashboardPage.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import './DashboardPage.css';
 
+// Use these exact filenames in frontend/src/assets/
 import queenMakeda from '../assets/queen-makeda.png';
-import iconBoosts from '../assets/icon-boosts.png';
-import iconStore from '../assets/icon-store.png';
-import iconEarnCoins from '../assets/icon-earn-coins.png';
-import iconFriends from '../assets/icon-friends.png';
-import iconBattle from '../assets/icon-battle.png';
-import btnTapAttack from '../assets/btn-tap-attack.png';
 import iconCoin from '../assets/icon-coin.png';
 import iconGem from '../assets/icon-gem.png';
 import iconGlobe from '../assets/icon-globe.png';
+import iconStore from '../assets/icon-store.png';
+import iconBoosts from '../assets/icon-boosts.png';
+import iconFriends from '../assets/icon-friends.png';
+import iconEarnCoins from '../assets/icon-earn-coins.png';
+import iconBattle from '../assets/icon-battle.png';
+import btnTapAttack from '../assets/btn-tap-attack.png';
 
 function DashboardPage({ user = {} }) {
   const { language, changeLanguage, t } = useLanguage();
-  const username = user.username || 'Traveler';
-  const score = user.totalPoints ?? user.points ?? 0;
-  const level = user.currentLevel ?? user.current_level ?? 1;
-  const coins = user.coins ?? 27020;
+  const [tapCount, setTapCount] = useState(0);
+
+  const username = user.username || user.first_name || 'PLAYER NAME';
+  const coins = user.coins ?? user.points ?? 27020;
   const gems = user.gems ?? 60;
+  const level = user.currentLevel ?? user.current_level ?? 1;
 
   const handleLanguageToggle = () => {
-    changeLanguage(language === 'en' ? 'am' : 'en');
-    // optional: window.location.reload();
+    const next = language === 'en' ? 'am' : 'en';
+    changeLanguage(next);
+  };
+
+  const handleQueenTap = () => {
+    setTapCount(prev => prev + 1);
   };
 
   return (
-    <div className="dashboard-root">
-      <div className="dashboard-frame" role="main" aria-label="Axum Dashboard">
-        <div className="dash-top-bar">
-          <div className="dash-top-left">
-            <span className="dash-top-title">{t('app.title') || 'AXUM'}</span>
+    <div className="saba-dashboard">
+      {/* Top Bar */}
+      <div className="saba-top-bar">
+        <div className="player-avatar-section">
+          <div className="avatar-circle">
+            <img src={queenMakeda} alt={username} className="avatar-img" />
           </div>
-
-          <div className="dash-top-center">
-            <div className="dash-currency">
-              <div className="currency-item" title="Coins">
-                <img src={iconCoin} alt="" className="currency-icon" />
-                <span className="currency-value">{coins.toLocaleString()}</span>
-                <button className="currency-plus" aria-label="Add coins">+</button>
-              </div>
-
-              <div className="currency-item" title="Gems">
-                <img src={iconGem} alt="" className="currency-icon" />
-                <span className="currency-value">{gems}</span>
-                <button className="currency-plus" aria-label="Add gems">+</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="dash-top-right">
-            <button
-              className="lang-toggle-btn"
-              onClick={handleLanguageToggle}
-              aria-label="Toggle language"
-            >
-              <img src={iconGlobe} alt="" className="lang-icon" />
-              <span className="lang-label">{language === 'am' ? 'አማ' : 'EN'}</span>
-            </button>
+          <div className="player-name-box">
+            <span className="player-name">{username}</span>
           </div>
         </div>
 
-        <div className="dash-level-bar">
-          <div className="level-pill">{t('dashboard.level') || 'Level'} {level}</div>
-          <div className="score-pill">{t('dashboard.score') || 'Score'} {score.toLocaleString()}</div>
+        <div className="currency-section">
+          <div className="currency-item">
+            <img src={iconCoin} alt="Coins" className="currency-icon" />
+            <span className="currency-value">{coins.toLocaleString()}</span>
+            <button className="currency-add-btn" aria-label="Add coins">+</button>
+          </div>
+
+          <div className="currency-item">
+            <img src={iconGem} alt="Gems" className="currency-icon" />
+            <span className="currency-value">{gems}</span>
+            <button className="currency-add-btn" aria-label="Add gems">+</button>
+          </div>
         </div>
 
-        <div className="dash-battle-row">
-          <button className="battle-button" aria-label="Battle">
-            <img src={iconBattle} alt="" className="battle-img" />
+        <div className="axum-logo-section">
+          <button
+            className="lang-toggle-btn"
+            onClick={handleLanguageToggle}
+            aria-label="Toggle language"
+            title={language === 'en' ? 'አማርኛ' : 'English'}
+          >
+            <img src={iconGlobe} alt="" className="lang-icon" />
           </button>
+          <span className="axum-title">AXUM</span>
         </div>
+      </div>
 
-        <div className="dash-main-area">
-          <div className="radial-column radial-left">
-            <div className="radial-btn">
-              <div className="radial-circle">
-                <img src={queenMakeda} alt={`${username} portrait`} className="queen-portrait-icon" />
-              </div>
-              <span className="radial-label username-label">{username}</span>
-            </div>
+      {/* Daily Game Buttons Row */}
+      <div className="daily-games-row">
+        <button className="daily-game-btn">
+          <div className="daily-game-icon">🏰</div>
+          <span className="daily-game-text">DAILY GAME</span>
+        </button>
 
-            <div className="radial-btn">
-              <div className="radial-circle">
-                <img src={iconBoosts} alt="Boosts" className="radial-icon" />
-              </div>
-              <span className="radial-label">{t('dashboard.boosts') || 'Boosts'}</span>
-            </div>
+        <button className="daily-game-btn">
+          <div className="daily-game-icon">🏰</div>
+          <span className="daily-game-text">DAILY GAME</span>
+        </button>
+      </div>
 
-            <div className="radial-btn">
-              <div className="radial-circle">
-                <img src={iconStore} alt="Store" className="radial-icon" />
-              </div>
-              <span className="radial-label">{t('dashboard.store') || 'Store'}</span>
-            </div>
+      {/* Main Queen Section */}
+      <div className="queen-main-section" onClick={handleQueenTap}>
+        <div className="queen-oval-frame">
+          <img src={queenMakeda} alt="Queen Makeda" className="queen-main-img" />
+        </div>
+        {tapCount > 0 && (
+          <div className="tap-counter">Taps: {tapCount}</div>
+        )}
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="bottom-nav-bar">
+        <button className="nav-btn" aria-label="Store">
+          <div className="nav-btn-circle">
+            <img src={iconStore} alt="Store" className="nav-icon" />
           </div>
+        </button>
 
-          <div className="queen-center">
-            <img src={queenMakeda} alt="Queen Makeda" className="queen-main-img" />
+        <button className="nav-btn" aria-label="Battle">
+          <div className="nav-btn-circle">
+            <img src={iconBattle} alt="Battle" className="nav-icon" />
           </div>
+        </button>
 
-          <div className="radial-column radial-right">
-            <div className="radial-btn">
-              <div className="radial-circle">
-                <img src={iconEarnCoins} alt="Earn Coins" className="radial-icon" />
-              </div>
-              <span className="radial-label">{t('dashboard.earnCoins') || 'Earn Coins'}</span>
-            </div>
-
-            <div className="radial-btn">
-              <div className="radial-circle">
-                <img src={iconFriends} alt="Friends" className="radial-icon" />
-              </div>
-              <span className="radial-label">{t('dashboard.friends') || 'Friends'}</span>
-            </div>
+        <button className="nav-btn" aria-label="Friends">
+          <div className="nav-btn-circle">
+            <img src={iconFriends} alt="Friends" className="nav-icon" />
           </div>
-        </div>
+        </button>
 
-        <div className="dash-bottom-main">
-          <button className="tap-attack-btn" aria-label="Tap to Attack">
-            <img src={btnTapAttack} alt="" className="tap-img" />
-          </button>
-        </div>
+        <button className="nav-btn" aria-label="Earn Coins">
+          <div className="nav-btn-circle">
+            <img src={iconEarnCoins} alt="Earn Coins" className="nav-icon" />
+          </div>
+        </button>
+      </div>
 
-        <div className="dash-footer-nav" role="navigation" aria-label="Quick navigation">
-          <button className="footer-item">Exchange</button>
-          <button className="footer-item">Mine</button>
-          <button className="footer-item">Shop</button>
-          <button className="footer-item">Tasks</button>
-        </div>
+      {/* Tap to Attack */}
+      <div className="tap-attack-row">
+        <button className="tap-attack-btn" aria-label="Tap to Attack">
+          <img src={btnTapAttack} alt="Tap to Attack" className="tap-img" />
+        </button>
       </div>
     </div>
   );
