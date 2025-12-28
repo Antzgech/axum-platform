@@ -1,138 +1,167 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/GamePage.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './GamePage.css';
 
-function GamePage({ user }) {
-  const [levels, setLevels] = useState([]);
-  const [selectedLevel, setSelectedLevel] = useState(null);
-  const [loading, setLoading] = useState(true);
+// Assets
+import iconCoin from '../assets/icon-coin.png';
+import iconGem from '../assets/icon-gem.png';
 
+export default function GamePage({ userId }) {
+  const navigate = useNavigate();
+
+  // Game state
+  const [available, setAvailable] = useState(true); // whether user can start a 20s session
+  const [running, setRunning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(20); // seconds remaining in active session
+  const [coinCollected, setCoinCollected] = useState(0);
+  const [gemCollected, setGemCollected] = useState(0);
+  const cooldownRef = useRef(null);
+  const timerRef = useRef(null);
+
+  // Check cooldown from server (optional) or localStorage
   useEffect(() => {
-    fetchLevels();
+    // Use localStorage key 'gameCooldown' to persist cooldown across tabs
+    const raw = localStorage.getItem('gameCooldown');
+    if (raw) {
+      const until = Number(raw);
+      if (Date.now() < until) {
+        setAvailable(false);
+        const remaining = Math.ceil((until - Date.now()) / 1000);
+        // schedule re-enable
+        cooldownRef.current = window.setTimeout(() => setAvailable(true), remaining * 1000);
+      } else {
+        localStorage.removeItem('gameCooldown');
+        setAvailable(true);
+      }
+    }
+    return () => {
+      if (cooldownRef.current) window.clearTimeout(cooldownRef.current);
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    };
   }, []);
 
-  const fetchLevels = async () => {
-    try {
-      const token = localStorage.getItem('axum_token');
-      const response = await fetch('/api/levels', {
-        headers: { 'Authorization': `Bearer ${token}` }
+  // Start a 20s game session
+  function startGame() {
+    if (!available || running) return;
+    setRunning(true);
+    setTimeLeft(20);
+    setCoinCollected(0);
+    setGemCollected(0);
+
+    // countdown
+    timerRef.current = window.setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          window.clearInterval(timerRef.current);
+          endGame();
+          return 0;
+        }
+        return prev - 1;
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setLevels(data.levels);
-      }
-    } catch (error) {
-      console.error('Failed to fetch levels:', error);
-      // Mock data for demonstration
-      setLevels([
-        { id: 1, name: 'The Awakening', unlocked: true, completed: false, dueDate: '2025-01-15', score: 0, maxScore: 1000 },
-        { id: 2, name: 'The Journey Begins', unlocked: false, completed: false, dueDate: '2025-01-30', score: 0, maxScore: 1500 },
-        { id: 3, name: 'Trials of Wisdom', unlocked: false, completed: false, dueDate: '2025-02-14', score: 0, maxScore: 2000 },
-        { id: 4, name: 'The Sacred Path', unlocked: false, completed: false, dueDate: '2025-02-28', score: 0, maxScore: 2500 },
-        { id: 5, name: 'Champions Rise', unlocked: false, completed: false, dueDate: '2025-03-15', score: 0, maxScore: 3000 },
-        { id: 6, name: 'Jerusalem Awaits', unlocked: false, completed: false, dueDate: '2025-03-30', score: 0, maxScore: 5000 }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    }, 1000);
+  }
 
-  const handlePlayLevel = async (level) => {
-    if (!level.unlocked) {
-      alert('Complete requirements to unlock this level!');
-      return;
-    }
-    setSelectedLevel(level);
-    // Game logic would go here
-  };
+  // Simple interaction: click the big target to collect random small rewards
+  function collectTap() {
+    if (!running) return;
+    // small random increments per tap
+    const coin = Math.floor(Math.random() * 50) + 10; // 10-59
+    const gemChance = Math.random();
+    const gem = gemChance < 0.12 ? 1 : 0; // ~12% chance to get 1 gem per tap
+    setCoinCollected(c => c + coin);
+    setGemCollected(g => g + gem);
+  }
 
-  if (loading) {
-    return <div className="game-loading"><div className="loading-spinner"></div></div>;
+  // End game: persist to server, set cooldown (1 minute), notify dashboard via localStorage
+  async function endGame() {
+    setRunning(false);
+    // set cooldown for 1 minute (60000 ms)
+    const cooldownUntil = Date.now() + 60 * 1000;
+    localStorage.setItem('gameCooldown', String(cooldownUntil));
+    setAvailable(false);
+    cooldownRef.current = window.setTimeout(() => {
+      setAvailable(true);
+      localStorage.removeItem('gameCooldown');
+    }, 60 * 1000);
+
+    // Prepare payload
+    const payload = {
+      userId,
+      coinReward: coinCollected,
+      gemReward: gemCollected,
+      playedAt: new Date().toISOString(),
+      duration: 20,
+    };
+
+    // POST to server endpoint to save results (replace URL with your API)
+    try {
+      await fetch('/api/game/result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      // handle error silently; still update UI
+    }
+
+    // Notify Dashboard via localStorage event (other tabs will receive storage event)
+    localStorage.setItem('gameResult', JSON.stringify({ coinReward: coinCollected, gemReward: gemCollected, ts: Date.now() }));
+    // remove key quickly to allow future events (some browsers require change)
+    setTimeout(() => localStorage.removeItem('gameResult'), 200);
+
+    // Optionally navigate back to dashboard or show summary
+    // navigate('/dashboard');
   }
 
   return (
-    <div className="game-page">
+    <div className="game-page-root">
       <div className="game-header">
-        <h1 className="game-title">Queen Makeda's Challenge</h1>
-        <p className="game-subtitle">Complete all 6 levels to join the final tournament</p>
+        <button className="back-btn" onClick={() => navigate(-1)}>← Back</button>
+        <h2>Boosts — Quick Play</h2>
       </div>
 
-      <div className="levels-container">
-        {levels.map((level, index) => (
-          <div 
-            key={level.id}
-            className={`level-card ${level.unlocked ? 'unlocked' : 'locked'} ${level.completed ? 'completed' : ''}`}
-          >
-            <div className="level-number">Level {level.id}</div>
-            
-            <div className="level-content">
-              <h3 className="level-name">{level.name}</h3>
-              
-              {level.unlocked ? (
-                <>
-                  <div className="level-stats">
-                    <div className="stat">
-                      <span className="stat-label">Your Score</span>
-                      <span className="stat-value">{level.score}</span>
-                    </div>
-                    <div className="stat">
-                      <span className="stat-label">Max Score</span>
-                      <span className="stat-value">{level.maxScore}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="level-deadline">
-                    <span className="deadline-icon">⏰</span>
-                    <span>Due: {level.dueDate}</span>
-                  </div>
-                  
-                  <button 
-                    className="btn btn-primary"
-                    onClick={() => handlePlayLevel(level)}
-                  >
-                    {level.completed ? 'Replay Level' : 'Play Now'} →
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="locked-overlay">
-                    <span className="lock-icon">🔒</span>
-                    <p>Complete Level {level.id - 1} requirements</p>
-                    <p className="unlock-date">Unlocks: {level.dueDate}</p>
-                  </div>
-                </>
-              )}
+      <div className="game-area">
+        <div className="game-info">
+          <div className="status-row">
+            <div className="status-item">
+              <img src={iconCoin} alt="" className="status-icon" />
+              <div className="status-value">{coinCollected.toLocaleString()}</div>
             </div>
-            
-            {level.completed && (
-              <div className="completion-badge">
-                <span>✅ Completed</span>
-              </div>
+            <div className="status-item">
+              <img src={iconGem} alt="" className="status-icon" />
+              <div className="status-value">{gemCollected}</div>
+            </div>
+          </div>
+
+          <div className="timer-row">
+            {running ? (
+              <div className="timer">Time left: <strong>{timeLeft}s</strong></div>
+            ) : available ? (
+              <div className="ready">Ready to play — 20s session</div>
+            ) : (
+              <div className="cooldown">Cooldown active — please wait</div>
             )}
           </div>
-        ))}
-      </div>
-
-      <div className="game-info-section">
-        <div className="info-card">
-          <h3 className="info-title">How It Works</h3>
-          <ul className="info-list">
-            <li>Each level unlocks every 2 weeks</li>
-            <li>Complete requirements (invites, subscriptions, follows) before playing</li>
-            <li>Top 10 players per level earn rewards</li>
-            <li>Top 5 become finalists (30 total finalists)</li>
-            <li>Players can replay levels for higher scores</li>
-            <li>Cannot re-enter top 10 in the same level once rewarded</li>
-          </ul>
         </div>
 
-        <div className="info-card">
-          <h3 className="info-title">Finalist Selection</h3>
-          <p>The top 5 players from each of the 6 levels become finalists. If you qualify in multiple levels, you'll be assigned to your highest level automatically, ensuring 30 unique champions compete in the final tournament!</p>
+        <div className="game-target-area">
+          <button
+            className={`game-target ${running ? 'active' : 'disabled'}`}
+            onClick={collectTap}
+            disabled={!running}
+            aria-label="Collect coins and gems"
+          >
+            {running ? 'TAP!' : 'Start to Play'}
+          </button>
+        </div>
+
+        <div className="game-controls">
+          <button className="start-btn" onClick={startGame} disabled={!available || running}>
+            {running ? 'Playing...' : available ? 'Start 20s' : 'Locked'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
-
-export default GamePage;
