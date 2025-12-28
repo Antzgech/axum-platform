@@ -3,9 +3,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./GamePage.css";
 
+import iconCoin from "../assets/icon-coin.png";
+import iconGem from "../assets/icon-gem.png";
+
 export default function GamePage({ userId }) {
   const navigate = useNavigate();
 
+  // Game state
   const [available, setAvailable] = useState(true);
   const [running, setRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(20);
@@ -18,8 +22,10 @@ export default function GamePage({ userId }) {
   const gameTimerRef = useRef(null);
   const animationRef = useRef(null);
 
+  // Player physics
   const playerRef = useRef({ y: 0, vy: 0, jumping: false });
   const obstaclesRef = useRef([]);
+  const collectiblesRef = useRef([]);
 
   // Cooldown check
   useEffect(() => {
@@ -31,8 +37,6 @@ export default function GamePage({ userId }) {
         setAvailable(false);
         const remaining = Math.ceil((until - now) / 1000);
         startCooldownCountdown(remaining);
-      } else {
-        localStorage.removeItem("gameCooldown");
       }
     }
   }, []);
@@ -60,7 +64,9 @@ export default function GamePage({ userId }) {
     setScore(0);
     setCoinReward(0);
     setGemReward(0);
+
     obstaclesRef.current = [];
+    collectiblesRef.current = [];
     playerRef.current = { y: 0, vy: 0, jumping: false };
 
     // Timer
@@ -78,23 +84,37 @@ export default function GamePage({ userId }) {
     // Animation loop
     const startTime = performance.now();
     let lastSpawn = startTime;
+    let lastCollectible = startTime;
 
     const loop = (now) => {
       const elapsed = now - startTime;
-      const speedFactor = 4 + Math.floor(elapsed / 4000);
 
-      // Spawn obstacles
-      if (now - lastSpawn > 800 - Math.min(500, Math.floor(elapsed / 10))) {
+      // MUCH SLOWER SPEED
+      const speed = 1.5 + elapsed / 15000; // slow ramp
+
+      // Spawn obstacles (slower)
+      if (now - lastSpawn > 1400) {
         obstaclesRef.current.push({
           x: 100,
-          w: 6 + Math.random() * 12,
-          speed: speedFactor + Math.random() * 2,
+          w: 14,
+          speed,
         });
         lastSpawn = now;
       }
 
+      // Spawn collectibles (coins/gems)
+      if (now - lastCollectible > 1800) {
+        collectiblesRef.current.push({
+          x: 100,
+          y: Math.random() * 40 + 10,
+          type: Math.random() < 0.8 ? "coin" : "gem",
+          speed,
+        });
+        lastCollectible = now;
+      }
+
       // Player physics
-      playerRef.current.vy += 0.6;
+      playerRef.current.vy += 0.4; // slower gravity
       playerRef.current.y += playerRef.current.vy;
       if (playerRef.current.y > 0) {
         playerRef.current.y = 0;
@@ -103,13 +123,18 @@ export default function GamePage({ userId }) {
       }
 
       // Move obstacles
-      obstaclesRef.current.forEach((o) => (o.x -= o.speed * 0.5));
-      obstaclesRef.current = obstaclesRef.current.filter((o) => o.x + o.w > -10);
+      obstaclesRef.current.forEach((o) => (o.x -= o.speed));
+      obstaclesRef.current = obstaclesRef.current.filter((o) => o.x > -10);
 
-      // Collision
-      const playerBox = { x: 10, w: 10, y: -playerRef.current.y, h: 30 };
+      // Move collectibles
+      collectiblesRef.current.forEach((c) => (c.x -= c.speed));
+      collectiblesRef.current = collectiblesRef.current.filter((c) => c.x > -10);
+
+      // Collision detection
+      const playerBox = { x: 10, w: 12, y: -playerRef.current.y, h: 30 };
+
       for (const o of obstaclesRef.current) {
-        const obsBox = { x: o.x, w: 4, y: 0, h: 30 };
+        const obsBox = { x: o.x, w: o.w, y: 0, h: 30 };
         if (
           playerBox.x < obsBox.x + obsBox.w &&
           playerBox.x + playerBox.w > obsBox.x &&
@@ -120,6 +145,22 @@ export default function GamePage({ userId }) {
           return;
         }
       }
+
+      // Collect coins/gems
+      collectiblesRef.current.forEach((c) => {
+        const colBox = { x: c.x, w: 10, y: c.y, h: 10 };
+        if (
+          playerBox.x < colBox.x + colBox.w &&
+          playerBox.x + playerBox.w > colBox.x &&
+          playerBox.y < colBox.y + colBox.h &&
+          playerBox.y + playerBox.h > colBox.y
+        ) {
+          if (c.type === "coin") setCoinReward((v) => v + 1);
+          else setGemReward((v) => v + 1);
+
+          c.x = -999; // remove
+        }
+      });
 
       setScore((prev) => prev + 1);
       renderScene();
@@ -132,7 +173,7 @@ export default function GamePage({ userId }) {
   function jump() {
     if (!running) return;
     if (playerRef.current.jumping) return;
-    playerRef.current.vy = -10;
+    playerRef.current.vy = -8; // smoother jump
     playerRef.current.jumping = true;
   }
 
@@ -146,16 +187,25 @@ export default function GamePage({ userId }) {
     }
 
     const obsContainer = canvas.querySelector(".runner-obstacles");
-    if (obsContainer) {
-      obsContainer.innerHTML = "";
-      obstaclesRef.current.forEach((o) => {
-        const el = document.createElement("div");
-        el.className = "runner-obstacle";
-        el.style.left = `${o.x}%`;
-        el.style.width = `${o.w}px`;
-        obsContainer.appendChild(el);
-      });
-    }
+    obsContainer.innerHTML = "";
+    obstaclesRef.current.forEach((o) => {
+      const el = document.createElement("div");
+      el.className = "runner-obstacle";
+      el.style.left = `${o.x}%`;
+      el.style.width = `${o.w}px`;
+      obsContainer.appendChild(el);
+    });
+
+    const colContainer = canvas.querySelector(".runner-collectibles");
+    colContainer.innerHTML = "";
+    collectiblesRef.current.forEach((c) => {
+      const el = document.createElement("img");
+      el.className = "runner-collectible";
+      el.src = c.type === "coin" ? iconCoin : iconGem;
+      el.style.left = `${c.x}%`;
+      el.style.bottom = `${c.y}px`;
+      colContainer.appendChild(el);
+    });
   }
 
   async function endGame() {
@@ -164,13 +214,6 @@ export default function GamePage({ userId }) {
 
     if (gameTimerRef.current) clearInterval(gameTimerRef.current);
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
-
-    // Rewards
-    const coins = Math.floor(score / 5);
-    const gems = Math.floor(score / 100);
-
-    setCoinReward(coins);
-    setGemReward(gems);
 
     // Cooldown
     const cooldownUntil = Date.now() + 60_000;
@@ -186,13 +229,12 @@ export default function GamePage({ userId }) {
         body: JSON.stringify({
           userId,
           score,
-          coinReward: coins,
-          gemReward: gems,
+          coinReward,
+          gemReward,
           duration: 20,
         }),
       });
 
-      // Notify Dashboard
       localStorage.setItem("gameUpdated", Date.now().toString());
       setTimeout(() => localStorage.removeItem("gameUpdated"), 200);
     } catch (err) {
@@ -213,7 +255,7 @@ export default function GamePage({ userId }) {
   }, []);
 
   return (
-    <div className="game-page-root">
+    <div className="game-fullscreen">
       <div className="game-header">
         <button className="back-btn" onClick={() => navigate(-1)}>
           ← Back
@@ -225,14 +267,11 @@ export default function GamePage({ userId }) {
         </div>
       </div>
 
-      <div
-        id="runner-canvas"
-        className="runner-canvas"
-        onClick={jump}
-      >
+      <div id="runner-canvas" className="runner-canvas" onClick={jump}>
         <div className="runner-ground" />
         <div className="runner-player" />
         <div className="runner-obstacles" />
+        <div className="runner-collectibles" />
       </div>
 
       <div className="game-controls">
@@ -246,8 +285,8 @@ export default function GamePage({ userId }) {
       </div>
 
       <div className="game-result-panel">
-        <div>Coins earned: {coinReward}</div>
-        <div>Gems earned: {gemReward}</div>
+        <div>Coins collected: {coinReward}</div>
+        <div>Gems collected: {gemReward}</div>
       </div>
     </div>
   );
