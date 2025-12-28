@@ -1,10 +1,6 @@
-// src/pages/GamePage.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./GamePage.css";
-
-import iconCoin from "../assets/icon-coin.png";
-import iconGem from "../assets/icon-gem.png";
 
 export default function GamePage({ userId }) {
   const navigate = useNavigate();
@@ -17,6 +13,7 @@ export default function GamePage({ userId }) {
   const [coinReward, setCoinReward] = useState(0);
   const [gemReward, setGemReward] = useState(0);
   const [cooldownText, setCooldownText] = useState("");
+  const [showResult, setShowResult] = useState(false);
 
   const cooldownTimerRef = useRef(null);
   const gameTimerRef = useRef(null);
@@ -42,7 +39,7 @@ export default function GamePage({ userId }) {
   }, []);
 
   function startCooldownCountdown(seconds) {
-    setCooldownText(`Locked (${seconds}s)`);
+    setCooldownText(`Next in ${seconds}s`);
     cooldownTimerRef.current = setInterval(() => {
       seconds -= 1;
       if (seconds <= 0) {
@@ -51,7 +48,7 @@ export default function GamePage({ userId }) {
         setCooldownText("");
         localStorage.removeItem("gameCooldown");
       } else {
-        setCooldownText(`Locked (${seconds}s)`);
+        setCooldownText(`Next in ${seconds}s`);
       }
     }, 1000);
   }
@@ -64,6 +61,7 @@ export default function GamePage({ userId }) {
     setScore(0);
     setCoinReward(0);
     setGemReward(0);
+    setShowResult(false);
 
     obstaclesRef.current = [];
     collectiblesRef.current = [];
@@ -88,33 +86,28 @@ export default function GamePage({ userId }) {
 
     const loop = (now) => {
       const elapsed = now - startTime;
+      const speed = 1.2 + elapsed / 20000;
 
-      // MUCH SLOWER SPEED
-      const speed = 1.5 + elapsed / 15000; // slow ramp
-
-      // Spawn obstacles (slower)
-      if (now - lastSpawn > 1400) {
-        obstaclesRef.current.push({
-          x: 100,
-          w: 14,
-          speed,
-        });
+      // Spawn obstacles
+      if (now - lastSpawn > 1600) {
+        obstaclesRef.current.push({ x: 105, w: 40, h: 50, speed });
         lastSpawn = now;
       }
 
-      // Spawn collectibles (coins/gems)
-      if (now - lastCollectible > 1800) {
+      // Spawn collectibles
+      if (now - lastCollectible > 1400) {
         collectiblesRef.current.push({
-          x: 100,
-          y: Math.random() * 40 + 10,
-          type: Math.random() < 0.8 ? "coin" : "gem",
+          x: 105,
+          y: Math.random() * 80 + 40,
+          type: Math.random() < 0.75 ? "coin" : "gem",
           speed,
+          collected: false,
         });
         lastCollectible = now;
       }
 
       // Player physics
-      playerRef.current.vy += 0.4; // slower gravity
+      playerRef.current.vy += 0.5;
       playerRef.current.y += playerRef.current.vy;
       if (playerRef.current.y > 0) {
         playerRef.current.y = 0;
@@ -124,41 +117,44 @@ export default function GamePage({ userId }) {
 
       // Move obstacles
       obstaclesRef.current.forEach((o) => (o.x -= o.speed));
-      obstaclesRef.current = obstaclesRef.current.filter((o) => o.x > -10);
+      obstaclesRef.current = obstaclesRef.current.filter((o) => o.x > -15);
 
       // Move collectibles
-      collectiblesRef.current.forEach((c) => (c.x -= c.speed));
-      collectiblesRef.current = collectiblesRef.current.filter((c) => c.x > -10);
+      collectiblesRef.current.forEach((c) => {
+        if (!c.collected) c.x -= c.speed;
+      });
+      collectiblesRef.current = collectiblesRef.current.filter((c) => c.x > -15);
 
       // Collision detection
-      const playerBox = { x: 10, w: 12, y: -playerRef.current.y, h: 30 };
+      const playerBox = { x: 15, w: 50, y: -playerRef.current.y, h: 50 };
 
+      // Check obstacles
       for (const o of obstaclesRef.current) {
-        const obsBox = { x: o.x, w: o.w, y: 0, h: 30 };
+        const obsBox = { x: o.x, w: o.w, y: 0, h: o.h };
         if (
           playerBox.x < obsBox.x + obsBox.w &&
           playerBox.x + playerBox.w > obsBox.x &&
           playerBox.y < obsBox.y + obsBox.h &&
           playerBox.y + playerBox.h > obsBox.y
         ) {
-          endGame();
+          endGame(true);
           return;
         }
       }
 
-      // Collect coins/gems
+      // Collect items
       collectiblesRef.current.forEach((c) => {
-        const colBox = { x: c.x, w: 10, y: c.y, h: 10 };
+        if (c.collected) return;
+        const colBox = { x: c.x, w: 30, y: c.y, h: 30 };
         if (
           playerBox.x < colBox.x + colBox.w &&
           playerBox.x + playerBox.w > colBox.x &&
           playerBox.y < colBox.y + colBox.h &&
           playerBox.y + playerBox.h > colBox.y
         ) {
+          c.collected = true;
           if (c.type === "coin") setCoinReward((v) => v + 1);
           else setGemReward((v) => v + 1);
-
-          c.x = -999; // remove
         }
       });
 
@@ -173,7 +169,7 @@ export default function GamePage({ userId }) {
   function jump() {
     if (!running) return;
     if (playerRef.current.jumping) return;
-    playerRef.current.vy = -8; // smoother jump
+    playerRef.current.vy = -10;
     playerRef.current.jumping = true;
   }
 
@@ -193,48 +189,42 @@ export default function GamePage({ userId }) {
       el.className = "runner-obstacle";
       el.style.left = `${o.x}%`;
       el.style.width = `${o.w}px`;
+      el.style.height = `${o.h}px`;
       obsContainer.appendChild(el);
     });
 
     const colContainer = canvas.querySelector(".runner-collectibles");
     colContainer.innerHTML = "";
     collectiblesRef.current.forEach((c) => {
-      const el = document.createElement("img");
-      el.className = "runner-collectible";
-      el.src = c.type === "coin" ? iconCoin : iconGem;
+      if (c.collected) return;
+      const el = document.createElement("div");
+      el.className = `runner-collectible ${c.type}`;
+      el.textContent = c.type === "coin" ? "🪙" : "💎";
       el.style.left = `${c.x}%`;
       el.style.bottom = `${c.y}px`;
       colContainer.appendChild(el);
     });
   }
 
-  async function endGame() {
+  async function endGame(collision = false) {
     if (!running) return;
     setRunning(false);
+    setShowResult(true);
 
     if (gameTimerRef.current) clearInterval(gameTimerRef.current);
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
 
-    // Cooldown
     const cooldownUntil = Date.now() + 60_000;
     localStorage.setItem("gameCooldown", String(cooldownUntil));
     setAvailable(false);
     startCooldownCountdown(60);
 
-    // Send to backend
     try {
       await fetch("/api/game/result", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          score,
-          coinReward,
-          gemReward,
-          duration: 20,
-        }),
+        body: JSON.stringify({ userId, score, coinReward, gemReward, duration: 20 }),
       });
-
       localStorage.setItem("gameUpdated", Date.now().toString());
       setTimeout(() => localStorage.removeItem("gameUpdated"), 200);
     } catch (err) {
@@ -242,52 +232,130 @@ export default function GamePage({ userId }) {
     }
   }
 
-  // Space to jump
+  // Handle keyboard and touch
   useEffect(() => {
     const onKey = (e) => {
-      if (e.code === "Space") {
+      if (e.code === "Space" || e.code === "ArrowUp") {
         e.preventDefault();
         jump();
       }
     };
+    
+    const onTouch = (e) => {
+      e.preventDefault();
+      jump();
+    };
+
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+    
+    const canvas = document.getElementById("runner-canvas");
+    if (canvas) {
+      canvas.addEventListener("touchstart", onTouch, { passive: false });
+      canvas.addEventListener("click", onTouch);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      if (canvas) {
+        canvas.removeEventListener("touchstart", onTouch);
+        canvas.removeEventListener("click", onTouch);
+      }
+    };
+  }, [running]);
 
   return (
     <div className="game-fullscreen">
       <div className="game-header">
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <h2>Boosts — Quick Play</h2>
+        <button className="back-btn" onClick={() => navigate(-1)}>← Back</button>
+        <h2 className="game-title">🏃 Queen's Run</h2>
         <div className="game-hud">
-          <div>Time: {timeLeft}s</div>
-          <div>Score: {score}</div>
+          <div className="hud-item">
+            <span className="hud-icon">⏱</span>
+            <span className="hud-value">{timeLeft}s</span>
+          </div>
+          <div className="hud-item">
+            <span className="hud-icon">⭐</span>
+            <span className="hud-value">{score}</span>
+          </div>
         </div>
       </div>
 
-      <div id="runner-canvas" className="runner-canvas" onClick={jump}>
+      <div id="runner-canvas" className="runner-canvas">
+        <div className="bg-layer bg-sky" />
+        <div className="bg-layer bg-mountains" />
+        <div className="bg-layer bg-hills" />
+        
         <div className="runner-ground" />
-        <div className="runner-player" />
+        <div className="runner-player">
+          <div className="player-character">👸🏾</div>
+        </div>
         <div className="runner-obstacles" />
         <div className="runner-collectibles" />
+        
+        {!running && available && (
+          <div className="tap-hint">👆 Tap to Jump</div>
+        )}
       </div>
 
       <div className="game-controls">
         <button
-          className="start-btn"
+          className={`start-btn ${!available || running ? 'disabled' : ''}`}
           onClick={startGame}
           disabled={!available || running}
         >
-          {running ? "Playing..." : available ? "Start 20s" : cooldownText}
+          {running ? (
+            <><span className="btn-icon">🎮</span><span>Playing...</span></>
+          ) : available ? (
+            <><span className="btn-icon">🚀</span><span>Start 20s Game</span></>
+          ) : (
+            <><span className="btn-icon">⏳</span><span>{cooldownText}</span></>
+          )}
         </button>
       </div>
 
-      <div className="game-result-panel">
-        <div>Coins collected: {coinReward}</div>
-        <div>Gems collected: {gemReward}</div>
-      </div>
+      {showResult && (
+        <div className="game-result-overlay">
+          <div className="result-panel">
+            <h3 className="result-title">🎉 Game Over!</h3>
+            <div className="result-score">
+              <div className="score-big">
+                <span className="score-label">Score</span>
+                <span className="score-number">{score}</span>
+              </div>
+            </div>
+            <div className="result-rewards">
+              <div className="reward-item">
+                <span className="reward-emoji">🪙</span>
+                <span className="reward-value">+{coinReward}</span>
+              </div>
+              <div className="reward-item">
+                <span className="reward-emoji">💎</span>
+                <span className="reward-value">+{gemReward}</span>
+              </div>
+            </div>
+            <button className="close-result-btn" onClick={() => setShowResult(false)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {running && (coinReward > 0 || gemReward > 0) && (
+        <div className="live-rewards">
+          {coinReward > 0 && (
+            <div className="live-reward-item">
+              <span className="live-reward-emoji">🪙</span>
+              <span>{coinReward}</span>
+            </div>
+          )}
+          {gemReward > 0 && (
+            <div className="live-reward-item">
+              <span className="live-reward-emoji">💎</span>
+              <span>{gemReward}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
