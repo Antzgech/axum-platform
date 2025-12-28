@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
@@ -17,74 +17,49 @@ import iconEarnCoins from '../assets/icon-earn-coins.png';
 export default function DashboardPage({ user = {}, fetchUser }) {
   const { language, changeLanguage } = useLanguage();
 
-  // Local currency state (keeps UI responsive)
-  const [coins, setCoins] = useState(user.coins ?? user.points ?? 27020);
-  const [gems, setGems] = useState(user.gems ?? 60);
+  const username = user.username || user.first_name || 'PLAYER NAME';
+  const avatarSrc = user.photo_url || queenMakeda;
+  const coins = user.coins ?? 0;
+  const gems = user.gems ?? 0;
 
-  // Makeda hint state (3s visibility handled elsewhere)
-  const [hintVisible, setHintVisible] = useState(false);
-  const [hintText, setHintText] = useState('');
-  const hideTimerRef = useRef(null);
-
-  // Avatar
-  const avatarSrc = user.photo_url || user.avatarUrl || queenMakeda;
-
-  // Language toggle
   const handleLanguageToggle = () => {
     const next = language === 'en' ? 'am' : 'en';
     changeLanguage(next);
   };
 
-  // Makeda tap: show hint for 3 seconds (user already set 3s)
-  function handleQueenTap() {
-    // Example hint text — replace with computeRemaining logic if needed
-    setHintText('Complete 3 battles\nCollect 10,000 coins\nFinish 5 tasks');
-    setHintVisible(true);
-    if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = window.setTimeout(() => {
-      setHintVisible(false);
-      hideTimerRef.current = null;
-    }, 3000);
-  }
-
-  // Listen for game results saved to localStorage by GamePage and update UI
+  // When the game finishes, GamePage will set localStorage "gameUpdated"
+  // Listen for that and call fetchUser() to refresh from the database
   useEffect(() => {
-    function onStorage(e) {
-      if (e.key === 'gameResult' && e.newValue) {
-        try {
-          const result = JSON.parse(e.newValue);
-          if (result.coinReward) setCoins(prev => prev + Number(result.coinReward));
-          if (result.gemReward) setGems(prev => prev + Number(result.gemReward));
-          // Optionally refetch user from server if fetchUser provided
-          if (typeof fetchUser === 'function') fetchUser();
-        } catch (err) {
-          // ignore parse errors
-        }
+    if (typeof fetchUser !== 'function') return;
+
+    const handler = (e) => {
+      if (e.key === 'gameUpdated' && e.newValue) {
+        fetchUser();
       }
-    }
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [fetchUser]);
+    };
 
-  // Also poll once on mount to reflect server state (optional)
-  useEffect(() => {
-    if (typeof fetchUser === 'function') {
-      fetchUser().then(updated => {
-        if (updated?.coins !== undefined) setCoins(updated.coins);
-        if (updated?.gems !== undefined) setGems(updated.gems);
-      }).catch(() => {});
+    window.addEventListener('storage', handler);
+
+    // Also check once on mount in case we just came back and event already fired
+    const flag = localStorage.getItem('gameUpdated');
+    if (flag) {
+      fetchUser();
+      localStorage.removeItem('gameUpdated');
     }
+
+    return () => window.removeEventListener('storage', handler);
   }, [fetchUser]);
 
   return (
     <div className="saba-dashboard full-screen">
-      <header className="top-block" role="banner">
+      {/* Top: avatar + name */}
+      <header className="top-block">
         <div className="top-left">
           <div className="avatar-circle">
-            <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
+            <img src={avatarSrc} alt={username} className="avatar-img" />
           </div>
           <div className="player-name-box">
-            <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
+            <span className="player-name">{username}</span>
           </div>
         </div>
 
@@ -101,6 +76,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </header>
 
+      {/* Coins & Gems (from DB: coins, gems) */}
       <div className="currency-row logo-style" role="region" aria-label="Currency">
         <div className="currency-item logo-box">
           <img src={iconCoin} alt="Coins" className="currency-icon" />
@@ -112,26 +88,18 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </div>
 
+      {/* Makeda center */}
       <main className="queen-main-section" role="main">
         <div className="queen-oval-frame">
           <img
             src={queenMakeda}
             alt="Queen Makeda"
             className="queen-main-img floating"
-            onClick={handleQueenTap}
-            role="button"
-            aria-label="Queen Makeda"
           />
         </div>
-
-        {hintVisible && (
-          <aside className="hint-popover" role="status" aria-live="polite">
-            <div className="hint-header">Quick Hint</div>
-            <pre className="hint-text">{hintText}</pre>
-          </aside>
-        )}
       </main>
 
+      {/* Bottom Navigation */}
       <nav className="bottom-nav-bar" role="navigation" aria-label="Quick navigation">
         <Link to="/rewards" className="nav-btn" aria-label="Store">
           <div className="nav-btn-circle">
