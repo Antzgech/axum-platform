@@ -393,42 +393,40 @@ app.post("/api/game/result", async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
-
-// GET /api/game/status
-// Returns whether user can play or must wait
-app.get("/api/game/status/:telegramId", async (req, res) => {
+// ---------------------------
+// Add 1 coin when Makeda tapped
+// ---------------------------
+app.post("/api/user/add-coin", auth, async (req, res) => {
   try {
-    const telegramId = req.params.telegramId;
+    const telegramId = req.user.telegramId;
 
-    const userRes = await pool.query(
-      "SELECT last_game_played FROM users WHERE telegram_id = $1",
+    const updated = await pool.query(
+      `UPDATE users
+       SET coins = coins + 1,
+           last_active = NOW()
+       WHERE telegram_id = $1
+       RETURNING coins, gems`,
       [telegramId]
     );
 
-    if (userRes.rows.length === 0) {
+    if (updated.rowCount === 0) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const last = userRes.rows[0].last_game_played;
-    if (!last) {
-      return res.json({ available: true, waitSeconds: 0 });
-    }
-
-    const now = Date.now();
-    const diff = now - new Date(last).getTime();
-
-    if (diff >= GAME_COOLDOWN_MS) {
-      return res.json({ available: true, waitSeconds: 0 });
-    }
-
-    const wait = Math.ceil((GAME_COOLDOWN_MS - diff) / 1000);
-    return res.json({ available: false, waitSeconds: wait });
+    res.json({
+      success: true,
+      coins: updated.rows[0].coins,
+      gems: updated.rows[0].gems
+    });
 
   } catch (err) {
-    console.error("❌ Game status error:", err.message);
-    return res.status(500).json({ error: "Server error" });
+    console.error("Makeda coin error:", err.message);
+    res.status(500).json({ error: "Server error" });
   }
 });
+
+
+
 
 
 
