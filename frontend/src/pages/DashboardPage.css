@@ -15,35 +15,10 @@
   max-width: 600px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   font-size: 1rem;
   font-weight: 600;
   color: var(--gold-primary);
   margin-bottom: 1rem;
-  gap: 0.5rem;
-}
-
-.language-toggle-btn {
-  padding: 0.5rem 0.75rem;
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  border-radius: var(--radius-sm);
-  color: var(--gold-primary);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.language-toggle-btn:hover {
-  background: rgba(212, 175, 55, 0.2);
-  border-color: var(--gold-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
-}
-
-.language-toggle-btn:active {
-  transform: translateY(0);
 }
 
 /* Daily Challenges */
@@ -62,6 +37,14 @@
   color: var(--gold-light);
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
   text-align: center;
+  display: flex;
+  justify-content: space-between;
+  width: 160px;
+}
+
+.timer {
+  font-size: 0.75rem;
+  color: var(--neutral-light);
 }
 
 /* Queen Section */
