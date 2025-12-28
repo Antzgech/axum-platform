@@ -27,6 +27,24 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     changeLanguage(next);
   };
 
+
+// Hide footer on mount, show on unmount
+useEffect(() => {
+  const footer = document.querySelector('footer');
+  const navbar = document.querySelector('nav');
+  if (footer) footer.style.display = 'none';
+  if (navbar) navbar.style.display = 'none';
+
+  return () => {
+    // Restore when leaving
+    if (footer) footer.style.display = '';
+    if (navbar) navbar.style.display = '';
+  };
+}, []);
+
+  
+
+  
   // Refresh user when game updates DB
   useEffect(() => {
     if (!fetchUser) return;
