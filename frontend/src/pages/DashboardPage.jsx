@@ -9,7 +9,8 @@ function DashboardPage({ user, fetchUser }) {
   const [localGems, setLocalGems] = useState(0);
   const [tapping, setTapping] = useState(false);
 
-  // Initialize from user object
+  const API_URL = 'https://axum-backend-production.up.railway.app';
+
   useEffect(() => {
     if (user) {
       setLocalCoins(user.coins || 0);
@@ -17,18 +18,15 @@ function DashboardPage({ user, fetchUser }) {
     }
   }, [user]);
 
-  // Handle Makeda tap
   const handleMakedaTap = async () => {
-    if (tapping) return; // Prevent multiple taps
+    if (tapping) return;
     
     setTapping(true);
-    
-    // Optimistically update UI
     setLocalCoins(prev => prev + 1);
 
     try {
       const token = localStorage.getItem('axum_token');
-      const response = await fetch('/api/user/add-coin', {
+      const response = await fetch(`${API_URL}/api/user/add-coin`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -38,21 +36,16 @@ function DashboardPage({ user, fetchUser }) {
 
       if (response.ok) {
         const data = await response.json();
-        // Update with server response
         setLocalCoins(data.coins || 0);
         setLocalGems(data.gems || 0);
         
-        // Refresh user data from server
         if (fetchUser) {
           fetchUser();
         }
       } else {
-        // Revert on error
         setLocalCoins(prev => prev - 1);
-        console.error('Failed to add coin');
       }
     } catch (error) {
-      // Revert on error
       setLocalCoins(prev => prev - 1);
       console.error('Error adding coin:', error);
     } finally {
@@ -62,7 +55,6 @@ function DashboardPage({ user, fetchUser }) {
 
   return (
     <div className="dashboard-page">
-      {/* Header */}
       <div className="dashboard-header">
         <div className="user-avatar">
           {user?.photo_url ? (
@@ -79,7 +71,6 @@ function DashboardPage({ user, fetchUser }) {
         </div>
       </div>
 
-      {/* Currency Display */}
       <div className="currency-row">
         <div className="currency-box">
           <span className="currency-icon">🪙</span>
@@ -97,7 +88,6 @@ function DashboardPage({ user, fetchUser }) {
         </div>
       </div>
 
-      {/* Queen Makeda - Tappable */}
       <div className="makeda-container">
         <div 
           className={`makeda-oval ${tapping ? 'tapping' : ''}`}
@@ -112,7 +102,6 @@ function DashboardPage({ user, fetchUser }) {
         </div>
       </div>
 
-      {/* Navigation Buttons */}
       <div className="nav-buttons">
         <Link to="/rewards" className="nav-button">
           <div className="nav-icon">🏪</div>
