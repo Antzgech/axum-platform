@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import './TasksPage.css';
- 
+
 function TasksPage({ user, fetchUser }) {
   const { t } = useLanguage();
   const [tasks, setTasks] = useState([]);
