@@ -17,8 +17,6 @@ function AppContent() {
   const location = useLocation();
 
   const isDashboard = location.pathname === '/' || location.pathname === '/dashboard';
-
-  // IMPORTANT: Use full URL, not relative!
   const API_URL = 'https://axum-backend-production.up.railway.app';
 
   const fetchUser = async () => {
@@ -63,13 +61,8 @@ function AppContent() {
         body: JSON.stringify(telegramUser)
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response content-type:', response.headers.get('content-type'));
-
       if (!response.ok) {
-        console.error('Login failed with status:', response.status);
-        const text = await response.text();
-        console.error('Response:', text);
+        console.error('Login failed');
         setLoading(false);
         return;
       }
@@ -82,7 +75,6 @@ function AppContent() {
       setLoading(false);
     } catch (error) {
       console.error('❌ Login error:', error);
-      alert('Login failed. Check console for details.');
       setLoading(false);
     }
   };
