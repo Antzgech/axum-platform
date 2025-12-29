@@ -263,29 +263,17 @@ function TasksPage({ user }) {
         )}
       </div>
 
-     {/* Info Section */}
-      <div className="tasks-info-section">
-        <div className="info-card">
-          <div className="info-icon">ℹ️</div>
+      {/* Info Section */}
+      <div className="info-section">
+        <div className="info-icon">ℹ️</div>
+        <div className="info-content">
           <h3>How Tasks Work</h3>
           <p>
             Complete social media tasks to earn coins and unlock new levels. 
             Each task rewards you with coins that count towards your progression.
           </p>
         </div>
-
-        <div className="info-card">
-          <div className="info-icon">⚡</div>
-          <h3>Quick Tips</h3>
-          <ul className="tips-list">
-            <li>Complete all tasks to maximize your earnings</li>
-            <li>Invite friends for bonus rewards</li>
-            <li>Check back daily for new tasks</li>
-            <li>Tasks are verified automatically</li>
-          </ul>
-        </div>
       </div>
-    </div>
 
       {/* Invite Modal */}
       {showInviteModal && (
