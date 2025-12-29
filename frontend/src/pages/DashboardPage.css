@@ -24,7 +24,11 @@
   margin: 0;
   overflow: hidden;
   background: linear-gradient(180deg, #1A1410 0%, #0F0A08 100%);
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 /* === Decorative Background Pattern === */
@@ -57,12 +61,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 18px 12px 18px;
+  padding: 14px 16px 8px 16px;
   background: linear-gradient(180deg, #2D1B3A 0%, #1F1228 100%);
   border-bottom: 3px solid rgba(212, 175, 55, 0.4);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 /* === Decorative Header Pattern === */
@@ -98,8 +103,8 @@
 
 /* === Avatar with Royal Border === */
 .avatar-circle {
-  width: 72px;
-  height: 72px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   padding: 3px;
   background: linear-gradient(135deg, #2D1B3A 0%, #3D2650 50%, var(--gold-shine) 100%);
@@ -225,9 +230,10 @@
   display: flex;
   justify-content: center;
   gap: 16px;
-  padding: 12px 16px 8px 16px;
+  padding: 8px 16px 6px 16px;
   position: relative;
   z-index: 5;
+  flex-shrink: 0;
 }
 
 .logo-box {
@@ -294,16 +300,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 8px 12px;
   position: relative;
-  flex: 1 1 auto;
+  flex: 1;
+  min-height: 0;
   z-index: 1;
 }
 
 /* === Royal Oval Frame === */
 .queen-oval-frame {
   width: 100%;
-  max-width: 720px;
+  max-width: 500px;
   aspect-ratio: 3 / 4;
   background: radial-gradient(ellipse at center, #2D1B3A 0%, #1F1228 60%, #120A1A 100%);
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
@@ -316,8 +323,8 @@
   justify-content: center;
   overflow: visible;
   position: relative;
-  padding: 8px;
-  border: 4px solid rgba(212, 175, 55, 0.3);
+  padding: 6px;
+  border: 3px solid rgba(212, 175, 55, 0.3);
 }
 
 /* === Decorative Glow === */
@@ -340,14 +347,14 @@
 
 /* === Makeda - Larger & Floating Out === */
 .queen-main-img {
-  width: 125%;
-  max-width: 1400px;
+  width: 120%;
+  max-width: 1200px;
   height: auto;
   object-fit: contain;
   transform-origin: center bottom;
   pointer-events: auto;
   position: relative;
-  top: 8px;
+  top: 6px;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.7));
   cursor: pointer;
   transition: all 0.3s ease;
@@ -379,13 +386,13 @@
 
 .hint-popover {
   position: absolute;
-  bottom: 24%;
+  bottom: 20%;
   left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(180deg, rgba(30, 28, 36, 0.98) 0%, rgba(18, 16, 22, 0.98) 100%);
   color: var(--gold-shine);
-  padding: 16px 20px;
-  border-radius: 16px;
+  padding: 12px 16px;
+  border-radius: 14px;
   border: 2px solid rgba(212, 175, 55, 0.3);
   box-shadow: 
     0 20px 50px rgba(0, 0, 0, 0.8),
@@ -445,15 +452,16 @@
 
 .bottom-nav-bar {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   justify-content: space-around;
   align-items: center;
-  padding: 16px 20px;
+  padding: 12px 16px;
   background: linear-gradient(180deg, rgba(45, 27, 58, 0.95) 0%, rgba(26, 15, 35, 0.98) 100%);
   border-top: 3px solid rgba(212, 175, 55, 0.3);
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .bottom-nav-bar::before {
@@ -481,12 +489,29 @@
   position: relative;
 }
 
+/* Staggered floating animation for each button */
+.nav-btn:nth-child(1) .nav-btn-circle {
+  animation-delay: 0s;
+}
+
+.nav-btn:nth-child(2) .nav-btn-circle {
+  animation-delay: 0.2s;
+}
+
+.nav-btn:nth-child(3) .nav-btn-circle {
+  animation-delay: 0.4s;
+}
+
+.nav-btn:nth-child(4) .nav-btn-circle {
+  animation-delay: 0.6s;
+}
+
 .nav-btn-circle {
-  width: 76px;
-  height: 76px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: linear-gradient(135deg, #2D1B3A 0%, #3D2650 100%);
-  border: 4px solid var(--gold-shine);
+  border: 3px solid var(--gold-shine);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -497,6 +522,16 @@
   transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   position: relative;
   overflow: hidden;
+  animation: floatButtons 3s ease-in-out infinite;
+}
+
+@keyframes floatButtons {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 .nav-btn-circle::before {
@@ -530,8 +565,8 @@
 }
 
 .nav-icon {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
   position: relative;
   z-index: 1;
