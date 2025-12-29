@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 // ---------------------------
 // CORS + JSON
 // ---------------------------
-const FRONTEND_URL = process.env.FRONTEND_URL; // e.g. https://axum-frontend.up.railway.app
+const FRONTEND_URL = process.env.FRONTEND_URL;
 console.log("🌐 FRONTEND_URL:", FRONTEND_URL || "not set ❌");
 
 app.use(cors({
@@ -68,7 +68,7 @@ const pool = new Pool({
     `);
     console.log("✅ Users table created/verified");
 
-    // Add new columns if they don't exist (for existing databases)
+    // Add new columns if they don't exist
     await pool.query(`
       DO $$ 
       BEGIN
@@ -93,11 +93,20 @@ const pool = new Pool({
         END IF;
       END $$;
     `);
+    
+    // Update NULL values
+    await pool.query(`
+      UPDATE users SET coins = 0 WHERE coins IS NULL;
+      UPDATE users SET gems = 0 WHERE gems IS NULL;
+      UPDATE users SET invited_friends = 0 WHERE invited_friends IS NULL;
+    `);
+    
     console.log("✅ Database schema updated");
 
-    // Create index for faster referral lookups
+    // Create indexes
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_users_invited_by ON users(invited_by);
+      CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
     `);
     console.log("✅ Indexes created");
 
@@ -186,7 +195,6 @@ app.get("/api/health", (req, res) => {
 app.post("/api/auth/telegram", async (req, res) => {
   try {
     console.log("🔐 /api/auth/telegram called");
-    console.log("📥 Body:", req.body);
 
     const { id, first_name, last_name, username, photo_url } = req.body || {};
 
@@ -267,7 +275,7 @@ app.post("/api/auth/telegram", async (req, res) => {
 });
 
 // ---------------------------
-// Get current user (protected)
+// Get current user (NEW ENDPOINT!)
 // ---------------------------
 app.get("/api/auth/me", auth, async (req, res) => {
   try {
@@ -331,7 +339,6 @@ app.post("/api/referral/check", async (req, res) => {
       return res.status(400).json({ error: "Missing telegram_id" });
     }
 
-    // Check if this user already has a referrer
     const userCheck = await pool.query(
       "SELECT invited_by, telegram_id FROM users WHERE telegram_id = $1",
       [telegram_id]
@@ -343,7 +350,6 @@ app.post("/api/referral/check", async (req, res) => {
 
     const user = userCheck.rows[0];
 
-    // If user already has a referrer, don't process again
     if (user.invited_by) {
       console.log(`⚠️ User ${telegram_id} already has referrer: ${user.invited_by}`);
       return res.json({ 
@@ -353,18 +359,15 @@ app.post("/api/referral/check", async (req, res) => {
       });
     }
 
-    // If no referrer provided, nothing to do
     if (!referred_by) {
       return res.json({ success: false, message: "No referrer provided" });
     }
 
-    // Don't allow self-referral
     if (referred_by === telegram_id || referred_by === telegram_id.toString()) {
       console.log(`⚠️ Self-referral attempt blocked: ${telegram_id}`);
       return res.json({ success: false, message: "Cannot refer yourself" });
     }
 
-    // Check if referrer exists
     const referrerCheck = await pool.query(
       "SELECT telegram_id, invited_friends, coins FROM users WHERE telegram_id = $1",
       [referred_by]
@@ -377,13 +380,11 @@ app.post("/api/referral/check", async (req, res) => {
 
     const referrer = referrerCheck.rows[0];
 
-    // Update the new user with referrer ID
     await pool.query(
       "UPDATE users SET invited_by = $1 WHERE telegram_id = $2",
       [referred_by, telegram_id]
     );
 
-    // Increment referrer's invited_friends count and add 100 coins
     const newInvitedCount = (referrer.invited_friends || 0) + 1;
     const newCoins = (referrer.coins || 0) + 100;
 
@@ -414,7 +415,6 @@ app.get("/api/tasks", auth, async (req, res) => {
   try {
     const telegramId = req.user.telegramId;
     
-    // Get user's completed tasks
     const userRes = await pool.query(
       "SELECT completed_tasks FROM users WHERE telegram_id = $1",
       [telegramId]
@@ -426,7 +426,6 @@ app.get("/api/tasks", auth, async (req, res) => {
 
     const completedTasks = userRes.rows[0].completed_tasks || [];
 
-    // Return tasks with completion status
     const tasksWithStatus = Array.from(tasks.values()).map(task => ({
       ...task,
       completed: completedTasks.includes(task.id)
@@ -436,7 +435,6 @@ app.get("/api/tasks", auth, async (req, res) => {
 
   } catch (error) {
     console.error("❌ Tasks fetch error:", error.message);
-    // Fallback: return all tasks as incomplete
     res.json({
       tasks: Array.from(tasks.values()).map(t => ({
         ...t,
@@ -456,7 +454,6 @@ app.post("/api/tasks/:id/complete", auth, async (req, res) => {
       return res.status(404).json({ error: "Task not found" });
     }
 
-    // Get user
     const userRes = await pool.query(
       "SELECT * FROM users WHERE telegram_id = $1",
       [telegramId]
@@ -469,7 +466,6 @@ app.post("/api/tasks/:id/complete", auth, async (req, res) => {
     const u = userRes.rows[0];
     const completed = u.completed_tasks || [];
 
-    // Check if already completed
     if (completed.includes(taskId)) {
       console.log(`⚠️ Task ${taskId} already completed by ${u.username}`);
       return res.status(400).json({ 
@@ -478,19 +474,14 @@ app.post("/api/tasks/:id/complete", auth, async (req, res) => {
       });
     }
 
-    // Add task to completed
     const newCompleted = [...completed, taskId];
-    
-    // Add coins
     const newCoins = (u.coins || 0) + task.points;
     
-    // Update level scores
     const levelScores = u.level_scores || {
       1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0
     };
     levelScores[u.current_level] = (levelScores[u.current_level] || 0) + task.points;
 
-    // Update database
     await pool.query(
       "UPDATE users SET completed_tasks = $1, coins = $2, level_scores = $3 WHERE telegram_id = $4",
       [newCompleted, newCoins, JSON.stringify(levelScores), telegramId]
@@ -512,9 +503,9 @@ app.post("/api/tasks/:id/complete", auth, async (req, res) => {
 });
 
 // ---------------------------
-// Game: Dino-style 20s play + cooldown
+// Game
 // ---------------------------
-const GAME_COOLDOWN_MS = 60 * 1000; // 1 minute
+const GAME_COOLDOWN_MS = 60 * 1000;
 
 app.post("/api/game/result", async (req, res) => {
   try {
@@ -524,7 +515,6 @@ app.post("/api/game/result", async (req, res) => {
       return res.status(400).json({ error: "Missing userId" });
     }
 
-    // Fetch user by telegram_id
     const userRes = await pool.query(
       "SELECT * FROM users WHERE telegram_id = $1",
       [userId]
@@ -536,7 +526,6 @@ app.post("/api/game/result", async (req, res) => {
 
     const user = userRes.rows[0];
 
-    // Cooldown check
     if (user.last_game_played) {
       const last = new Date(user.last_game_played).getTime();
       const now = Date.now();
@@ -549,11 +538,9 @@ app.post("/api/game/result", async (req, res) => {
       }
     }
 
-    // Safe numeric values
     const coinsToAdd = Number(coinReward) || 0;
     const gemsToAdd = Number(gemReward) || 0;
 
-    // Update DB
     const updated = await pool.query(
       `UPDATE users
        SET coins = coins + $1,
@@ -582,7 +569,7 @@ app.post("/api/game/result", async (req, res) => {
 });
 
 // ---------------------------
-// Add 1 coin when Makeda tapped
+// Add coin when Makeda tapped
 // ---------------------------
 app.post("/api/user/add-coin", auth, async (req, res) => {
   try {
