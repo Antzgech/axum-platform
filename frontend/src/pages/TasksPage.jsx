@@ -128,8 +128,8 @@ function TasksPage({ user }) {
     return infos[task.type] || 'Complete this task to earn coins.';
   };
 
-  // Get the first 3 social tasks (excluding invite)
-  const socialTasks = tasks.filter(t => t.type !== 'invite').slice(0, 3);
+  // Get all social tasks (not just 3)
+  const socialTasks = tasks.filter(t => t.type !== 'invite');
 
   return (
     <div className="tasks-page-clean">
@@ -181,10 +181,10 @@ function TasksPage({ user }) {
           </div>
           <div className="task-row-right">
             <button 
-              className={`task-action-btn ${invitedFriends >= levelRequirement ? 'completed' : ''}`}
-              onClick={() => setShowInviteModal(true)}
+              className={`task-action-btn invite-btn ${invitedFriends >= levelRequirement ? 'completed' : ''}`}
+              onClick={handleShareTelegram}
             >
-              {invitedFriends >= levelRequirement ? '✅ Joined' : 'Join'}
+              {invitedFriends >= levelRequirement ? '✅ Done' : 'Invite'}
             </button>
             <button 
               className="info-btn"
