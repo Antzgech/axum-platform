@@ -2,21 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import './TasksPage.css';
 
-function TasksPage({ user }) {
+function TasksPage({ user, fetchUser }) {
   const { t } = useLanguage();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showTaskInfo, setShowTaskInfo] = useState(null);
+  const [showInfoModal, setShowInfoModal] = useState(null);
   const [inviteLink, setInviteLink] = useState('');
+  
+  // Calculate stats
+  const completedTasks = tasks.filter(t => t.completed).length;
+  const totalTasks = tasks.length;
+  const earnedCoins = tasks.filter(t => t.completed).reduce((sum, t) => sum + t.points, 0);
+  const availableTasks = tasks.filter(t => !t.completed).length;
 
-  // Stats
-  const [completedTasks, setCompletedTasks] = useState(0);
-  const [totalTasks, setTotalTasks] = useState(0);
-  const [coinsEarned, setCoinsEarned] = useState(0);
-  const [availableTasks, setAvailableTasks] = useState(0);
-
-  // User current level data
+  // User invite data
   const currentLevel = user?.current_level || 1;
   const invitedFriends = user?.invited_friends || 0;
   const levelRequirement = currentLevel * 5; // 5 friends per level
@@ -28,7 +27,7 @@ function TasksPage({ user }) {
 
   const generateInviteLink = () => {
     const botUsername = process.env.REACT_APP_TELEGRAM_BOT_USERNAME || 'SabaQuest_bot';
-    const userId = user?.id || user?.telegram_id || '';
+    const userId = user?.telegram_id || user?.id || '';
     const link = `https://t.me/${botUsername}?start=ref_${userId}`;
     setInviteLink(link);
   };
@@ -42,8 +41,7 @@ function TasksPage({ user }) {
       
       if (response.ok) {
         const data = await response.json();
-        setTasks(data.tasks);
-        calculateStats(data.tasks);
+        setTasks(data.tasks || []);
       }
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
@@ -52,25 +50,17 @@ function TasksPage({ user }) {
     }
   };
 
-  const calculateStats = (tasksList) => {
-    const completed = tasksList.filter(t => t.completed).length;
-    const total = tasksList.length;
-    const coins = tasksList.filter(t => t.completed).reduce((sum, t) => sum + t.points, 0);
-    const available = total - completed;
+  const handleTaskComplete = async (task) => {
+    if (task.completed) return;
 
-    setCompletedTasks(completed);
-    setTotalTasks(total);
-    setCoinsEarned(coins);
-    setAvailableTasks(available);
-  };
-
-  const handleCompleteTask = async (task) => {
     // Open social media link
     if (task.url) {
       window.open(task.url, '_blank');
     }
     
-    // Wait for user to complete action
+    // Wait 5 seconds (trust system - user has time to subscribe)
+    showNotification(`⏳ Opening ${task.title}... Complete the action!`);
+    
     setTimeout(async () => {
       try {
         const token = localStorage.getItem('axum_token');
@@ -83,24 +73,32 @@ function TasksPage({ user }) {
         });
         
         if (response.ok) {
-          showNotification(`✅ Task completed! +${task.points} coins`);
+          const data = await response.json();
+          showNotification(`✅ Task completed! +${task.points} coins earned!`);
+          
+          // Refresh tasks and user data
           fetchTasks();
+          if (fetchUser) fetchUser();
+        } else {
+          showNotification('❌ Task already completed or error occurred');
         }
       } catch (error) {
         console.error('Failed to complete task:', error);
         showNotification('❌ Failed to complete task');
       }
-    }, 1500);
+    }, 5000); // 5 second delay
   };
 
-  const handleCopyInviteLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    showNotification('✅ Invite link copied!');
-  };
-
-  const handleShareTelegram = () => {
-    const text = encodeURIComponent(`🏰 Join me on Queen Makeda's Quest!\n\nEarn rewards and complete challenges!\n\n`);
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${text}`, '_blank');
+  const handleInvite = () => {
+    const text = encodeURIComponent(
+      `🏰 Join me on Queen Makeda's Quest!\n\n` +
+      `Earn coins, complete challenges, and climb the leaderboard!\n\n` +
+      `Tap the link to start your adventure:`
+    );
+    window.open(
+      `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${text}`, 
+      '_blank'
+    );
   };
 
   const showNotification = (message) => {
@@ -116,79 +114,106 @@ function TasksPage({ user }) {
     }, 3000);
   };
 
-  const getTaskInfo = (task) => {
-    const infos = {
-      invite: `You need to invite ${levelRequirement} friends who join the app to complete Level ${currentLevel}. Currently: ${invitedFriends}/${levelRequirement}`,
-      youtube: 'Subscribe to our YouTube channel and watch our latest videos to earn 20 coins.',
-      facebook: 'Follow our Facebook page and engage with our community to earn 20 coins.',
-      tiktok: 'Follow us on TikTok and watch our creative content to earn 20 coins.',
-      telegram: 'Join our official Telegram group to stay updated and earn 30 coins.',
-      instagram: 'Follow us on Instagram and see our latest posts to earn 20 coins.'
+  const getTaskButtonText = (task) => {
+    const buttonText = {
+      youtube: 'Subscribe',
+      telegram: 'Join',
+      facebook: 'Follow',
+      tiktok: 'Follow',
+      instagram: 'Follow',
+      invite: 'INVITE'
     };
-    return infos[task.type] || 'Complete this task to earn coins.';
+    return buttonText[task.type] || 'Start';
   };
 
-  // Get all social tasks (not just 3)
+  const getTaskInfo = (taskType) => {
+    const info = {
+      invite: `Invite ${levelRequirement} friends to complete Level ${currentLevel}. You've invited ${invitedFriends} so far. Each friend who joins earns you 100 coins!`,
+      youtube: `Subscribe to our YouTube channel to earn 20 coins. Click Subscribe, then confirm your subscription on YouTube.`,
+      telegram: `Join our Telegram group to stay updated and earn 30 coins. Click Join, then confirm in Telegram.`,
+      facebook: `Follow our Facebook page to earn 20 coins. Click Follow, then confirm on Facebook.`,
+      tiktok: `Follow us on TikTok to earn 30 coins. Click Follow, then confirm on TikTok.`,
+      instagram: `Follow us on Instagram to earn 20 coins. Click Follow, then confirm on Instagram.`
+    };
+    return info[taskType] || 'Complete this task to earn coins.';
+  };
+
+  // Separate invite task from social tasks
+  const inviteTask = {
+    id: 'invite',
+    type: 'invite',
+    title: 'Invite Friends',
+    points: 100,
+    completed: invitedFriends >= levelRequirement,
+    icon: '👥'
+  };
+
   const socialTasks = tasks.filter(t => t.type !== 'invite');
 
   return (
-    <div className="tasks-page-clean">
+    <div className="tasks-page-final">
       {/* Header */}
-      <div className="tasks-header-clean">
-        <div className="tasks-icon-header">📜</div>
-        <h1 className="tasks-title-clean">Queen's Tasks</h1>
-        <p className="tasks-subtitle-clean">Complete social quests to earn rewards</p>
+      <div className="tasks-header-final">
+        <div className="header-icon">📜</div>
+        <h1 className="header-title">Queen's Tasks</h1>
+        <p className="header-subtitle">Complete social quests to earn rewards</p>
       </div>
 
       {/* Stats Row */}
-      <div className="stats-row">
-        <div className="stat-item">
-          <div className="stat-label">✅ Completed</div>
+      <div className="stats-bar">
+        <div className="stat-box">
+          <div className="stat-label">Completed</div>
           <div className="stat-value">{completedTasks}/{totalTasks}</div>
         </div>
         <div className="stat-divider"></div>
-        <div className="stat-item">
+        <div className="stat-box">
           <div className="stat-label">Earned 🪙</div>
-          <div className="stat-value">{coinsEarned}</div>
+          <div className="stat-value">{earnedCoins}</div>
         </div>
         <div className="stat-divider"></div>
-        <div className="stat-item">
+        <div className="stat-box">
           <div className="stat-label">⚡ Available</div>
           <div className="stat-value">{availableTasks}</div>
         </div>
       </div>
 
-      {/* Tasks Container */}
-      <div className="tasks-container-clean">
-        {/* Invite Task - Special Top Row */}
-        <div className="task-row invite-row">
-          <div className="task-row-left">
-            <div className="task-icon-wrapper">
-              <span className="task-icon-large">👥</span>
+      {/* Tasks List */}
+      <div className="tasks-list">
+        {/* Invite Task - Special */}
+        <div className="task-item invite-task">
+          <div className="task-left">
+            <div className="task-icon-circle">
+              <span className="task-emoji">{inviteTask.icon}</span>
             </div>
-            <div className="task-info">
-              <h3 className="task-name">Invite Friends</h3>
-              <div className="task-progress">
-                <span className="progress-text">{invitedFriends}/{levelRequirement}</span>
-                <div className="progress-bar-mini">
+            <div className="task-details">
+              <h3 className="task-name">{inviteTask.title}</h3>
+              <div className="task-status">
+                <span className="status-text">
+                  {invitedFriends >= levelRequirement ? '✅' : '⚡'} {invitedFriends}/{levelRequirement}
+                </span>
+                <div className="progress-bar-tiny">
                   <div 
-                    className="progress-fill-mini" 
-                    style={{ width: `${(invitedFriends / levelRequirement) * 100}%` }}
+                    className="progress-fill-tiny"
+                    style={{ width: `${Math.min((invitedFriends / levelRequirement) * 100, 100)}%` }}
                   ></div>
                 </div>
+                {invitedFriends >= levelRequirement && (
+                  <span className="coins-display">🪙 {invitedFriends * 100}</span>
+                )}
               </div>
             </div>
           </div>
-          <div className="task-row-right">
+          <div className="task-right">
             <button 
-              className={`task-action-btn invite-btn ${invitedFriends >= levelRequirement ? 'completed' : ''}`}
-              onClick={handleShareTelegram}
+              className={`task-button ${invitedFriends >= levelRequirement ? 'completed' : 'invite-special'}`}
+              onClick={handleInvite}
+              disabled={invitedFriends >= levelRequirement}
             >
-              {invitedFriends >= levelRequirement ? '✅ Done' : 'Invite'}
+              {invitedFriends >= levelRequirement ? 'Completed ✅' : 'INVITE'}
             </button>
             <button 
-              className="info-btn"
-              onClick={() => setShowTaskInfo('invite')}
+              className="info-button"
+              onClick={() => setShowInfoModal('invite')}
             >
               ✨
             </button>
@@ -197,148 +222,103 @@ function TasksPage({ user }) {
 
         {/* Social Media Tasks */}
         {loading ? (
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
+          <div className="loading-wrapper">
+            <div className="spinner"></div>
             <p>Loading tasks...</p>
           </div>
         ) : (
-          <>
-            {socialTasks.map((task) => {
-              const isCompleted = task.completed;
-              const progress = isCompleted ? 1 : 0;
-              const maxProgress = 1;
-
-              return (
-                <div key={task.id} className={`task-row ${isCompleted ? 'completed-row' : ''}`}>
-                  <div className="task-row-left">
-                    <div className="task-icon-wrapper">
-                      {task.type === 'youtube' && <span className="task-icon-large">▶️</span>}
-                      {task.type === 'facebook' && <span className="task-icon-large">👍</span>}
-                      {task.type === 'tiktok' && <span className="task-icon-large">🎵</span>}
-                      {task.type === 'telegram' && <span className="task-icon-large">✈️</span>}
-                      {task.type === 'instagram' && <span className="task-icon-large">📸</span>}
-                    </div>
-                    <div className="task-info">
-                      <h3 className="task-name">
-                        {task.type === 'youtube' && 'YouTube'}
-                        {task.type === 'facebook' && 'Facebook'}
-                        {task.type === 'tiktok' && 'TikTok'}
-                        {task.type === 'telegram' && 'Telegram'}
-                        {task.type === 'instagram' && 'Instagram'}
-                      </h3>
-                      <div className="task-progress">
-                        <span className="progress-text">
-                          {progress}/{maxProgress} {isCompleted ? '✅' : '⚡'}
-                        </span>
-                        <span className="coins-earned">{isCompleted ? task.points : 0} 🪙</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="task-row-right">
-                    <button 
-                      className={`task-action-btn ${isCompleted ? 'completed' : ''}`}
-                      onClick={() => !isCompleted && handleCompleteTask(task)}
-                      disabled={isCompleted}
-                    >
-                      {isCompleted ? 'Completed' : 'Start'}
-                    </button>
-                    <button 
-                      className="info-btn"
-                      onClick={() => setShowTaskInfo(task.type)}
-                    >
-                      ✨
-                    </button>
+          socialTasks.map((task) => (
+            <div 
+              key={task.id} 
+              className={`task-item ${task.completed ? 'completed-task' : ''}`}
+            >
+              <div className="task-left">
+                <div className="task-icon-circle">
+                  <span className="task-emoji">{task.icon}</span>
+                </div>
+                <div className="task-details">
+                  <h3 className="task-name">
+                    {task.type === 'youtube' && 'YouTube'}
+                    {task.type === 'telegram' && 'Telegram'}
+                    {task.type === 'facebook' && 'Facebook'}
+                    {task.type === 'tiktok' && 'TikTok'}
+                    {task.type === 'instagram' && 'Instagram'}
+                  </h3>
+                  <div className="task-status">
+                    <span className="status-text">
+                      {task.completed ? '✅' : '⚡'} {task.completed ? '1/1' : '0/1'}
+                    </span>
+                    <span className="coins-display">
+                      🪙 {task.completed ? task.points : 0}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </>
+              </div>
+              <div className="task-right">
+                <button 
+                  className={`task-button ${task.completed ? 'completed' : ''}`}
+                  onClick={() => handleTaskComplete(task)}
+                  disabled={task.completed}
+                >
+                  {task.completed ? 'Completed ✅' : getTaskButtonText(task)}
+                </button>
+                <button 
+                  className="info-button"
+                  onClick={() => setShowInfoModal(task.type)}
+                >
+                  ✨
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
-      {/* Info Section */}
-      <div className="info-section">
-        <div className="info-icon">ℹ️</div>
-        <div className="info-content">
-          <h3>How Tasks Work</h3>
-          <p>
-            Complete social media tasks to earn coins and unlock new levels. 
-            Each task rewards you with coins that count towards your progression.
-          </p>
+      {/* Info Sections */}
+      <div className="info-sections">
+        <div className="info-box">
+          <div className="info-icon-big">ℹ️</div>
+          <div className="info-text">
+            <h3>How Tasks Work</h3>
+            <p>
+              Complete social media tasks to earn coins and unlock new levels. 
+              Each task rewards you with coins that count towards your progression. 
+              Simply click the task button, complete the action (subscribe, follow, join), 
+              and coins will be added to your account automatically.
+            </p>
+          </div>
+        </div>
+
+        <div className="info-box">
+          <div className="info-icon-big">⚡</div>
+          <div className="info-text">
+            <h3>Quick Tips</h3>
+            <ul>
+              <li>✓ Complete all tasks to maximize your earnings</li>
+              <li>✓ Invite friends to earn 100 coins per friend</li>
+              <li>✓ Each friend must join through your unique link</li>
+              <li>✓ Tasks are one-time rewards - complete them all!</li>
+              <li>✓ Check back for new tasks and challenges</li>
+            </ul>
+          </div>
         </div>
       </div>
 
-      {/* Invite Modal */}
-      {showInviteModal && (
-        <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowInviteModal(false)}>×</button>
-            
+      {/* Info Modal */}
+      {showInfoModal && (
+        <div className="modal-backdrop" onClick={() => setShowInfoModal(null)}>
+          <div className="info-modal-box" onClick={(e) => e.stopPropagation()}>
+            <button className="close-modal" onClick={() => setShowInfoModal(null)}>×</button>
             <div className="modal-header">
-              <div className="modal-icon">👥</div>
-              <h2>Invite Friends</h2>
-              <p>Share your link and earn rewards!</p>
-            </div>
-
-            <div className="modal-body">
-              <div className="invite-stats">
-                <div className="invite-stat">
-                  <div className="stat-number">{invitedFriends}</div>
-                  <div className="stat-label">Friends Joined</div>
-                </div>
-                <div className="invite-stat">
-                  <div className="stat-number">{levelRequirement}</div>
-                  <div className="stat-label">Required for Level {currentLevel}</div>
-                </div>
-              </div>
-
-              <div className="invite-link-box">
-                <input 
-                  type="text" 
-                  value={inviteLink} 
-                  readOnly 
-                  className="invite-input"
-                />
-                <button className="copy-btn" onClick={handleCopyInviteLink}>
-                  📋 Copy
-                </button>
-              </div>
-
-              <button className="share-btn telegram" onClick={handleShareTelegram}>
-                ✈️ Share on Telegram
-              </button>
-
-              <div className="rewards-box">
-                <h4>🎁 Rewards</h4>
-                <ul>
-                  <li>💰 100 coins per friend who joins</li>
-                  <li>🎯 Progress towards next level</li>
-                  <li>👑 Special badges for top inviters</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Task Info Modal */}
-      {showTaskInfo && (
-        <div className="modal-overlay" onClick={() => setShowTaskInfo(null)}>
-          <div className="info-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowTaskInfo(null)}>×</button>
-            
-            <div className="info-modal-header">
-              <div className="info-modal-icon">ℹ️</div>
+              <div className="modal-icon">ℹ️</div>
               <h3>Task Information</h3>
             </div>
-
-            <div className="info-modal-body">
-              <p>{getTaskInfo({ type: showTaskInfo })}</p>
+            <div className="modal-body">
+              <p>{getTaskInfo(showInfoModal)}</p>
             </div>
-
             <button 
-              className="close-info-btn" 
-              onClick={() => setShowTaskInfo(null)}
+              className="modal-close-btn"
+              onClick={() => setShowInfoModal(null)}
             >
               Got it!
             </button>
