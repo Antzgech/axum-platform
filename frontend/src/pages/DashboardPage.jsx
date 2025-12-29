@@ -156,7 +156,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           </div>
         </Link>
 
-        <Link to="/dashboard" className="nav-btn">
+        <Link to="/tasks" className="nav-btn">
           <div className="nav-btn-circle">
             <img src={iconFriends} alt="Friends" className="nav-icon" />
           </div>
