@@ -109,17 +109,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   
 
-      {/* Makeda */}
-      <main className="queen-main-section">
-        <div className="queen-oval-frame">
-          <img
-            src={queenMakeda}
-            alt="Queen Makeda"
-            className="queen-main-img floating"
-            onClick={handleQueenTap}
-            role="button"
-          />
-        </div>
+   
     {/* Coins & Gems */}
       <div className="currency-row logo-style">
         <div className="currency-item logo-box">
@@ -132,7 +122,17 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           <div className="currency-value">{gems}</div>
         </div>
       </div>
-
+   {/* Makeda */}
+      <main className="queen-main-section">
+        <div className="queen-oval-frame">
+          <img
+            src={queenMakeda}
+            alt="Queen Makeda"
+            className="queen-main-img floating"
+            onClick={handleQueenTap}
+            role="button"
+          />
+        </div>
         
         {hintVisible && (
           <aside className="hint-popover" role="status">
