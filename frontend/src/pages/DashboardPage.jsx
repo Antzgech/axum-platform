@@ -107,18 +107,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </header>
 
-      {/* Coins & Gems */}
-      <div className="currency-row logo-style">
-        <div className="currency-item logo-box">
-          <img src={iconCoin} alt="Coins" className="currency-icon" />
-          <div className="currency-value">{coins.toLocaleString()}</div>
-        </div>
-
-        <div className="currency-item logo-box">
-          <img src={iconGem} alt="Gems" className="currency-icon" />
-          <div className="currency-value">{gems}</div>
-        </div>
-      </div>
+  
 
       {/* Makeda */}
       <main className="queen-main-section">
@@ -131,7 +120,20 @@ export default function DashboardPage({ user = {}, fetchUser }) {
             role="button"
           />
         </div>
+    {/* Coins & Gems */}
+      <div className="currency-row logo-style">
+        <div className="currency-item logo-box">
+          <img src={iconCoin} alt="Coins" className="currency-icon" />
+          <div className="currency-value">{coins.toLocaleString()}</div>
+        </div>
 
+        <div className="currency-item logo-box">
+          <img src={iconGem} alt="Gems" className="currency-icon" />
+          <div className="currency-value">{gems}</div>
+        </div>
+      </div>
+
+        
         {hintVisible && (
           <aside className="hint-popover" role="status">
             <div className="hint-header">Quick Hint</div>
