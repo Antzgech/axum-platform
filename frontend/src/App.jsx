@@ -15,10 +15,11 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
 
-  // Check if we're on dashboard
   const isDashboard = location.pathname === '/' || location.pathname === '/dashboard';
 
-  // Fetch user data
+  // IMPORTANT: Use full URL, not relative!
+  const API_URL = 'https://axum-backend-production.up.railway.app';
+
   const fetchUser = async () => {
     try {
       const token = localStorage.getItem('axum_token');
@@ -27,7 +28,7 @@ function AppContent() {
         return;
       }
 
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -36,10 +37,9 @@ function AppContent() {
 
       if (response.ok) {
         const userData = await response.json();
-        console.log('✅ User data loaded:', userData);
+        console.log('✅ User loaded:', userData);
         setUser(userData);
       } else {
-        console.error('Failed to fetch user data');
         localStorage.removeItem('axum_token');
       }
     } catch (error) {
@@ -49,88 +49,58 @@ function AppContent() {
     }
   };
 
-  // Handle Telegram login
   const handleTelegramAuth = async (telegramUser) => {
     try {
       console.log('🔐 Logging in with Telegram:', telegramUser);
       
-      const response = await fetch('/api/auth/telegram', {
+      const response = await fetch(`${API_URL}/api/auth/telegram`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(telegramUser)
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Login successful:', data);
-        
-        localStorage.setItem('axum_token', data.token);
-        setUser(data.user);
-        
-        // Check for referral
-        await checkReferral(telegramUser.id);
-      } else {
-        console.error('Login failed');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-    }
-  };
+      console.log('Response status:', response.status);
+      console.log('Response content-type:', response.headers.get('content-type'));
 
-  // Check referral on login
-  const checkReferral = async (telegramId) => {
-    try {
-      // Get referrer from Telegram WebApp initData or URL params
-      const urlParams = new URLSearchParams(window.location.search);
-      const startParam = urlParams.get('tgWebAppStartParam');
+      if (!response.ok) {
+        console.error('Login failed with status:', response.status);
+        const text = await response.text();
+        console.error('Response:', text);
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('✅ Login successful');
       
-      let referredBy = null;
-      if (startParam && startParam.startsWith('ref_')) {
-        referredBy = startParam.replace('ref_', '');
-      }
-
-      if (referredBy) {
-        console.log(`🔗 Checking referral: ${telegramId} referred by ${referredBy}`);
-        
-        const response = await fetch('/api/referral/check', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            telegram_id: telegramId,
-            referred_by: referredBy
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            console.log('✅ Referral processed:', data);
-          }
-        }
-      }
+      localStorage.setItem('axum_token', data.token);
+      setUser(data.user);
+      setLoading(false);
     } catch (error) {
-      console.error('Referral check error:', error);
+      console.error('❌ Login error:', error);
+      alert('Login failed. Check console for details.');
+      setLoading(false);
     }
   };
 
-  // Initialize app
   useEffect(() => {
     const initApp = async () => {
-      // Try to get Telegram WebApp user
       if (window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
 
         const telegramUser = tg.initDataUnsafe?.user;
+        
         if (telegramUser) {
           await handleTelegramAuth(telegramUser);
         } else {
-          // No Telegram user, check for token
           await fetchUser();
         }
       } else {
-        // Not in Telegram, check for token
         await fetchUser();
       }
     };
