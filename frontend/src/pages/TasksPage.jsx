@@ -2,13 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import './TasksPage.css';
 
-// Import social media logos (you'll need these in assets folder)
-import youtubeIcon from '../assets/youtube-icon.png'; // Add these
-import facebookIcon from '../assets/facebook-icon.png';
-import tiktokIcon from '../assets/tiktok-icon.png';
-import telegramIcon from '../assets/telegram-icon.png';
-import instagramIcon from '../assets/instagram-icon.png';
-
 function TasksPage({ user }) {
   const { t } = useLanguage();
   const [tasks, setTasks] = useState([]);
