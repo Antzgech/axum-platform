@@ -53,16 +53,53 @@ const pool = new Pool({
         last_name VARCHAR(255) DEFAULT '',
         photo_url TEXT DEFAULT '',
         points INTEGER DEFAULT 0,
+        coins INTEGER DEFAULT 0,
+        gems INTEGER DEFAULT 0,
         current_level INTEGER DEFAULT 1,
         badges JSONB DEFAULT '[]'::jsonb,
         completed_tasks TEXT[] DEFAULT '{}',
         invited_friends INTEGER DEFAULT 0,
+        invited_by TEXT DEFAULT NULL,
         level_scores JSONB DEFAULT '{"1":0,"2":0,"3":0,"4":0,"5":0,"6":0}'::jsonb,
+        last_game_played TIMESTAMP DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     console.log("✅ Users table created/verified");
+
+    // Add new columns if they don't exist (for existing databases)
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='users' AND column_name='invited_by') THEN
+          ALTER TABLE users ADD COLUMN invited_by TEXT DEFAULT NULL;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='users' AND column_name='invited_friends') THEN
+          ALTER TABLE users ADD COLUMN invited_friends INTEGER DEFAULT 0;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='users' AND column_name='coins') THEN
+          ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='users' AND column_name='gems') THEN
+          ALTER TABLE users ADD COLUMN gems INTEGER DEFAULT 0;
+        END IF;
+      END $$;
+    `);
+    console.log("✅ Database schema updated");
+
+    // Create index for faster referral lookups
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_invited_by ON users(invited_by);
+    `);
+    console.log("✅ Indexes created");
 
     const count = await pool.query("SELECT COUNT(*) FROM users");
     console.log(`📊 Current users in database: ${count.rows[0].count}`);
@@ -72,7 +109,7 @@ const pool = new Pool({
 })();
 
 // ---------------------------
-// In-memory tasks (for later)
+// In-memory tasks
 // ---------------------------
 const tasks = new Map();
 [
@@ -80,7 +117,7 @@ const tasks = new Map();
     id: "1",
     type: "youtube",
     title: "Subscribe to Meten Official YouTube",
-    points: 50,
+    points: 20,
     url: "https://www.youtube.com/@metenofficial",
     icon: "▶️",
   },
@@ -96,7 +133,7 @@ const tasks = new Map();
     id: "3",
     type: "facebook",
     title: "Follow on Facebook",
-    points: 40,
+    points: 20,
     url: "https://facebook.com/profile.php?id=61578048881192",
     icon: "👍",
   },
@@ -104,7 +141,7 @@ const tasks = new Map();
     id: "4",
     type: "tiktok",
     title: "Follow on TikTok",
-    points: 40,
+    points: 30,
     url: "https://tiktok.com/@metenofficials",
     icon: "🎵",
   },
@@ -112,19 +149,13 @@ const tasks = new Map();
     id: "5",
     type: "instagram",
     title: "Follow on Instagram",
-    points: 40,
+    points: 20,
     url: "https://instagram.com/metenofficial",
     icon: "📸",
   },
-  {
-    id: "6",
-    type: "invite",
-    title: "Invite 5 Friends",
-    points: 100,
-    url: null,
-    icon: "👥",
-  },
 ].forEach((t) => tasks.set(t.id, t));
+
+console.log(`✅ Loaded ${tasks.size} tasks`);
 
 // ---------------------------
 // Auth middleware (JWT)
@@ -152,8 +183,6 @@ app.get("/api/health", (req, res) => {
 // ---------------------------
 // Telegram Auth
 // ---------------------------
-// EXPECTS RAW TELEGRAM USER OBJECT:
-// { id, first_name, last_name, username, photo_url, ... }
 app.post("/api/auth/telegram", async (req, res) => {
   try {
     console.log("🔐 /api/auth/telegram called");
@@ -217,18 +246,60 @@ app.post("/api/auth/telegram", async (req, res) => {
       token,
       user: {
         id: user.telegram_id,
+        telegram_id: user.telegram_id,
         username: user.username,
         first_name: user.first_name,
         last_name: user.last_name,
         photo_url: user.photo_url,
-        points: user.points,
+        points: user.points || 0,
+        coins: user.coins || 0,
+        gems: user.gems || 0,
         current_level: user.current_level,
         badges: user.badges || [],
+        invited_friends: user.invited_friends || 0,
+        invited_by: user.invited_by || null,
       },
     });
   } catch (error) {
     console.error("❌ Auth error:", error.message);
     res.status(500).json({ error: "Auth failed", details: error.message });
+  }
+});
+
+// ---------------------------
+// Get current user (protected)
+// ---------------------------
+app.get("/api/auth/me", auth, async (req, res) => {
+  try {
+    const userRes = await pool.query(
+      "SELECT * FROM users WHERE telegram_id = $1",
+      [req.user.telegramId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = userRes.rows[0];
+    
+    res.json({
+      id: user.telegram_id,
+      telegram_id: user.telegram_id,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      photo_url: user.photo_url,
+      points: user.points || 0,
+      coins: user.coins || 0,
+      gems: user.gems || 0,
+      current_level: user.current_level,
+      badges: user.badges || [],
+      invited_friends: user.invited_friends || 0,
+      invited_by: user.invited_by || null,
+    });
+  } catch (error) {
+    console.error("❌ Get user error:", error.message);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -248,23 +319,126 @@ app.get("/api/stats", async (req, res) => {
 });
 
 // ---------------------------
+// REFERRAL TRACKING
+// ---------------------------
+app.post("/api/referral/check", async (req, res) => {
+  try {
+    const { telegram_id, referred_by } = req.body;
+    
+    console.log(`🔗 Referral check: ${telegram_id} referred by ${referred_by}`);
+
+    if (!telegram_id) {
+      return res.status(400).json({ error: "Missing telegram_id" });
+    }
+
+    // Check if this user already has a referrer
+    const userCheck = await pool.query(
+      "SELECT invited_by, telegram_id FROM users WHERE telegram_id = $1",
+      [telegram_id]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = userCheck.rows[0];
+
+    // If user already has a referrer, don't process again
+    if (user.invited_by) {
+      console.log(`⚠️ User ${telegram_id} already has referrer: ${user.invited_by}`);
+      return res.json({ 
+        success: false, 
+        message: "User already has referrer",
+        referred_by: user.invited_by 
+      });
+    }
+
+    // If no referrer provided, nothing to do
+    if (!referred_by) {
+      return res.json({ success: false, message: "No referrer provided" });
+    }
+
+    // Don't allow self-referral
+    if (referred_by === telegram_id || referred_by === telegram_id.toString()) {
+      console.log(`⚠️ Self-referral attempt blocked: ${telegram_id}`);
+      return res.json({ success: false, message: "Cannot refer yourself" });
+    }
+
+    // Check if referrer exists
+    const referrerCheck = await pool.query(
+      "SELECT telegram_id, invited_friends, coins FROM users WHERE telegram_id = $1",
+      [referred_by]
+    );
+
+    if (referrerCheck.rows.length === 0) {
+      console.log(`⚠️ Referrer not found: ${referred_by}`);
+      return res.json({ success: false, message: "Referrer not found" });
+    }
+
+    const referrer = referrerCheck.rows[0];
+
+    // Update the new user with referrer ID
+    await pool.query(
+      "UPDATE users SET invited_by = $1 WHERE telegram_id = $2",
+      [referred_by, telegram_id]
+    );
+
+    // Increment referrer's invited_friends count and add 100 coins
+    const newInvitedCount = (referrer.invited_friends || 0) + 1;
+    const newCoins = (referrer.coins || 0) + 100;
+
+    await pool.query(
+      "UPDATE users SET invited_friends = $1, coins = $2 WHERE telegram_id = $3",
+      [newInvitedCount, newCoins, referred_by]
+    );
+
+    console.log(`✅ REFERRAL SUCCESS: ${referred_by} invited ${telegram_id} (+100 coins, total: ${newInvitedCount} friends)`);
+
+    res.json({ 
+      success: true, 
+      referrer: referred_by,
+      coins_awarded: 100,
+      total_invites: newInvitedCount
+    });
+
+  } catch (error) {
+    console.error("❌ Referral check error:", error.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ---------------------------
 // Tasks
 // ---------------------------
 app.get("/api/tasks", auth, async (req, res) => {
   try {
-    const result = await pool.query(
+    const telegramId = req.user.telegramId;
+    
+    // Get user's completed tasks
+    const userRes = await pool.query(
       "SELECT completed_tasks FROM users WHERE telegram_id = $1",
-      [req.user.telegramId]
+      [telegramId]
     );
-    const completed = result.rows[0]?.completed_tasks || [];
-    const allTasks = Array.from(tasks.values()).map((t) => ({
-      ...t,
-      completed: completed.includes(t.id),
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const completedTasks = userRes.rows[0].completed_tasks || [];
+
+    // Return tasks with completion status
+    const tasksWithStatus = Array.from(tasks.values()).map(task => ({
+      ...task,
+      completed: completedTasks.includes(task.id)
     }));
-    res.json({ tasks: allTasks });
+
+    res.json({ tasks: tasksWithStatus });
+
   } catch (error) {
+    console.error("❌ Tasks fetch error:", error.message);
+    // Fallback: return all tasks as incomplete
     res.json({
-      tasks: Array.from(tasks.values()).map((t) => ({
+      tasks: Array.from(tasks.values()).map(t => ({
         ...t,
         completed: false,
       })),
@@ -274,63 +448,74 @@ app.get("/api/tasks", auth, async (req, res) => {
 
 app.post("/api/tasks/:id/complete", auth, async (req, res) => {
   try {
+    const telegramId = req.user.telegramId;
     const taskId = req.params.id;
-    const task = tasks.get(taskId);
-    if (!task) return res.status(404).json({ error: "Task not found" });
 
+    const task = tasks.get(taskId);
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    // Get user
     const userRes = await pool.query(
       "SELECT * FROM users WHERE telegram_id = $1",
-      [req.user.telegramId]
+      [telegramId]
     );
-    if (userRes.rows.length === 0)
+
+    if (userRes.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
+    }
 
     const u = userRes.rows[0];
     const completed = u.completed_tasks || [];
 
+    // Check if already completed
     if (completed.includes(taskId)) {
-      return res.status(400).json({ error: "Already completed" });
+      console.log(`⚠️ Task ${taskId} already completed by ${u.username}`);
+      return res.status(400).json({ 
+        error: "Task already completed",
+        success: false
+      });
     }
 
+    // Add task to completed
     const newCompleted = [...completed, taskId];
-    const newPoints = u.points + task.points;
+    
+    // Add coins
+    const newCoins = (u.coins || 0) + task.points;
+    
+    // Update level scores
     const levelScores = u.level_scores || {
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-      6: 0,
+      1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0
     };
-    levelScores[u.current_level] =
-      (levelScores[u.current_level] || 0) + task.points;
+    levelScores[u.current_level] = (levelScores[u.current_level] || 0) + task.points;
 
+    // Update database
     await pool.query(
-      "UPDATE users SET completed_tasks = $1, points = $2, level_scores = $3 WHERE telegram_id = $4",
-      [newCompleted, newPoints, JSON.stringify(levelScores), req.user.telegramId]
+      "UPDATE users SET completed_tasks = $1, coins = $2, level_scores = $3 WHERE telegram_id = $4",
+      [newCompleted, newCoins, JSON.stringify(levelScores), telegramId]
     );
 
-    console.log(
-      `✅ TASK COMPLETED: ${u.username} - ${task.title} (+${task.points} points)`
-    );
+    console.log(`✅ TASK COMPLETED: ${u.username} - ${task.title} (+${task.points} coins, total: ${newCoins})`);
 
-    res.json({ success: true, points: task.points, totalPoints: newPoints });
+    res.json({ 
+      success: true, 
+      points: task.points, 
+      totalCoins: newCoins,
+      completedTasks: newCompleted
+    });
+
   } catch (error) {
-    console.error("Task error:", error.message);
+    console.error("❌ Task completion error:", error.message);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-
 // ---------------------------
 // Game: Dino-style 20s play + cooldown
 // ---------------------------
+const GAME_COOLDOWN_MS = 60 * 1000; // 1 minute
 
-// 1 minute cooldown
-const GAME_COOLDOWN_MS = 60 * 1000;
-
-// POST /api/game/result
-// Body: { userId, coinReward, gemReward, score, duration }
 app.post("/api/game/result", async (req, res) => {
   try {
     const { userId, coinReward = 0, gemReward = 0, score = 0, duration = 20 } = req.body;
@@ -339,7 +524,7 @@ app.post("/api/game/result", async (req, res) => {
       return res.status(400).json({ error: "Missing userId" });
     }
 
-    // Fetch user by telegram_id (your frontend uses telegram_id as user.id)
+    // Fetch user by telegram_id
     const userRes = await pool.query(
       "SELECT * FROM users WHERE telegram_id = $1",
       [userId]
@@ -380,6 +565,8 @@ app.post("/api/game/result", async (req, res) => {
       [coinsToAdd, gemsToAdd, userId]
     );
 
+    console.log(`🎮 Game completed: ${user.username} (+${coinsToAdd} coins, +${gemsToAdd} gems)`);
+
     return res.json({
       success: true,
       coinsAdded: coinsToAdd,
@@ -393,6 +580,7 @@ app.post("/api/game/result", async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
+
 // ---------------------------
 // Add 1 coin when Makeda tapped
 // ---------------------------
@@ -420,15 +608,10 @@ app.post("/api/user/add-coin", auth, async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Makeda coin error:", err.message);
+    console.error("❌ Makeda coin error:", err.message);
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
-
-
-
 
 // ---------------------------
 // 404
@@ -445,6 +628,8 @@ app.listen(PORT, () => {
   🚀 Server: http://localhost:${PORT}
   💾 Database: PostgreSQL
   🤖 Bot: @SabaQuest_bot
+  📋 Tasks: ${tasks.size} loaded
+  🔗 Referral system: Active
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Test: /api/health | /api/stats
   `);
