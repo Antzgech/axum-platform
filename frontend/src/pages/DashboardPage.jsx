@@ -62,7 +62,16 @@ const LEVEL_REQUIREMENTS = {
   }
 };
 
-const MAKEDA_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+// ========================================
+// DAILY PROGRESSIVE REWARD SYSTEM
+// ========================================
+const STORAGE_KEYS = {
+  LAST_RESET: 'makeda_last_reset',
+  TAP_COUNT: 'makeda_tap_count',
+  LAST_TAP: 'makeda_last_tap',
+  NEXT_REWARD: 'makeda_next_reward',
+  NEXT_COOLDOWN: 'makeda_next_cooldown'
+};
 
 export default function DashboardPage({ user = {}, fetchUser }) {
   const { language, changeLanguage } = useLanguage();
@@ -70,20 +79,25 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   // UI state
   const [coins, setCoins] = useState(user.coins || 0);
   const [gems, setGems] = useState(user.gems || 0);
-  const [addingCoin, setAddingCoin] = useState(false);
 
   // User info popup
   const [showUserInfo, setShowUserInfo] = useState(false);
 
-  // Makeda hint with cooldown
-  const [hintVisible, setHintVisible] = useState(false);
-  const [hintData, setHintData] = useState(null);
-  const [makedaCooldown, setMakedaCooldown] = useState(0);
-  const hideTimerRef = useRef(null);
+  // Makeda progress popup
+  const [showProgress, setShowProgress] = useState(false);
+  const [progressData, setProgressData] = useState(null);
+
+  // Daily reward system
+  const [nextReward, setNextReward] = useState(2);
+  const [nextCooldown, setNextCooldown] = useState(2);
+  const [tapCount, setTapCount] = useState(0);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [canClaimReward, setCanClaimReward] = useState(true);
+
   const cooldownIntervalRef = useRef(null);
+  const API_URL = 'https://axum-backend-production.up.railway.app';
 
   const avatarSrc = user.photo_url || queenMakeda;
-  const API_URL = 'https://axum-backend-production.up.railway.app';
 
   // Sync coins/gems when user prop changes
   useEffect(() => {
@@ -91,9 +105,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     if (user.gems !== undefined) setGems(user.gems);
   }, [user]);
 
-  // Check Makeda cooldown on mount
+  // Initialize daily reward system on mount
   useEffect(() => {
-    checkMakedaCooldown();
+    initializeDailySystem();
     
     return () => {
       if (cooldownIntervalRef.current) {
@@ -102,15 +116,62 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     };
   }, []);
 
-  // Check if Makeda is on cooldown
-  const checkMakedaCooldown = () => {
-    const lastTap = localStorage.getItem('makeda_last_tap');
-    if (lastTap) {
-      const timePassed = Date.now() - parseInt(lastTap);
-      if (timePassed < MAKEDA_COOLDOWN_MS) {
-        const remaining = Math.ceil((MAKEDA_COOLDOWN_MS - timePassed) / 1000);
-        setMakedaCooldown(remaining);
-        startCooldownTimer();
+  // Check if it's a new day and reset if needed
+  const checkAndResetDaily = () => {
+    const lastReset = localStorage.getItem(STORAGE_KEYS.LAST_RESET);
+    const now = new Date();
+    const today = now.toDateString();
+
+    if (!lastReset || lastReset !== today) {
+      // New day! Reset everything
+      console.log('🌅 New day detected! Resetting daily rewards...');
+      localStorage.setItem(STORAGE_KEYS.LAST_RESET, today);
+      localStorage.setItem(STORAGE_KEYS.TAP_COUNT, '0');
+      localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, '2');
+      localStorage.setItem(STORAGE_KEYS.NEXT_COOLDOWN, '2');
+      localStorage.removeItem(STORAGE_KEYS.LAST_TAP);
+      
+      setTapCount(0);
+      setNextReward(2);
+      setNextCooldown(2);
+      setCooldownRemaining(0);
+      setCanClaimReward(true);
+      
+      return true;
+    }
+    return false;
+  };
+
+  // Initialize the daily reward system
+  const initializeDailySystem = () => {
+    // Check if new day
+    const isNewDay = checkAndResetDaily();
+    
+    if (!isNewDay) {
+      // Load existing state
+      const savedTapCount = parseInt(localStorage.getItem(STORAGE_KEYS.TAP_COUNT) || '0');
+      const savedNextReward = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_REWARD) || '2');
+      const savedNextCooldown = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_COOLDOWN) || '2');
+      const savedLastTap = localStorage.getItem(STORAGE_KEYS.LAST_TAP);
+
+      setTapCount(savedTapCount);
+      setNextReward(savedNextReward);
+      setNextCooldown(savedNextCooldown);
+
+      // Check cooldown
+      if (savedLastTap) {
+        const lastTapTime = parseInt(savedLastTap);
+        const cooldownMs = savedNextCooldown * 60 * 1000;
+        const timePassed = Date.now() - lastTapTime;
+        
+        if (timePassed < cooldownMs) {
+          const remainingSec = Math.ceil((cooldownMs - timePassed) / 1000);
+          setCooldownRemaining(remainingSec);
+          setCanClaimReward(false);
+          startCooldownTimer();
+        } else {
+          setCanClaimReward(true);
+        }
       }
     }
   };
@@ -122,9 +183,10 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     }
 
     cooldownIntervalRef.current = setInterval(() => {
-      setMakedaCooldown(prev => {
+      setCooldownRemaining(prev => {
         if (prev <= 1) {
           clearInterval(cooldownIntervalRef.current);
+          setCanClaimReward(true);
           return 0;
         }
         return prev - 1;
@@ -154,7 +216,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
     const completedTasks = user.completed_tasks?.length || 0;
     const invitedFriends = user.invited_friends || 0;
-    const currentCoins = user.coins || 0;
+    const currentCoins = coins;
 
     // Calculate remaining
     const coinsRemaining = Math.max(0, levelReq.coinsNeeded - currentCoins);
@@ -166,9 +228,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     const tasksProgress = Math.min(100, (completedTasks / levelReq.tasksNeeded) * 100);
     const friendsProgress = Math.min(100, (invitedFriends / levelReq.friendsNeeded) * 100);
     const overallProgress = (coinsProgress + tasksProgress + friendsProgress) / 3;
-
-    // Check if level complete
-    const isLevelComplete = coinsRemaining === 0 && tasksRemaining === 0 && friendsRemaining === 0;
 
     return {
       level: currentLevel,
@@ -186,8 +245,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       tasksProgress,
       friendsProgress,
       overallProgress,
-      isLevelComplete,
-      reward: levelReq.reward,
       isMaxLevel: false
     };
   };
@@ -207,90 +264,92 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     setShowUserInfo(false);
   };
 
-  // PLUS BUTTON - Add 1 coin manually
-  async function handlePlusClick(e) {
-    e.stopPropagation();
-    
-    if (addingCoin) return;
+  // Handle Makeda tap with daily progressive reward
+  const handleQueenTap = async () => {
+    console.log('👑 Queen Makeda tapped');
 
-    setAddingCoin(true);
-    const previousCoins = coins;
-    setCoins(prev => prev + 1);
+    // Always calculate and show progress
+    const progress = calculateProgress();
+    setProgressData(progress);
+    setShowProgress(true);
 
+    // Check if can claim reward
+    if (canClaimReward) {
+      console.log(`💰 Claiming ${nextReward} coins!`);
+      
+      // Give coins to user
+      await giveCoinsToUser(nextReward);
+
+      // Update state for next tap
+      const newTapCount = tapCount + 1;
+      const newNextReward = nextReward * 2;
+      const newNextCooldown = nextCooldown * 2;
+
+      setTapCount(newTapCount);
+      setNextReward(newNextReward);
+      setNextCooldown(newNextCooldown);
+
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEYS.TAP_COUNT, newTapCount.toString());
+      localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, newNextReward.toString());
+      localStorage.setItem(STORAGE_KEYS.NEXT_COOLDOWN, newNextCooldown.toString());
+      localStorage.setItem(STORAGE_KEYS.LAST_TAP, Date.now().toString());
+
+      // Start cooldown
+      const cooldownSec = newNextCooldown * 60;
+      setCooldownRemaining(cooldownSec);
+      setCanClaimReward(false);
+      startCooldownTimer();
+
+      console.log(`⏰ Next reward: ${newNextReward} coins in ${newNextCooldown} minutes`);
+    } else {
+      console.log(`⏳ Still on cooldown: ${formatCooldown(cooldownRemaining)} remaining`);
+    }
+  };
+
+  // Give coins to user via API
+  const giveCoinsToUser = async (amount) => {
     try {
       const token = localStorage.getItem("axum_token");
       
       if (!token) {
-        throw new Error('No token found. Please login again.');
+        console.error('No token found');
+        return;
       }
 
-      const res = await fetch(`${API_URL}/api/user/add-coin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+      // Call API multiple times to add coins
+      for (let i = 0; i < amount; i++) {
+        const res = await fetch(`${API_URL}/api/user/add-coin`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (i === amount - 1) {
+            // Last call - update UI
+            setCoins(data.coins);
+            setGems(data.gems);
+          }
         }
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
       }
 
-      const data = await res.json();
-
-      if (data.success) {
-        setCoins(data.coins);
-        setGems(data.gems);
-        
-        if (typeof fetchUser === "function") {
-          fetchUser();
-        }
-      } else {
-        setCoins(previousCoins);
+      // Refresh user data
+      if (typeof fetchUser === "function") {
+        fetchUser();
       }
+
+      console.log(`✅ Successfully added ${amount} coins!`);
     } catch (err) {
-      setCoins(previousCoins);
-      console.error("Plus button error:", err);
-    } finally {
-      setAddingCoin(false);
+      console.error("Error giving coins:", err);
     }
-  }
+  };
 
-  // When Makeda is tapped → Show progress info with cooldown
-  async function handleQueenTap() {
-    // Check cooldown
-    if (makedaCooldown > 0) {
-      alert(`⏰ Queen Makeda needs rest!\n\nPlease wait ${formatCooldown(makedaCooldown)} before tapping again.`);
-      return;
-    }
-
-    console.log('👑 Queen Makeda tapped');
-
-    // Calculate progress
-    const progress = calculateProgress();
-    setHintData(progress);
-    setHintVisible(true);
-
-    // Set cooldown
-    localStorage.setItem('makeda_last_tap', Date.now().toString());
-    setMakedaCooldown(MAKEDA_COOLDOWN_MS / 1000);
-    startCooldownTimer();
-
-    // Auto-hide after 10 seconds
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => {
-      setHintVisible(false);
-      hideTimerRef.current = null;
-    }, 10000);
-  }
-
-  // Close hint popup
-  const closeHint = () => {
-    setHintVisible(false);
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
+  const closeProgress = () => {
+    setShowProgress(false);
   };
 
   // Calculate stats
@@ -324,21 +383,11 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </header>
 
-      {/* Coins & Gems with PLUS BUTTON */}
+      {/* Coins & Gems (NO PLUS BUTTON) */}
       <div className="currency-row logo-style">
         <div className="currency-item logo-box">
           <img src={iconCoin} alt="Coins" className="currency-icon" />
-          <div className="currency-value-wrapper">
-            <div className="currency-value">{coins.toLocaleString()}</div>
-            <button 
-              className={`plus-coin-btn ${addingCoin ? 'adding' : ''}`}
-              onClick={handlePlusClick}
-              disabled={addingCoin}
-              title="Add 1 coin"
-            >
-              {addingCoin ? '⏳' : '+'}
-            </button>
-          </div>
+          <div className="currency-value">{coins.toLocaleString()}</div>
         </div>
 
         <div className="currency-item logo-box">
@@ -347,150 +396,130 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </div>
 
-      {/* Makeda with Cooldown Indicator */}
+      {/* Makeda with Daily Reward System */}
       <main className="queen-main-section">
         <div className="queen-oval-frame">
           <img
             src={queenMakeda}
             alt="Queen Makeda"
-            className={`queen-main-img floating ${makedaCooldown > 0 ? 'on-cooldown' : ''}`}
+            className={`queen-main-img floating ${!canClaimReward ? 'on-cooldown' : ''}`}
             onClick={handleQueenTap}
             role="button"
             style={{
-              opacity: makedaCooldown > 0 ? 0.5 : 1,
-              cursor: makedaCooldown > 0 ? 'not-allowed' : 'pointer'
+              opacity: !canClaimReward ? 0.6 : 1,
+              cursor: 'pointer'
             }}
           />
           
-          {makedaCooldown > 0 && (
+          {!canClaimReward && cooldownRemaining > 0 && (
             <div className="cooldown-overlay">
               <div className="cooldown-text">
-                ⏰ {formatCooldown(makedaCooldown)}
+                ⏰ {formatCooldown(cooldownRemaining)}
               </div>
+              <div className="next-reward-preview">
+                Next: {nextReward} 🪙
+              </div>
+            </div>
+          )}
+
+          {canClaimReward && (
+            <div className="reward-ready-badge">
+              <div className="reward-amount">+{nextReward} 🪙</div>
+              <div className="reward-label">Tap to claim!</div>
             </div>
           )}
         </div>
 
-        {/* Enhanced Progress Popup */}
-        {hintVisible && hintData && (
+        {/* Progress Popup */}
+        {showProgress && progressData && (
           <aside className="progress-popover" role="status">
-            <button className="close-hint-btn" onClick={closeHint}>×</button>
+            <button className="close-hint-btn" onClick={closeProgress}>×</button>
             
             <div className="progress-header">
-              <h3>🏆 Level {hintData.level}: {hintData.name}</h3>
-              {hintData.isMaxLevel && <p className="max-level-badge">⭐ MAX LEVEL ⭐</p>}
+              <h3>🏆 Level {progressData.level}: {progressData.name}</h3>
             </div>
 
-            {!hintData.isMaxLevel && (
+            {!progressData.isMaxLevel && (
               <div className="progress-content">
                 {/* Overall Progress */}
                 <div className="overall-progress">
                   <div className="progress-label">
                     <span>Overall Progress</span>
-                    <span className="progress-percentage">{hintData.overallProgress.toFixed(1)}%</span>
+                    <span className="progress-percentage">{progressData.overallProgress.toFixed(1)}%</span>
                   </div>
                   <div className="progress-bar">
                     <div 
                       className="progress-fill overall" 
-                      style={{width: `${hintData.overallProgress}%`}}
+                      style={{width: `${progressData.overallProgress}%`}}
                     />
                   </div>
                 </div>
 
-                {/* Coins Progress */}
+                {/* Coins Remaining */}
                 <div className="requirement-item">
                   <div className="req-header">
                     <span className="req-icon">🪙</span>
-                    <span className="req-label">Coins</span>
+                    <span className="req-label">Coins Needed</span>
                     <span className="req-status">
-                      {hintData.currentCoins.toLocaleString()} / {hintData.coinsNeeded.toLocaleString()}
+                      {progressData.currentCoins.toLocaleString()} / {progressData.coinsNeeded.toLocaleString()}
                     </span>
                   </div>
                   <div className="progress-bar">
                     <div 
                       className="progress-fill coins" 
-                      style={{width: `${hintData.coinsProgress}%`}}
+                      style={{width: `${progressData.coinsProgress}%`}}
                     />
                   </div>
-                  {hintData.coinsRemaining > 0 && (
+                  {progressData.coinsRemaining > 0 && (
                     <div className="req-remaining">
-                      Need {hintData.coinsRemaining.toLocaleString()} more coins
+                      ⚡ {progressData.coinsRemaining.toLocaleString()} coins remaining
                     </div>
                   )}
                 </div>
 
-                {/* Tasks Progress */}
+                {/* Tasks Remaining */}
                 <div className="requirement-item">
                   <div className="req-header">
                     <span className="req-icon">✅</span>
-                    <span className="req-label">Tasks</span>
+                    <span className="req-label">Tasks Needed</span>
                     <span className="req-status">
-                      {hintData.completedTasks} / {hintData.tasksNeeded}
+                      {progressData.completedTasks} / {progressData.tasksNeeded}
                     </span>
                   </div>
                   <div className="progress-bar">
                     <div 
                       className="progress-fill tasks" 
-                      style={{width: `${hintData.tasksProgress}%`}}
+                      style={{width: `${progressData.tasksProgress}%`}}
                     />
                   </div>
-                  {hintData.tasksRemaining > 0 && (
+                  {progressData.tasksRemaining > 0 && (
                     <div className="req-remaining">
-                      Complete {hintData.tasksRemaining} more tasks
+                      ⚡ {progressData.tasksRemaining} tasks remaining
                     </div>
                   )}
                 </div>
 
-                {/* Friends Progress */}
+                {/* Friends Remaining */}
                 <div className="requirement-item">
                   <div className="req-header">
                     <span className="req-icon">👥</span>
-                    <span className="req-label">Friends</span>
+                    <span className="req-label">Friends Needed</span>
                     <span className="req-status">
-                      {hintData.invitedFriends} / {hintData.friendsNeeded}
+                      {progressData.invitedFriends} / {progressData.friendsNeeded}
                     </span>
                   </div>
                   <div className="progress-bar">
                     <div 
                       className="progress-fill friends" 
-                      style={{width: `${hintData.friendsProgress}%`}}
+                      style={{width: `${progressData.friendsProgress}%`}}
                     />
                   </div>
-                  {hintData.friendsRemaining > 0 && (
+                  {progressData.friendsRemaining > 0 && (
                     <div className="req-remaining">
-                      Invite {hintData.friendsRemaining} more friends
+                      ⚡ {progressData.friendsRemaining} friends remaining
                     </div>
                   )}
                 </div>
-
-                {/* Level Completion */}
-                {hintData.isLevelComplete ? (
-                  <div className="level-complete">
-                    <div className="complete-badge">🎉 LEVEL COMPLETE! 🎉</div>
-                    <div className="reward-info">
-                      <div className="reward-label">Next Level Reward:</div>
-                      <div className="reward-items">
-                        <span>🪙 +{hintData.reward.coins.toLocaleString()}</span>
-                        <span>💎 +{hintData.reward.gems}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="next-level-reward">
-                    <div className="reward-label">Complete Level {hintData.level} to earn:</div>
-                    <div className="reward-items">
-                      <span>🪙 {hintData.reward.coins.toLocaleString()}</span>
-                      <span>💎 {hintData.reward.gems}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {hintData.isMaxLevel && (
-              <div className="max-level-message">
-                <p>🏆 You've reached the highest level!</p>
-                <p>Keep earning coins and completing tasks!</p>
               </div>
             )}
           </aside>
@@ -579,6 +608,11 @@ export default function DashboardPage({ user = {}, fetchUser }) {
               <div className="stat-row">
                 <span className="stat-label">👥 Friends Invited:</span>
                 <span className="stat-value highlight">{invitedFriends}</span>
+              </div>
+
+              <div className="stat-row">
+                <span className="stat-label">🎁 Daily Taps:</span>
+                <span className="stat-value highlight">{tapCount}</span>
               </div>
 
               <div className="stat-row">
