@@ -181,7 +181,7 @@ html, body, #root {
 }
 
 /* ========================================
-   QUEEN MAKEDA SECTION
+   QUEEN MAKEDA SECTION WITH TIMER
    ======================================== */
 
 .queen-main-section {
@@ -193,7 +193,7 @@ html, body, #root {
   flex: 1 1 auto;
 }
 
-/* Decorative oval frame */
+/* Decorative oval frame with progress ring */
 .queen-oval-frame {
   width: 100%;
   max-width: 720px;
@@ -212,6 +212,45 @@ html, body, #root {
   padding: 6px;
 }
 
+/* Cooldown Progress Ring (SVG) */
+.cooldown-progress-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.progress-ring-bg {
+  fill: none;
+  stroke: rgba(212, 175, 55, 0.15);
+  stroke-width: 2;
+}
+
+.progress-ring-fill {
+  fill: none;
+  stroke: #D4AF37;
+  stroke-width: 3;
+  stroke-dasharray: 302;
+  stroke-dashoffset: 302;
+  transition: stroke-dashoffset 1s linear;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.8));
+  animation: progressGlow 2s ease-in-out infinite;
+}
+
+@keyframes progressGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(212, 175, 55, 1));
+  }
+}
+
 /* Makeda image */
 .queen-main-img {
   width: 120%;
@@ -224,6 +263,7 @@ html, body, #root {
   top: 6px;
   filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.65));
   cursor: pointer;
+  z-index: 10;
 }
 
 /* Floating animation */
@@ -274,13 +314,8 @@ html, body, #root {
   }
 }
 
-.flying-coin {
-  --start-x: attr(style left);
-  --start-y: attr(style top);
-}
-
 /* ========================================
-   COMPACT PROGRESS POPUP
+   COMPACT PROGRESS POPUP (Auto-hide 3s)
    ======================================== */
 
 .progress-popover-compact {
@@ -400,7 +435,7 @@ html, body, #root {
 }
 
 /* ========================================
-   COMPACT USER INFO POPUP
+   COMPACT USER INFO POPUP (Auto-hide 3s)
    ======================================== */
 
 .user-info-popup-overlay {
@@ -666,6 +701,10 @@ html, body, #root {
   .flying-coin {
     font-size: 1.3rem;
   }
+
+  .progress-ring-fill {
+    stroke-width: 2.5;
+  }
 }
 
 @media (max-width: 420px) {
@@ -673,17 +712,4 @@ html, body, #root {
     width: 250px;
     bottom: 20%;
   }
-}
-
-/* ========================================
-   HIDE OLD BADGES (NOT USED ANYMORE)
-   ======================================== */
-
-.reward-ready-badge,
-.reward-amount,
-.reward-label,
-.cooldown-overlay,
-.cooldown-text,
-.next-reward-preview {
-  display: none !important;
 }
