@@ -30,9 +30,9 @@ app.use(cors({
     process.env.FRONTEND_URL,
     "http://localhost:5173",
     "http://127.0.0.1:5173"
-        "https://web.telegram.org",     // ← ADD THIS!
-    "https://telegram.org",          // ← ADD THIS!
-    "https://t.me"                   // ← ADD THIS!
+        "https://web.telegram.org",  
+    "https://telegram.org",         
+    "https://t.me"                 
 
   ],
   credentials: true
