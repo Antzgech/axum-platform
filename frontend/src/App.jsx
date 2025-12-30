@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 
@@ -25,6 +25,10 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const location = useLocation();
+
+  // Check if we're on dashboard page
+  const isDashboard = location.pathname === '/dashboard';
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -64,64 +68,72 @@ function AppContent() {
   if (!language) return <LanguageSelector onSelectLanguage={changeLanguage} />;
 
   return (
+    <div className="app-container">
+      {/* Hide Navbar on Dashboard */}
+      {user && hasSeenOnboarding && !isDashboard && <Navbar />}
+
+      <main className={isDashboard ? "" : "main-content"}>
+        <Routes>
+          <Route path="/" element={
+            !user ? <HomePage setUser={setUser} language={language} /> :
+            !hasSeenOnboarding ? <Navigate to="/onboarding" /> :
+            <Navigate to="/dashboard" />
+          } />
+
+          <Route path="/onboarding" element={
+            user && !hasSeenOnboarding ?
+            <OnboardingPage onComplete={handleOnboardingComplete} language={language} /> :
+            <Navigate to={user ? "/dashboard" : "/"} />
+          } />
+
+          <Route path="/dashboard" element={
+            user && hasSeenOnboarding ?
+            <DashboardPage user={user} language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/game" element={
+            user && hasSeenOnboarding ?
+            <GamePage user={user} language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/leaderboard" element={
+            user && hasSeenOnboarding ?
+            <LeaderboardPage language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/rewards" element={
+            user && hasSeenOnboarding ?
+            <RewardsPage user={user} language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/tasks" element={
+            user && hasSeenOnboarding ?
+            <TasksPage user={user} language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/sponsors" element={
+            user && hasSeenOnboarding ?
+            <SponsorsPage language={language} /> :
+            <Navigate to="/" />
+          } />
+        </Routes>
+      </main>
+
+      {/* Hide Footer on Dashboard */}
+      {user && hasSeenOnboarding && !isDashboard && <Footer />}
+    </div>
+  );
+}
+
+function AppWrapper() {
+  return (
     <Router>
-      <div className="app-container">
-        {user && hasSeenOnboarding && <Navbar />}
-
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={
-              !user ? <HomePage setUser={setUser} language={language} /> :
-              !hasSeenOnboarding ? <Navigate to="/onboarding" /> :
-              <Navigate to="/dashboard" />
-            } />
-
-            <Route path="/onboarding" element={
-              user && !hasSeenOnboarding ?
-              <OnboardingPage onComplete={handleOnboardingComplete} language={language} /> :
-              <Navigate to={user ? "/dashboard" : "/"} />
-            } />
-
-            <Route path="/dashboard" element={
-              user && hasSeenOnboarding ?
-              <DashboardPage user={user} language={language} /> :
-              <Navigate to="/" />
-            } />
-
-            <Route path="/game" element={
-              user && hasSeenOnboarding ?
-              <GamePage user={user} language={language} /> :
-              <Navigate to="/" />
-            } />
-
-            <Route path="/leaderboard" element={
-              user && hasSeenOnboarding ?
-              <LeaderboardPage language={language} /> :
-              <Navigate to="/" />
-            } />
-
-            <Route path="/rewards" element={
-              user && hasSeenOnboarding ?
-              <RewardsPage user={user} language={language} /> :
-              <Navigate to="/" />
-            } />
-
-            <Route path="/tasks" element={
-              user && hasSeenOnboarding ?
-              <TasksPage user={user} language={language} /> :
-              <Navigate to="/" />
-            } />
-
-            <Route path="/sponsors" element={
-              user && hasSeenOnboarding ?
-              <SponsorsPage language={language} /> :
-              <Navigate to="/" />
-            } />
-          </Routes>
-        </main>
-
-        {user && hasSeenOnboarding && <Footer />}
-      </div>
+      <AppContent />
     </Router>
   );
 }
@@ -129,7 +141,7 @@ function AppContent() {
 function App() {
   return (
     <LanguageProvider>
-      <AppContent />
+      <AppWrapper />
     </LanguageProvider>
   );
 }
