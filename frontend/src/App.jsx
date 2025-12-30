@@ -20,6 +20,8 @@ import SponsorsPage from './pages/SponsorsPage';
 
 import './App.css';
 
+const API_URL = 'https://axum-backend-production.up.railway.app';
+
 function AppContent() {
   const { language, changeLanguage } = useLanguage();
   const [user, setUser] = useState(null);
@@ -30,6 +32,30 @@ function AppContent() {
   // Check if we're on dashboard page
   const isDashboard = location.pathname === '/dashboard';
 
+  // Fetch user data from database
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem('axum_token');
+      if (!token) return;
+
+      const response = await fetch(`${API_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('✅ User refreshed:', userData);
+        setUser(userData);
+      } else {
+        console.error('Failed to fetch user');
+        localStorage.removeItem('axum_token');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Fetch user error:', error);
+    }
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -38,14 +64,16 @@ function AppContent() {
 
         const token = localStorage.getItem('axum_token');
         if (token) {
-          const response = await fetch('/api/auth/me', {
+          const response = await fetch(`${API_URL}/api/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
 
           if (response.ok) {
             const userData = await response.json();
+            console.log('✅ User logged in:', userData);
             setUser(userData);
           } else {
+            console.error('Auth failed');
             localStorage.removeItem('axum_token');
           }
         }
@@ -88,13 +116,13 @@ function AppContent() {
 
           <Route path="/dashboard" element={
             user && hasSeenOnboarding ?
-            <DashboardPage user={user} language={language} /> :
+            <DashboardPage user={user} fetchUser={fetchUser} language={language} /> :
             <Navigate to="/" />
           } />
 
           <Route path="/game" element={
             user && hasSeenOnboarding ?
-            <GamePage user={user} language={language} /> :
+            <GamePage user={user} fetchUser={fetchUser} language={language} /> :
             <Navigate to="/" />
           } />
 
@@ -112,7 +140,7 @@ function AppContent() {
 
           <Route path="/tasks" element={
             user && hasSeenOnboarding ?
-            <TasksPage user={user} language={language} /> :
+            <TasksPage user={user} fetchUser={fetchUser} language={language} /> :
             <Navigate to="/" />
           } />
 
