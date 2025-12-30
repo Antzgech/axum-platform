@@ -22,7 +22,74 @@
    PLUS BUTTON FOR COINS
    ======================================== */
 
+/* Add this to your existing DashboardPage.css */
 
+/* ========================================
+   PLUS BUTTON FOR COINS
+   ======================================== */
+
+.currency-value-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plus-coin-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #D4AF37 0%, #C9A332 100%);
+  border: 2px solid #F4E4B8;
+  color: #1a1a1a;
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(212, 175, 55, 0.4);
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.plus-coin-btn:hover {
+  transform: scale(1.15) rotate(90deg);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.6);
+  background: linear-gradient(135deg, #F4E4B8 0%, #D4AF37 100%);
+}
+
+.plus-coin-btn:active {
+  transform: scale(0.95) rotate(90deg);
+}
+
+.plus-coin-btn.adding {
+  animation: btnSpin 0.5s linear;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+@keyframes btnSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.plus-coin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .plus-coin-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    font-size: 1.2rem;
+  }
+}
 
 
 
