@@ -80,7 +80,8 @@ function AppContent() {
       } catch (error) {
         console.error('Auth check failed:', error);
       } finally {
-        setTimeout(() => setLoading(false), 1500);
+        // Show loading screen for exactly 7 seconds
+        setTimeout(() => setLoading(false), 7000);
       }
     };
 
