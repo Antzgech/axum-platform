@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
+import DailyCheckIn from '../components/DailyCheckIn';
+
 
 // Assets
 import queenMakeda from '../assets/queen-makeda.png';
