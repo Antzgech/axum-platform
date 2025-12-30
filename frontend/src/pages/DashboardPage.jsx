@@ -132,6 +132,52 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     }
   };
 
+
+
+  const [showCheckin, setShowCheckin] = useState(false);
+
+useEffect(() => {
+  const lastCheckin = localStorage.getItem('last_checkin_date');
+  const today = new Date().toDateString();
+
+  if (lastCheckin !== today) {
+    setTimeout(() => {
+      setShowCheckin(true);
+    }, 2000);
+  }
+}, []);
+
+
+<button
+  className="checkin-mini-btn"
+  onClick={() => setShowCheckin(true)}
+>
+  📅
+</button>
+{showCheckin && (
+  <DailyCheckIn
+    onClose={() => setShowCheckin(false)}
+    onClaim={handleCheckinClaim}
+  />
+)}
+
+const handleCheckinClaim = (data) => {
+  localStorage.setItem('last_checkin_date', new Date().toDateString());
+
+  if (data.rewards) {
+    setCoins(prev => prev + data.rewards.coins);
+    setGems(prev => prev + data.rewards.gems);
+  }
+
+  if (typeof fetchUser === "function") {
+    fetchUser();
+  }
+
+  setTimeout(() => setShowCheckin(false), 2000);
+};
+
+  
+
   const startCooldownTimer = (cooldownMinutes) => {
     if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
 
@@ -227,11 +273,14 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
 
   
-<button className="checkin-mini-btn" onClick={() => setShowCheckin(true)} > 📅 </button>
+
   const handleLanguageToggle = () => {
-    setShowCheckin(true);
-    const next = language === 'en' ? 'am' : 'en';
-    changeLanguage(next);
+     className="checkin-mini-btn"
+  onClick={() => setShowCheckin(true)}
+>
+  📅
+   /* const next = language === 'en' ? 'am' : 'en';
+    changeLanguage(next);*/
   };
 
 
