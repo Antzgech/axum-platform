@@ -87,6 +87,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const [showProgress, setShowProgress] = useState(false);
   const [progressData, setProgressData] = useState(null);
 
+  // Coin animations
+  const [flyingCoins, setFlyingCoins] = useState([]);
+
   // Daily reward system
   const [nextReward, setNextReward] = useState(2);
   const [nextCooldown, setNextCooldown] = useState(2);
@@ -95,6 +98,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const [canClaimReward, setCanClaimReward] = useState(true);
 
   const cooldownIntervalRef = useRef(null);
+  const coinBoxRef = useRef(null);
+  const makedaRef = useRef(null);
+
   const API_URL = 'https://axum-backend-production.up.railway.app';
 
   const avatarSrc = user.photo_url || queenMakeda;
@@ -123,7 +129,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     const today = now.toDateString();
 
     if (!lastReset || lastReset !== today) {
-      // New day! Reset everything
       console.log('🌅 New day detected! Resetting daily rewards...');
       localStorage.setItem(STORAGE_KEYS.LAST_RESET, today);
       localStorage.setItem(STORAGE_KEYS.TAP_COUNT, '0');
@@ -144,11 +149,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   // Initialize the daily reward system
   const initializeDailySystem = () => {
-    // Check if new day
     const isNewDay = checkAndResetDaily();
     
     if (!isNewDay) {
-      // Load existing state
       const savedTapCount = parseInt(localStorage.getItem(STORAGE_KEYS.TAP_COUNT) || '0');
       const savedNextReward = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_REWARD) || '2');
       const savedNextCooldown = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_COOLDOWN) || '2');
@@ -158,7 +161,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       setNextReward(savedNextReward);
       setNextCooldown(savedNextCooldown);
 
-      // Check cooldown
       if (savedLastTap) {
         const lastTapTime = parseInt(savedLastTap);
         const cooldownMs = savedNextCooldown * 60 * 1000;
@@ -201,6 +203,39 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Create flying coin animations
+  const createFlyingCoins = (amount) => {
+    const makedaRect = makedaRef.current?.getBoundingClientRect();
+    const coinBoxRect = coinBoxRef.current?.getBoundingClientRect();
+
+    if (!makedaRect || !coinBoxRect) return;
+
+    const startX = makedaRect.left + makedaRect.width / 2;
+    const startY = makedaRect.top + makedaRect.height / 2;
+    const endX = coinBoxRect.left + coinBoxRect.width / 2;
+    const endY = coinBoxRect.top + coinBoxRect.height / 2;
+
+    const newCoins = [];
+    for (let i = 0; i < amount; i++) {
+      const id = Date.now() + Math.random();
+      newCoins.push({
+        id,
+        startX,
+        startY,
+        endX,
+        endY,
+        delay: i * 150 // Stagger each coin by 150ms
+      });
+    }
+
+    setFlyingCoins(prev => [...prev, ...newCoins]);
+
+    // Remove coins after animation completes
+    setTimeout(() => {
+      setFlyingCoins(prev => prev.filter(coin => !newCoins.find(c => c.id === coin.id)));
+    }, 1500 + (amount * 150));
+  };
+
   // Calculate level progress
   const calculateProgress = () => {
     const currentLevel = user.current_level || 1;
@@ -218,12 +253,10 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     const invitedFriends = user.invited_friends || 0;
     const currentCoins = coins;
 
-    // Calculate remaining
     const coinsRemaining = Math.max(0, levelReq.coinsNeeded - currentCoins);
     const tasksRemaining = Math.max(0, levelReq.tasksNeeded - completedTasks);
     const friendsRemaining = Math.max(0, levelReq.friendsNeeded - invitedFriends);
 
-    // Calculate percentages
     const coinsProgress = Math.min(100, (currentCoins / levelReq.coinsNeeded) * 100);
     const tasksProgress = Math.min(100, (completedTasks / levelReq.tasksNeeded) * 100);
     const friendsProgress = Math.min(100, (invitedFriends / levelReq.friendsNeeded) * 100);
@@ -249,13 +282,11 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     };
   };
 
-  // Toggle language
   const handleLanguageToggle = () => {
     const next = language === 'en' ? 'am' : 'en';
     changeLanguage(next);
   };
 
-  // Click on username → Show user info popup
   const handleNameClick = () => {
     setShowUserInfo(true);
   };
@@ -277,8 +308,13 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     if (canClaimReward) {
       console.log(`💰 Claiming ${nextReward} coins!`);
       
-      // Give coins to user
-      await giveCoinsToUser(nextReward);
+      // Create flying coin animation
+      createFlyingCoins(nextReward);
+
+      // Give coins to user (with delay for animation)
+      setTimeout(() => {
+        giveCoinsToUser(nextReward);
+      }, 800);
 
       // Update state for next tap
       const newTapCount = tapCount + 1;
@@ -289,13 +325,11 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       setNextReward(newNextReward);
       setNextCooldown(newNextCooldown);
 
-      // Save to localStorage
       localStorage.setItem(STORAGE_KEYS.TAP_COUNT, newTapCount.toString());
       localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, newNextReward.toString());
       localStorage.setItem(STORAGE_KEYS.NEXT_COOLDOWN, newNextCooldown.toString());
       localStorage.setItem(STORAGE_KEYS.LAST_TAP, Date.now().toString());
 
-      // Start cooldown
       const cooldownSec = newNextCooldown * 60;
       setCooldownRemaining(cooldownSec);
       setCanClaimReward(false);
@@ -317,7 +351,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         return;
       }
 
-      // Call API multiple times to add coins
       for (let i = 0; i < amount; i++) {
         const res = await fetch(`${API_URL}/api/user/add-coin`, {
           method: "POST",
@@ -330,14 +363,12 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         if (res.ok) {
           const data = await res.json();
           if (i === amount - 1) {
-            // Last call - update UI
             setCoins(data.coins);
             setGems(data.gems);
           }
         }
       }
 
-      // Refresh user data
       if (typeof fetchUser === "function") {
         fetchUser();
       }
@@ -352,7 +383,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     setShowProgress(false);
   };
 
-  // Calculate stats
   const completedTasksCount = user?.completed_tasks?.length || 0;
   const invitedFriends = user?.invited_friends || 0;
   const currentLevel = user?.current_level || 1;
@@ -383,9 +413,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </header>
 
-      {/* Coins & Gems (NO PLUS BUTTON) */}
+      {/* Coins & Gems */}
       <div className="currency-row logo-style">
-        <div className="currency-item logo-box">
+        <div className="currency-item logo-box" ref={coinBoxRef}>
           <img src={iconCoin} alt="Coins" className="currency-icon" />
           <div className="currency-value">{coins.toLocaleString()}</div>
         </div>
@@ -396,128 +426,70 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </div>
 
-      {/* Makeda with Daily Reward System */}
+      {/* Makeda */}
       <main className="queen-main-section">
-        <div className="queen-oval-frame">
+        <div className="queen-oval-frame" ref={makedaRef}>
           <img
             src={queenMakeda}
             alt="Queen Makeda"
-            className={`queen-main-img floating ${!canClaimReward ? 'on-cooldown' : ''}`}
+            className="queen-main-img floating"
             onClick={handleQueenTap}
             role="button"
-            style={{
-              opacity: !canClaimReward ? 0.6 : 1,
-              cursor: 'pointer'
-            }}
           />
-          
-          {!canClaimReward && cooldownRemaining > 0 && (
-            <div className="cooldown-overlay">
-              <div className="cooldown-text">
-                ⏰ {formatCooldown(cooldownRemaining)}
-              </div>
-              <div className="next-reward-preview">
-                Next: {nextReward} 🪙
-              </div>
-            </div>
-          )}
-
-          {canClaimReward && (
-            <div className="reward-ready-badge">
-              <div className="reward-amount">+{nextReward} 🪙</div>
-              <div className="reward-label">Tap to claim!</div>
-            </div>
-          )}
         </div>
 
-        {/* Progress Popup */}
+        {/* Flying Coin Animations */}
+        {flyingCoins.map((coin, index) => (
+          <div
+            key={coin.id}
+            className="flying-coin"
+            style={{
+              left: `${coin.startX}px`,
+              top: `${coin.startY}px`,
+              '--end-x': `${coin.endX}px`,
+              '--end-y': `${coin.endY}px`,
+              animationDelay: `${coin.delay}ms`
+            }}
+          >
+            +1 🪙
+          </div>
+        ))}
+
+        {/* Compact Progress Popup */}
         {showProgress && progressData && (
-          <aside className="progress-popover" role="status">
+          <aside className="progress-popover-compact" role="status">
             <button className="close-hint-btn" onClick={closeProgress}>×</button>
             
-            <div className="progress-header">
-              <h3>🏆 Level {progressData.level}: {progressData.name}</h3>
+            <div className="progress-header-compact">
+              <h4>Level {progressData.level}: {progressData.name}</h4>
             </div>
 
             {!progressData.isMaxLevel && (
-              <div className="progress-content">
-                {/* Overall Progress */}
-                <div className="overall-progress">
-                  <div className="progress-label">
-                    <span>Overall Progress</span>
-                    <span className="progress-percentage">{progressData.overallProgress.toFixed(1)}%</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill overall" 
-                      style={{width: `${progressData.overallProgress}%`}}
-                    />
-                  </div>
-                </div>
-
-                {/* Coins Remaining */}
-                <div className="requirement-item">
-                  <div className="req-header">
-                    <span className="req-icon">🪙</span>
-                    <span className="req-label">Coins Needed</span>
-                    <span className="req-status">
-                      {progressData.currentCoins.toLocaleString()} / {progressData.coinsNeeded.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill coins" 
-                      style={{width: `${progressData.coinsProgress}%`}}
-                    />
-                  </div>
+              <div className="progress-content-compact">
+                {/* Coins */}
+                <div className="req-compact">
+                  <span className="req-icon-small">🪙</span>
+                  <span className="req-text">{progressData.currentCoins.toLocaleString()} / {progressData.coinsNeeded.toLocaleString()}</span>
                   {progressData.coinsRemaining > 0 && (
-                    <div className="req-remaining">
-                      ⚡ {progressData.coinsRemaining.toLocaleString()} coins remaining
-                    </div>
+                    <span className="req-remain-small">{progressData.coinsRemaining.toLocaleString()} left</span>
                   )}
                 </div>
 
-                {/* Tasks Remaining */}
-                <div className="requirement-item">
-                  <div className="req-header">
-                    <span className="req-icon">✅</span>
-                    <span className="req-label">Tasks Needed</span>
-                    <span className="req-status">
-                      {progressData.completedTasks} / {progressData.tasksNeeded}
-                    </span>
-                  </div>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill tasks" 
-                      style={{width: `${progressData.tasksProgress}%`}}
-                    />
-                  </div>
+                {/* Tasks */}
+                <div className="req-compact">
+                  <span className="req-icon-small">✅</span>
+                  <span className="req-text">{progressData.completedTasks} / {progressData.tasksNeeded}</span>
                   {progressData.tasksRemaining > 0 && (
-                    <div className="req-remaining">
-                      ⚡ {progressData.tasksRemaining} tasks remaining
-                    </div>
+                    <span className="req-remain-small">{progressData.tasksRemaining} left</span>
                   )}
                 </div>
 
-                {/* Friends Remaining */}
-                <div className="requirement-item">
-                  <div className="req-header">
-                    <span className="req-icon">👥</span>
-                    <span className="req-label">Friends Needed</span>
-                    <span className="req-status">
-                      {progressData.invitedFriends} / {progressData.friendsNeeded}
-                    </span>
-                  </div>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill friends" 
-                      style={{width: `${progressData.friendsProgress}%`}}
-                    />
-                  </div>
+                {/* Friends */}
+                <div className="req-compact">
+                  <span className="req-icon-small">👥</span>
+                  <span className="req-text">{progressData.invitedFriends} / {progressData.friendsNeeded}</span>
                   {progressData.friendsRemaining > 0 && (
-                    <div className="req-remaining">
-                      ⚡ {progressData.friendsRemaining} friends remaining
-                    </div>
+                    <span className="req-remain-small">{progressData.friendsRemaining} left</span>
                   )}
                 </div>
               </div>
@@ -553,77 +525,39 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </Link>
       </nav>
 
-      {/* USER INFO POPUP */}
+      {/* Compact User Info Popup */}
       {showUserInfo && (
         <div className="user-info-popup-overlay" onClick={closeUserInfo}>
-          <div className="user-info-popup" onClick={(e) => e.stopPropagation()}>
+          <div className="user-info-popup-compact" onClick={(e) => e.stopPropagation()}>
             <button className="close-popup" onClick={closeUserInfo}>×</button>
             
-            <div className="popup-header">
-              <div className="popup-avatar">
+            <div className="popup-header-compact">
+              <div className="popup-avatar-small">
                 {user?.photo_url ? (
                   <img src={user.photo_url} alt={user.username} />
                 ) : (
-                  <div className="popup-avatar-placeholder">
+                  <div className="popup-avatar-placeholder-small">
                     {user?.first_name?.[0]?.toUpperCase() || '👤'}
                   </div>
                 )}
               </div>
-              <h3>Player Stats</h3>
+              <h4>{user?.first_name || 'Player'}</h4>
             </div>
 
-            <div className="popup-content">
-              <div className="stat-row">
-                <span className="stat-label">👤 Name:</span>
-                <span className="stat-value">
-                  {user?.first_name || 'Unknown'} {user?.last_name || ''}
-                </span>
+            <div className="popup-content-compact">
+              <div className="stat-compact">
+                <span>🪙 {coins.toLocaleString()}</span>
+                <span>💎 {gems}</span>
+                <span>⭐ Lv.{currentLevel}</span>
               </div>
-              
-              <div className="stat-row">
-                <span className="stat-label">📱 Username:</span>
-                <span className="stat-value">@{user?.username || 'N/A'}</span>
+              <div className="stat-compact">
+                <span>✅ {completedTasksCount} tasks</span>
+                <span>👥 {invitedFriends} friends</span>
               </div>
-
-              <div className="stat-row">
-                <span className="stat-label">🪙 Coins:</span>
-                <span className="stat-value highlight">{coins.toLocaleString()}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">💎 Gems:</span>
-                <span className="stat-value highlight">{gems.toLocaleString()}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">⭐ Level:</span>
-                <span className="stat-value highlight">{currentLevel}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">✅ Tasks Completed:</span>
-                <span className="stat-value highlight">{completedTasksCount}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">👥 Friends Invited:</span>
-                <span className="stat-value highlight">{invitedFriends}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">🎁 Daily Taps:</span>
-                <span className="stat-value highlight">{tapCount}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">🆔 Telegram ID:</span>
-                <span className="stat-value">{user?.telegram_id || user?.id || 'N/A'}</span>
+              <div className="stat-compact">
+                <span>🎁 {tapCount} taps today</span>
               </div>
             </div>
-
-            <button className="close-button" onClick={closeUserInfo}>
-              Close
-            </button>
           </div>
         </div>
       )}
