@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
+import { useState, useEffect } from 'react';
+import DailyCheckIn from '../components/DailyCheckIn';
 
 // Assets
 import queenMakeda from '../assets/queen-makeda.png';
@@ -23,7 +25,7 @@ const LEVEL_REQUIREMENTS = {
   5: { name: "Legendary Hero", coinsNeeded: 150000, tasksNeeded: 40, friendsNeeded: 50, reward: { coins: 15000, gems: 100 } },
   6: { name: "Queen's Champion", coinsNeeded: 500000, tasksNeeded: 60, friendsNeeded: 100, reward: { coins: 50000, gems: 250 } }
 };
-
+const [showCheckin, setShowCheckin] = useState(false);
 const STORAGE_KEYS = {
   LAST_RESET: 'makeda_last_reset',
   TAP_COUNT: 'makeda_tap_count',
@@ -31,6 +33,54 @@ const STORAGE_KEYS = {
   NEXT_REWARD: 'makeda_next_reward',
   NEXT_COOLDOWN: 'makeda_next_cooldown'
 };
+
+
+useEffect(() => {
+  // Check if user needs to check in today
+  const checkDailyCheckin = async () => {
+    const lastCheckin = localStorage.getItem('last_checkin_date');
+    const today = new Date().toDateString();
+    
+    // If different day, show modal after 2 seconds
+    if (lastCheckin !== today) {
+      setTimeout(() => {
+        setShowCheckin(true);
+      }, 2000);
+    }
+  };
+  
+  checkDailyCheckin();
+}, []);
+
+const handleCheckinClaim = (data) => {
+  console.log('✅ Daily check-in claimed!', data);
+  
+  // Save today's date
+  localStorage.setItem('last_checkin_date', new Date().toDateString());
+  
+  // Refresh user data to show new coins/gems
+  if (fetchUser) {
+    fetchUser();
+  }
+  
+  // Close modal
+  setShowCheckin(false);
+};
+
+{/* Daily Check-In Modal */}
+{showCheckin && (
+  <DailyCheckIn 
+    onClose={() => setShowCheckin(false)}
+    onClaim={handleCheckinClaim}
+  />
+)}
+<button 
+  className="checkin-button"
+  onClick={() => setShowCheckin(true)}
+>
+  📅 Daily Check-In
+</button>
+
 
 export default function DashboardPage({ user = {}, fetchUser }) {
   const { language, changeLanguage } = useLanguage();
