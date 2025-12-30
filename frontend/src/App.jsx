@@ -29,10 +29,8 @@ function AppContent() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
   const location = useLocation();
 
-  // Check if we're on dashboard page
   const isDashboard = location.pathname === '/dashboard';
 
-  // Fetch user data from database
   const fetchUser = async () => {
     try {
       const token = localStorage.getItem('axum_token');
@@ -80,8 +78,8 @@ function AppContent() {
       } catch (error) {
         console.error('Auth check failed:', error);
       } finally {
-        // Show loading screen for exactly 7 seconds
-        setTimeout(() => setLoading(false), 7000);
+        // Show loading screen for exactly 14 seconds
+        setTimeout(() => setLoading(false), 14000);
       }
     };
 
@@ -98,7 +96,6 @@ function AppContent() {
 
   return (
     <div className="app-container">
-      {/* Hide Navbar on Dashboard */}
       {user && hasSeenOnboarding && !isDashboard && <Navbar />}
 
       <main className={isDashboard ? "" : "main-content"}>
@@ -153,7 +150,6 @@ function AppContent() {
         </Routes>
       </main>
 
-      {/* Hide Footer on Dashboard */}
       {user && hasSeenOnboarding && !isDashboard && <Footer />}
     </div>
   );
