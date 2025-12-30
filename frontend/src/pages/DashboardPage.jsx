@@ -8,6 +8,7 @@ function DashboardPage({ user, fetchUser }) {
   const [localCoins, setLocalCoins] = useState(0);
   const [localGems, setLocalGems] = useState(0);
   const [tapping, setTapping] = useState(false);
+  const [addingCoin, setAddingCoin] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
 
   const API_URL = 'https://axum-backend-production.up.railway.app';
@@ -19,12 +20,52 @@ function DashboardPage({ user, fetchUser }) {
     }
   }, [user]);
 
+  // Add coin via plus button
+  const handleAddCoin = async (e) => {
+    e.stopPropagation(); // Prevent triggering other clicks
+    
+    if (addingCoin) return;
+    
+    setAddingCoin(true);
+    setLocalCoins(prev => prev + 1);
+
+    try {
+      const token = localStorage.getItem('axum_token');
+      const response = await fetch(`${API_URL}/api/user/add-coin`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLocalCoins(data.coins || 0);
+        setLocalGems(data.gems || 0);
+        
+        if (fetchUser) {
+          fetchUser();
+        }
+        
+        console.log('✅ Coin added! Total:', data.coins);
+      } else {
+        setLocalCoins(prev => prev - 1);
+        console.error('Failed to add coin');
+      }
+    } catch (error) {
+      setLocalCoins(prev => prev - 1);
+      console.error('Error adding coin:', error);
+    } finally {
+      setAddingCoin(false);
+    }
+  };
+
+  // Tap Queen Makeda (existing functionality)
   const handleMakedaTap = async () => {
     if (tapping) return;
     
-    // Show user info popup
     setShowUserInfo(true);
-    
     setTapping(true);
     setLocalCoins(prev => prev + 1);
 
@@ -61,7 +102,6 @@ function DashboardPage({ user, fetchUser }) {
     setShowUserInfo(false);
   };
 
-  // Calculate completed tasks count
   const completedTasksCount = user?.completed_tasks?.length || 0;
 
   return (
@@ -87,7 +127,17 @@ function DashboardPage({ user, fetchUser }) {
           <span className="currency-icon">🪙</span>
           <div className="currency-info">
             <span className="currency-label">Coins</span>
-            <span className="currency-value">{localCoins.toLocaleString()}</span>
+            <div className="currency-value-row">
+              <span className="currency-value">{localCoins.toLocaleString()}</span>
+              <button 
+                className={`add-coin-btn ${addingCoin ? 'adding' : ''}`}
+                onClick={handleAddCoin}
+                disabled={addingCoin}
+                title="Add 1 coin"
+              >
+                {addingCoin ? '⏳' : '+'}
+              </button>
+            </div>
           </div>
         </div>
         <div className="currency-box">
