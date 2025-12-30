@@ -1,4 +1,240 @@
-/* Add this to the end of your DashboardPage.css */
+/* ========================================
+   DASHBOARD PAGE - COMPLETE CSS
+   Ethiopian Royal Theme with Flying Coins
+   ======================================== */
+
+/* Root variables */
+:root {
+  --bg-main-1: #8B6F47;
+  --bg-main-2: #4A3622;
+  --logo-bg-start: #F4E4B8;
+  --logo-bg-end: #D4AF37;
+  --accent-purple: #4A3070;
+  --gold: #D4AF37;
+  --gold-primary: #D4AF37;
+  --gold-shine: #D4AF37;
+  --glass: rgba(255,255,255,0.06);
+  --white: #ffffff;
+  --shadow-strong: rgba(0,0,0,0.55);
+  --radius-lg: 16px;
+}
+
+/* Global reset & full-screen background */
+* { 
+  box-sizing: border-box; 
+  -webkit-font-smoothing: antialiased; 
+  -moz-osx-font-smoothing: grayscale; 
+}
+
+html, body, #root { 
+  height: 100%; 
+  margin: 0; 
+  padding: 0; 
+  background: linear-gradient(180deg, var(--bg-main-1), var(--bg-main-2)); 
+  font-family: Arial, sans-serif; 
+  color: var(--white); 
+}
+
+/* ========================================
+   FULL SCREEN CONTAINER
+   ======================================== */
+
+.saba-dashboard.full-screen {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ========================================
+   TOP HEADER
+   ======================================== */
+
+.top-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 16px 8px 16px;
+  background: linear-gradient(180deg, #6B4E9B, #5A3D8A);
+  border-bottom: 0;
+}
+
+.top-left { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  min-width: 0; 
+}
+
+.top-right { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+
+/* Avatar */
+.avatar-circle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, var(--accent-purple), #8B6E9B);
+  border: 3px solid rgba(212, 175, 55, 0.95);
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+  flex-shrink: 0;
+}
+
+.avatar-img { 
+  width: 100%; 
+  height: 100%; 
+  border-radius: 50%; 
+  object-fit: cover; 
+}
+
+/* Player name */
+.player-name-box {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.06);
+  min-width: 0;
+}
+
+.player-name { 
+  font-family: Georgia, serif; 
+  font-weight: 700; 
+  font-size: 1rem; 
+  text-transform: uppercase; 
+  letter-spacing: 0.06em; 
+  color: var(--white); 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+
+/* Language toggle + emoji */
+.lang-toggle-btn { 
+  width: 40px; 
+  height: 40px; 
+  border-radius: 50%; 
+  background: rgba(255, 255, 255, 0.12); 
+  border: 1px solid rgba(212, 175, 55, 0.12); 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+  cursor: pointer; 
+}
+
+.lang-icon { 
+  width: 20px; 
+  height: 20px; 
+}
+
+.axum-logo-emoji { 
+  font-size: 1.6rem; 
+  color: var(--gold); 
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.45); 
+}
+
+/* ========================================
+   CURRENCY ROW
+   ======================================== */
+
+.currency-row { 
+  display: flex; 
+  justify-content: center; 
+  gap: 14px; 
+  padding: 10px 16px 6px 16px; 
+}
+
+.logo-box {
+  display: flex; 
+  align-items: center; 
+  gap: 10px;
+  background: linear-gradient(180deg, var(--logo-bg-start), var(--logo-bg-end));
+  color: #2b1b3a;
+  padding: 10px 14px;
+  border-radius: 14px;
+  min-width: 120px;
+  justify-content: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.currency-icon { 
+  width: 24px; 
+  height: 24px; 
+}
+
+.currency-value { 
+  font-weight: 800; 
+  font-size: 1rem; 
+}
+
+/* ========================================
+   QUEEN MAKEDA SECTION
+   ======================================== */
+
+.queen-main-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  position: relative;
+  flex: 1 1 auto;
+}
+
+/* Decorative oval frame */
+.queen-oval-frame {
+  width: 100%;
+  max-width: 720px;
+  aspect-ratio: 3 / 4;
+  background: radial-gradient(ellipse at center, #4A3070 0%, #2D1B4E 100%);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  border: 0;
+  box-shadow: 
+    0 0 40px rgba(139, 110, 155, 0.45), 
+    inset 0 0 40px rgba(0, 0, 0, 0.35);
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  overflow: visible; 
+  position: relative; 
+  padding: 6px;
+}
+
+/* Makeda image */
+.queen-main-img {
+  width: 120%;
+  max-width: 1200px;
+  height: auto;
+  object-fit: contain;
+  transform-origin: center bottom;
+  pointer-events: auto;
+  position: relative;
+  top: 6px;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.65));
+  cursor: pointer;
+}
+
+/* Floating animation */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.floating { 
+  animation: floatY 4.5s ease-in-out infinite; 
+}
 
 /* ========================================
    FLYING COIN ANIMATION
@@ -11,7 +247,8 @@
   color: #FFD700;
   text-shadow: 
     0 0 10px rgba(255, 215, 0, 0.8),
-    0 0 20px rgba(255, 215, 0, 0.6);
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.5);
   pointer-events: none;
   z-index: 9999;
   animation: flyToTarget 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
@@ -132,10 +369,16 @@
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
 }
 
 .req-compact:last-child {
   margin-bottom: 0;
+}
+
+.req-compact:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(212, 175, 55, 0.2);
 }
 
 .req-icon-small {
@@ -302,8 +545,94 @@
   white-space: nowrap;
 }
 
-/* Mobile Responsive */
+/* ========================================
+   BOTTOM NAVIGATION
+   ======================================== */
+
+.bottom-nav-bar {
+  display: flex; 
+  gap: 18px; 
+  justify-content: space-around; 
+  align-items: center;
+  padding: 14px 18px; 
+  background: linear-gradient(180deg, rgba(45, 27, 78, 0.85), rgba(26, 15, 45, 0.95));
+  border-top: 0;
+}
+
+.nav-btn { 
+  text-decoration: none; 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+
+.nav-btn-circle {
+  width: 72px; 
+  height: 72px; 
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple), #5A3D8A);
+  border: 4px solid var(--gold);
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.45), 
+    inset 0 2px 8px rgba(255, 255, 255, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.nav-btn:hover .nav-btn-circle { 
+  transform: translateY(-6px); 
+  box-shadow: 
+    0 12px 28px rgba(0, 0, 0, 0.55), 
+    0 0 20px rgba(212, 175, 55, 0.18); 
+  border-color: #F4E4B8; 
+}
+
+.nav-icon { 
+  width: 40px; 
+  height: 40px; 
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45)); 
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
 @media (max-width: 480px) {
+  .avatar-circle { 
+    width: 60px; 
+    height: 60px; 
+  }
+  
+  .player-name { 
+    font-size: 0.95rem; 
+  }
+  
+  .logo-box { 
+    min-width: 96px; 
+    padding: 8px 10px; 
+  }
+  
+  .queen-oval-frame { 
+    max-width: 420px; 
+  }
+  
+  .queen-main-img { 
+    width: 140%; 
+    top: 8px; 
+  }
+  
+  .nav-btn-circle { 
+    width: 60px; 
+    height: 60px; 
+  }
+  
+  .nav-icon { 
+    width: 32px; 
+    height: 32px; 
+  }
+  
   .progress-popover-compact {
     width: 260px;
     bottom: 18%;
@@ -339,7 +668,17 @@
   }
 }
 
-/* Remove old badges that are no longer needed */
+@media (max-width: 420px) {
+  .progress-popover-compact {
+    width: 250px;
+    bottom: 20%;
+  }
+}
+
+/* ========================================
+   HIDE OLD BADGES (NOT USED ANYMORE)
+   ======================================== */
+
 .reward-ready-badge,
 .reward-amount,
 .reward-label,
