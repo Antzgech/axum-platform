@@ -1,146 +1,147 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { LanguageProvider } from './i18n/LanguageContext';
+
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+
+import LoadingPage from './components/LoadingPage';
+import LanguageSelector from './components/LanguageSelector';
+
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import DashboardPage from './pages/DashboardPage';
+
+import HomePage from './pages/HomePage';
 import OnboardingPage from './pages/OnboardingPage';
+import DashboardPage from './pages/DashboardPage';
 import GamePage from './pages/GamePage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import RewardsPage from './pages/RewardsPage';
 import TasksPage from './pages/TasksPage';
+import SponsorsPage from './pages/SponsorsPage';
+
 import './App.css';
 
 function AppContent() {
+  const { language, changeLanguage } = useLanguage();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
   const location = useLocation();
 
-  const isDashboard = location.pathname === '/' || location.pathname === '/dashboard';
-  const API_URL = 'https://axum-backend-production.up.railway.app';
-
-  const fetchUser = async () => {
-    try {
-      const token = localStorage.getItem('axum_token');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('✅ User loaded:', userData);
-        setUser(userData);
-      } else {
-        localStorage.removeItem('axum_token');
-      }
-    } catch (error) {
-      console.error('Error fetching user:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTelegramAuth = async (telegramUser) => {
-    try {
-      console.log('🔐 Logging in with Telegram:', telegramUser);
-      
-      const response = await fetch(`${API_URL}/api/auth/telegram`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(telegramUser)
-      });
-
-      if (!response.ok) {
-        console.error('Login failed');
-        setLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-      console.log('✅ Login successful');
-      
-      localStorage.setItem('axum_token', data.token);
-      setUser(data.user);
-      setLoading(false);
-    } catch (error) {
-      console.error('❌ Login error:', error);
-      setLoading(false);
-    }
-  };
+  // Check if we're on dashboard page
+  const isDashboard = location.pathname === '/dashboard';
 
   useEffect(() => {
-    const initApp = async () => {
-      if (window.Telegram?.WebApp) {
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+    const checkAuth = async () => {
+      try {
+        const onboardingComplete = localStorage.getItem('axum_onboarding_complete');
+        setHasSeenOnboarding(!!onboardingComplete);
 
-        const telegramUser = tg.initDataUnsafe?.user;
-        
-        if (telegramUser) {
-          await handleTelegramAuth(telegramUser);
-        } else {
-          await fetchUser();
+        const token = localStorage.getItem('axum_token');
+        if (token) {
+          const response = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData);
+          } else {
+            localStorage.removeItem('axum_token');
+          }
         }
-      } else {
-        await fetchUser();
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      } finally {
+        setTimeout(() => setLoading(false), 1500);
       }
     };
 
-    initApp();
+    checkAuth();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loader"></div>
-        <p>Loading...</p>
-      </div>
-    );
-  }
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('axum_onboarding_complete', 'true');
+    setHasSeenOnboarding(true);
+  };
 
-  if (!user) {
-    return <OnboardingPage onLogin={handleTelegramAuth} />;
-  }
+  if (loading) return <LoadingPage />;
+  if (!language) return <LanguageSelector onSelectLanguage={changeLanguage} />;
 
   return (
     <div className="app-container">
-      {!isDashboard && <Navbar />}
-      
-      <main className={`main-content ${isDashboard ? 'dashboard-mode' : ''}`}>
+      {/* Hide Navbar on Dashboard */}
+      {user && hasSeenOnboarding && !isDashboard && <Navbar />}
+
+      <main className={isDashboard ? "" : "main-content"}>
         <Routes>
-          <Route path="/" element={<DashboardPage user={user} fetchUser={fetchUser} />} />
-          <Route path="/dashboard" element={<DashboardPage user={user} fetchUser={fetchUser} />} />
-          <Route path="/game" element={<GamePage user={user} fetchUser={fetchUser} />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
-          <Route path="/rewards" element={<RewardsPage user={user} />} />
-          <Route path="/tasks" element={<TasksPage user={user} fetchUser={fetchUser} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/" element={
+            !user ? <HomePage setUser={setUser} language={language} /> :
+            !hasSeenOnboarding ? <Navigate to="/onboarding" /> :
+            <Navigate to="/dashboard" />
+          } />
+
+          <Route path="/onboarding" element={
+            user && !hasSeenOnboarding ?
+            <OnboardingPage onComplete={handleOnboardingComplete} language={language} /> :
+            <Navigate to={user ? "/dashboard" : "/"} />
+          } />
+
+          <Route path="/dashboard" element={
+            user && hasSeenOnboarding ?
+            <DashboardPage user={user} language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/game" element={
+            user && hasSeenOnboarding ?
+            <GamePage user={user} language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/leaderboard" element={
+            user && hasSeenOnboarding ?
+            <LeaderboardPage language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/rewards" element={
+            user && hasSeenOnboarding ?
+            <RewardsPage user={user} language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/tasks" element={
+            user && hasSeenOnboarding ?
+            <TasksPage user={user} language={language} /> :
+            <Navigate to="/" />
+          } />
+
+          <Route path="/sponsors" element={
+            user && hasSeenOnboarding ?
+            <SponsorsPage language={language} /> :
+            <Navigate to="/" />
+          } />
         </Routes>
       </main>
 
-      {!isDashboard && <Footer />}
+      {/* Hide Footer on Dashboard */}
+      {user && hasSeenOnboarding && !isDashboard && <Footer />}
     </div>
+  );
+}
+
+function AppWrapper() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
 
 function App() {
   return (
     <LanguageProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <AppWrapper />
     </LanguageProvider>
   );
 }
