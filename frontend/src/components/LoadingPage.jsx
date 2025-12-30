@@ -51,7 +51,7 @@ export default function LoadingPage() {
         className="loading-video-fitted"
         autoPlay
         muted
-        playsInline
+        
         preload="auto"
       >
         <source src="/queen-makeda-video.mp4" type="video/mp4" />
