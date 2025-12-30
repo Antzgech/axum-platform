@@ -18,9 +18,12 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const { language, changeLanguage } = useLanguage();
 
   // UI state (always synced with DB)
-  const [coins, setCoins] = useState(user.coins ?? 0);
-  const [gems, setGems] = useState(user.gems ?? 0);
+  const [coins, setCoins] = useState(0);
+  const [gems, setGems] = useState(0);
   const [addingCoin, setAddingCoin] = useState(false);
+
+  // User info popup
+  const [showUserInfo, setShowUserInfo] = useState(false);
 
   // Makeda hint
   const [hintVisible, setHintVisible] = useState(false);
@@ -31,10 +34,33 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   const API_URL = 'https://axum-backend-production.up.railway.app';
 
+  // Sync coins/gems from user prop
+  useEffect(() => {
+    console.log('📊 User data:', user);
+    if (user.coins !== undefined) {
+      setCoins(user.coins);
+      console.log('💰 Coins from DB:', user.coins);
+    }
+    if (user.gems !== undefined) {
+      setGems(user.gems);
+      console.log('💎 Gems from DB:', user.gems);
+    }
+  }, [user]);
+
   // Toggle language
   const handleLanguageToggle = () => {
     const next = language === 'en' ? 'am' : 'en';
     changeLanguage(next);
+  };
+
+  // ⭐ Click on SABA name → Show user info popup
+  const handleNameClick = () => {
+    console.log('👤 Opening user info popup');
+    setShowUserInfo(true);
+  };
+
+  const closeUserInfo = () => {
+    setShowUserInfo(false);
   };
 
   // ⭐ PLUS BUTTON - Add 1 coin manually
@@ -43,6 +69,8 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     
     if (addingCoin) return;
 
+    console.log('➕ Plus button clicked');
+
     setAddingCoin(true);
     
     // Optimistically update UI
@@ -50,7 +78,13 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     setCoins(prev => prev + 1);
 
     try {
-      const token = localStorage.getItem("axum_token"); // ← FIXED: was "token"
+      const token = localStorage.getItem("axum_token");
+      
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      console.log('📡 Calling /api/user/add-coin...');
 
       const res = await fetch(`${API_URL}/api/user/add-coin`, {
         method: "POST",
@@ -60,33 +94,32 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         }
       });
 
+      console.log('📡 Response status:', res.status);
+
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
 
       const data = await res.json();
+      console.log('📡 Response data:', data);
 
       if (data.success) {
-        // Update with real values from server
         setCoins(data.coins);
         setGems(data.gems);
-
         console.log('✅ Coin added! Total:', data.coins);
 
-        // Refresh full user object
         if (typeof fetchUser === "function") {
           fetchUser();
         }
       } else {
-        // Revert on error
         setCoins(previousCoins);
         console.error('Failed to add coin:', data);
+        alert('Failed to add coin');
       }
     } catch (err) {
-      // Revert on error
       setCoins(previousCoins);
-      console.error("Plus button error:", err);
-      alert('Failed to add coin. Check console for details.');
+      console.error("❌ Plus button error:", err);
+      alert(`Failed to add coin: ${err.message}\n\nCheck if backend is deployed with /api/user/add-coin endpoint.`);
     } finally {
       setAddingCoin(false);
     }
@@ -94,6 +127,8 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   // ⭐ When Makeda is tapped → show hint + add 1 coin to DB
   async function handleQueenTap() {
+    console.log('👑 Queen Makeda tapped');
+
     // Show hint popup
     setHintText('Complete 3 battles\nCollect 10,000 coins\nFinish 5 tasks');
     setHintVisible(true);
@@ -104,12 +139,12 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       hideTimerRef.current = null;
     }, 3000);
 
-    // ⭐ Add 1 coin to database
+    // Add 1 coin to database
     const previousCoins = coins;
     setCoins(prev => prev + 1);
 
     try {
-      const token = localStorage.getItem("axum_token"); // ← FIXED: was "token"
+      const token = localStorage.getItem("axum_token");
 
       const res = await fetch(`${API_URL}/api/user/add-coin`, {
         method: "POST",
@@ -122,11 +157,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       const data = await res.json();
 
       if (data.success) {
-        // Update UI with server values
         setCoins(data.coins);
         setGems(data.gems);
 
-        // Refresh full user object from DB
         if (typeof fetchUser === "function") {
           fetchUser();
         }
@@ -139,11 +172,10 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     }
   }
 
-  // Sync UI when user object updates
-  useEffect(() => {
-    if (user.coins !== undefined) setCoins(user.coins);
-    if (user.gems !== undefined) setGems(user.gems);
-  }, [user]);
+  // Calculate stats
+  const completedTasksCount = user?.completed_tasks?.length || 0;
+  const invitedFriends = user?.invited_friends || 0;
+  const currentLevel = user?.current_level || 1;
 
   return (
     <div className="saba-dashboard full-screen">
@@ -153,7 +185,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           <div className="avatar-circle">
             <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
           </div>
-          <div className="player-name-box">
+          <div className="player-name-box" onClick={handleNameClick} style={{cursor: 'pointer'}}>
             <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
           </div>
         </div>
@@ -240,6 +272,74 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           </div>
         </Link>
       </nav>
+
+      {/* USER INFO POPUP - Shows when SABA name is clicked */}
+      {showUserInfo && (
+        <div className="user-info-popup-overlay" onClick={closeUserInfo}>
+          <div className="user-info-popup" onClick={(e) => e.stopPropagation()}>
+            <button className="close-popup" onClick={closeUserInfo}>×</button>
+            
+            <div className="popup-header">
+              <div className="popup-avatar">
+                {user?.photo_url ? (
+                  <img src={user.photo_url} alt={user.username} />
+                ) : (
+                  <div className="popup-avatar-placeholder">
+                    {user?.first_name?.[0] || '👤'}
+                  </div>
+                )}
+              </div>
+              <h3>Player Stats</h3>
+            </div>
+
+            <div className="popup-content">
+              <div className="stat-row">
+                <span className="stat-label">👤 Name:</span>
+                <span className="stat-value">{user?.first_name || 'Unknown'} {user?.last_name || ''}</span>
+              </div>
+              
+              <div className="stat-row">
+                <span className="stat-label">📱 Username:</span>
+                <span className="stat-value">@{user?.username || 'N/A'}</span>
+              </div>
+
+              <div className="stat-row">
+                <span className="stat-label">🪙 Coins:</span>
+                <span className="stat-value highlight">{coins.toLocaleString()}</span>
+              </div>
+
+              <div className="stat-row">
+                <span className="stat-label">💎 Gems:</span>
+                <span className="stat-value highlight">{gems.toLocaleString()}</span>
+              </div>
+
+              <div className="stat-row">
+                <span className="stat-label">⭐ Level:</span>
+                <span className="stat-value highlight">{currentLevel}</span>
+              </div>
+
+              <div className="stat-row">
+                <span className="stat-label">✅ Tasks Completed:</span>
+                <span className="stat-value highlight">{completedTasksCount}</span>
+              </div>
+
+              <div className="stat-row">
+                <span className="stat-label">👥 Friends Invited:</span>
+                <span className="stat-value highlight">{invitedFriends}</span>
+              </div>
+
+              <div className="stat-row">
+                <span className="stat-label">🆔 Telegram ID:</span>
+                <span className="stat-value">{user?.telegram_id || user?.id || 'N/A'}</span>
+              </div>
+            </div>
+
+            <button className="close-button" onClick={closeUserInfo}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
