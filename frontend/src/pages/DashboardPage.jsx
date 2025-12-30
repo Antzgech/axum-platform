@@ -1,256 +1,245 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+// src/pages/DashboardPage.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 
-function DashboardPage({ user, fetchUser }) {
-  const { t } = useLanguage();
-  const [localCoins, setLocalCoins] = useState(0);
-  const [localGems, setLocalGems] = useState(0);
-  const [tapping, setTapping] = useState(false);
+// Assets
+import queenMakeda from '../assets/queen-makeda.png';
+import iconCoin from '../assets/icon-coin.png';
+import iconGem from '../assets/icon-gem.png';
+import iconGlobe from '../assets/icon-globe.png';
+import iconStore from '../assets/icon-store.png';
+import iconBoosts from '../assets/icon-boosts.png';
+import iconFriends from '../assets/icon-friends.png';
+import iconEarnCoins from '../assets/icon-earn-coins.png';
+
+export default function DashboardPage({ user = {}, fetchUser }) {
+  const { language, changeLanguage } = useLanguage();
+
+  // UI state (always synced with DB)
+  const [coins, setCoins] = useState(user.coins ?? 0);
+  const [gems, setGems] = useState(user.gems ?? 0);
   const [addingCoin, setAddingCoin] = useState(false);
-  const [showUserInfo, setShowUserInfo] = useState(false);
+
+  // Makeda hint
+  const [hintVisible, setHintVisible] = useState(false);
+  const [hintText, setHintText] = useState('');
+  const hideTimerRef = useRef(null);
+
+  const avatarSrc = user.photo_url || queenMakeda;
 
   const API_URL = 'https://axum-backend-production.up.railway.app';
 
-  useEffect(() => {
-    if (user) {
-      setLocalCoins(user.coins || 0);
-      setLocalGems(user.gems || 0);
-    }
-  }, [user]);
+  // Toggle language
+  const handleLanguageToggle = () => {
+    const next = language === 'en' ? 'am' : 'en';
+    changeLanguage(next);
+  };
 
-  // Add coin via plus button
-  const handleAddCoin = async (e) => {
-    e.stopPropagation(); // Prevent triggering other clicks
+  // ⭐ PLUS BUTTON - Add 1 coin manually
+  async function handlePlusClick(e) {
+    e.stopPropagation();
     
     if (addingCoin) return;
-    
+
     setAddingCoin(true);
-    setLocalCoins(prev => prev + 1);
+    
+    // Optimistically update UI
+    const previousCoins = coins;
+    setCoins(prev => prev + 1);
 
     try {
-      const token = localStorage.getItem('axum_token');
-      const response = await fetch(`${API_URL}/api/user/add-coin`, {
-        method: 'POST',
+      const token = localStorage.getItem("axum_token"); // ← FIXED: was "token"
+
+      const res = await fetch(`${API_URL}/api/user/add-coin`, {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setLocalCoins(data.coins || 0);
-        setLocalGems(data.gems || 0);
-        
-        if (fetchUser) {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Update with real values from server
+        setCoins(data.coins);
+        setGems(data.gems);
+
+        console.log('✅ Coin added! Total:', data.coins);
+
+        // Refresh full user object
+        if (typeof fetchUser === "function") {
           fetchUser();
         }
-        
-        console.log('✅ Coin added! Total:', data.coins);
       } else {
-        setLocalCoins(prev => prev - 1);
-        console.error('Failed to add coin');
+        // Revert on error
+        setCoins(previousCoins);
+        console.error('Failed to add coin:', data);
       }
-    } catch (error) {
-      setLocalCoins(prev => prev - 1);
-      console.error('Error adding coin:', error);
+    } catch (err) {
+      // Revert on error
+      setCoins(previousCoins);
+      console.error("Plus button error:", err);
+      alert('Failed to add coin. Check console for details.');
     } finally {
       setAddingCoin(false);
     }
-  };
+  }
 
-  // Tap Queen Makeda (existing functionality)
-  const handleMakedaTap = async () => {
-    if (tapping) return;
-    
-    setShowUserInfo(true);
-    setTapping(true);
-    setLocalCoins(prev => prev + 1);
+  // ⭐ When Makeda is tapped → show hint + add 1 coin to DB
+  async function handleQueenTap() {
+    // Show hint popup
+    setHintText('Complete 3 battles\nCollect 10,000 coins\nFinish 5 tasks');
+    setHintVisible(true);
+
+    if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = window.setTimeout(() => {
+      setHintVisible(false);
+      hideTimerRef.current = null;
+    }, 3000);
+
+    // ⭐ Add 1 coin to database
+    const previousCoins = coins;
+    setCoins(prev => prev + 1);
 
     try {
-      const token = localStorage.getItem('axum_token');
-      const response = await fetch(`${API_URL}/api/user/add-coin`, {
-        method: 'POST',
+      const token = localStorage.getItem("axum_token"); // ← FIXED: was "token"
+
+      const res = await fetch(`${API_URL}/api/user/add-coin`, {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setLocalCoins(data.coins || 0);
-        setLocalGems(data.gems || 0);
-        
-        if (fetchUser) {
+      const data = await res.json();
+
+      if (data.success) {
+        // Update UI with server values
+        setCoins(data.coins);
+        setGems(data.gems);
+
+        // Refresh full user object from DB
+        if (typeof fetchUser === "function") {
           fetchUser();
         }
       } else {
-        setLocalCoins(prev => prev - 1);
+        setCoins(previousCoins);
       }
-    } catch (error) {
-      setLocalCoins(prev => prev - 1);
-      console.error('Error adding coin:', error);
-    } finally {
-      setTapping(false);
+    } catch (err) {
+      setCoins(previousCoins);
+      console.error("Makeda coin error:", err);
     }
-  };
+  }
 
-  const closeUserInfo = () => {
-    setShowUserInfo(false);
-  };
-
-  const completedTasksCount = user?.completed_tasks?.length || 0;
+  // Sync UI when user object updates
+  useEffect(() => {
+    if (user.coins !== undefined) setCoins(user.coins);
+    if (user.gems !== undefined) setGems(user.gems);
+  }, [user]);
 
   return (
-    <div className="dashboard-page">
-      <div className="dashboard-header">
-        <div className="user-avatar">
-          {user?.photo_url ? (
-            <img src={user.photo_url} alt={user.username} />
-          ) : (
-            <div className="avatar-placeholder">
-              {user?.first_name?.[0] || '👤'}
-            </div>
-          )}
-        </div>
-        <div className="user-info">
-          <h2>{user?.first_name || 'Player'}</h2>
-          <p>@{user?.username || 'sabawian'}</p>
-        </div>
-      </div>
-
-      <div className="currency-row">
-        <div className="currency-box">
-          <span className="currency-icon">🪙</span>
-          <div className="currency-info">
-            <span className="currency-label">Coins</span>
-            <div className="currency-value-row">
-              <span className="currency-value">{localCoins.toLocaleString()}</span>
-              <button 
-                className={`add-coin-btn ${addingCoin ? 'adding' : ''}`}
-                onClick={handleAddCoin}
-                disabled={addingCoin}
-                title="Add 1 coin"
-              >
-                {addingCoin ? '⏳' : '+'}
-              </button>
-            </div>
+    <div className="saba-dashboard full-screen">
+      {/* Header */}
+      <header className="top-block" role="banner">
+        <div className="top-left">
+          <div className="avatar-circle">
+            <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
+          </div>
+          <div className="player-name-box">
+            <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
           </div>
         </div>
-        <div className="currency-box">
-          <span className="currency-icon">💎</span>
-          <div className="currency-info">
-            <span className="currency-label">Gems</span>
-            <span className="currency-value">{localGems.toLocaleString()}</span>
-          </div>
+
+        <div className="top-right">
+          <button
+            className="lang-toggle-btn"
+            onClick={handleLanguageToggle}
+            aria-label="Toggle language"
+            title={language === 'en' ? 'አማርኛ' : 'English'}
+          >
+            <img src={iconGlobe} alt="Language" className="lang-icon" />
+          </button>
+          <span className="axum-logo-emoji" role="img">⚜️</span>
         </div>
-      </div>
+      </header>
 
-      <div className="makeda-container">
-        <div 
-          className={`makeda-oval ${tapping ? 'tapping' : ''}`}
-          onClick={handleMakedaTap}
-        >
-          <img 
-            src="/queen-makeda.png" 
-            alt="Queen Makeda" 
-            className="makeda-image"
-          />
-          <div className="tap-hint">Tap to earn coins!</div>
-        </div>
-      </div>
-
-      <div className="nav-buttons">
-        <Link to="/rewards" className="nav-button">
-          <div className="nav-icon">🏪</div>
-          <span>Store</span>
-        </Link>
-        <Link to="/game" className="nav-button">
-          <div className="nav-icon">⚡</div>
-          <span>Boosts</span>
-        </Link>
-        <Link to="/tasks" className="nav-button">
-          <div className="nav-icon">👥</div>
-          <span>Friends</span>
-        </Link>
-        <Link to="/tasks" className="nav-button">
-          <div className="nav-icon">💰</div>
-          <span>Earn Coins</span>
-        </Link>
-      </div>
-
-      {/* User Info Popup */}
-      {showUserInfo && (
-        <div className="user-info-popup-overlay" onClick={closeUserInfo}>
-          <div className="user-info-popup" onClick={(e) => e.stopPropagation()}>
-            <button className="close-popup" onClick={closeUserInfo}>×</button>
-            
-            <div className="popup-header">
-              <div className="popup-avatar">
-                {user?.photo_url ? (
-                  <img src={user.photo_url} alt={user.username} />
-                ) : (
-                  <div className="popup-avatar-placeholder">
-                    {user?.first_name?.[0] || '👤'}
-                  </div>
-                )}
-              </div>
-              <h3>Player Stats</h3>
-            </div>
-
-            <div className="popup-content">
-              <div className="stat-row">
-                <span className="stat-label">👤 Name:</span>
-                <span className="stat-value">{user?.first_name || 'Unknown'} {user?.last_name || ''}</span>
-              </div>
-              
-              <div className="stat-row">
-                <span className="stat-label">📱 Username:</span>
-                <span className="stat-value">@{user?.username || 'N/A'}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">🪙 Coins:</span>
-                <span className="stat-value highlight">{localCoins.toLocaleString()}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">💎 Gems:</span>
-                <span className="stat-value highlight">{localGems.toLocaleString()}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">⭐ Level:</span>
-                <span className="stat-value highlight">{user?.current_level || 1}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">✅ Tasks Completed:</span>
-                <span className="stat-value highlight">{completedTasksCount}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">👥 Friends Invited:</span>
-                <span className="stat-value highlight">{user?.invited_friends || 0}</span>
-              </div>
-
-              <div className="stat-row">
-                <span className="stat-label">🆔 Telegram ID:</span>
-                <span className="stat-value">{user?.telegram_id || user?.id || 'N/A'}</span>
-              </div>
-            </div>
-
-            <button className="close-button" onClick={closeUserInfo}>
-              Close
+      {/* Coins & Gems with PLUS BUTTON */}
+      <div className="currency-row logo-style">
+        <div className="currency-item logo-box">
+          <img src={iconCoin} alt="Coins" className="currency-icon" />
+          <div className="currency-value-wrapper">
+            <div className="currency-value">{coins.toLocaleString()}</div>
+            <button 
+              className={`plus-coin-btn ${addingCoin ? 'adding' : ''}`}
+              onClick={handlePlusClick}
+              disabled={addingCoin}
+              title="Add 1 coin"
+            >
+              {addingCoin ? '⏳' : '+'}
             </button>
           </div>
         </div>
-      )}
+
+        <div className="currency-item logo-box">
+          <img src={iconGem} alt="Gems" className="currency-icon" />
+          <div className="currency-value">{gems}</div>
+        </div>
+      </div>
+
+      {/* Makeda */}
+      <main className="queen-main-section">
+        <div className="queen-oval-frame">
+          <img
+            src={queenMakeda}
+            alt="Queen Makeda"
+            className="queen-main-img floating"
+            onClick={handleQueenTap}
+            role="button"
+          />
+        </div>
+
+        {hintVisible && (
+          <aside className="hint-popover" role="status">
+            <div className="hint-header">Quick Hint</div>
+            <pre className="hint-text">{hintText}</pre>
+          </aside>
+        )}
+      </main>
+
+      {/* Bottom Nav */}
+      <nav className="bottom-nav-bar">
+        <Link to="/rewards" className="nav-btn">
+          <div className="nav-btn-circle">
+            <img src={iconStore} alt="Store" className="nav-icon" />
+          </div>
+        </Link>
+
+        <Link to="/game" className="nav-btn">
+          <div className="nav-btn-circle">
+            <img src={iconBoosts} alt="Boosts" className="nav-icon" />
+          </div>
+        </Link>
+
+        <Link to="/dashboard" className="nav-btn">
+          <div className="nav-btn-circle">
+            <img src={iconFriends} alt="Friends" className="nav-icon" />
+          </div>
+        </Link>
+
+        <Link to="/tasks" className="nav-btn">
+          <div className="nav-btn-circle">
+            <img src={iconEarnCoins} alt="Earn Coins" className="nav-icon" />
+          </div>
+        </Link>
+      </nav>
     </div>
   );
 }
-
-export default DashboardPage;
