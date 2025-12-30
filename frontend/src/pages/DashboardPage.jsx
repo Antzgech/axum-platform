@@ -56,8 +56,31 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const coinBoxRef = useRef(null);
   const makedaRef = useRef(null);
 
+  
+ // Daily Check-In
+  const [showCheckin, setShowCheckin] = useState(false);
+
+  
   const API_URL = 'https://axum-backend-production.up.railway.app';
   const avatarSrc = user.photo_url || queenMakeda;
+
+// Check if user needs to check in today
+  useEffect(() => {
+    const checkDailyCheckin = () => {
+      const lastCheckin = localStorage.getItem('last_checkin_date');
+      const today = new Date().toDateString();
+      
+      // If different day or never checked in, show modal after 2 seconds
+      if (lastCheckin !== today) {
+        setTimeout(() => {
+          setShowCheckin(true);
+        }, 2000);
+      }
+    };
+    
+    checkDailyCheckin();
+  }, []);
+  
 
   useEffect(() => {
     if (user.coins !== undefined) setCoins(user.coins);
@@ -134,47 +157,16 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
 
 
-  const [showCheckin, setShowCheckin] = useState(false);
-
-useEffect(() => {
-  const lastCheckin = localStorage.getItem('last_checkin_date');
-  const today = new Date().toDateString();
-
-  if (lastCheckin !== today) {
-    setTimeout(() => {
-      setShowCheckin(true);
-    }, 2000);
-  }
-}, []);
 
 
-<button
-  className="checkin-mini-btn"
-  onClick={() => setShowCheckin(true)}
->
-  📅
-</button>
-{showCheckin && (
-  <DailyCheckIn
-    onClose={() => setShowCheckin(false)}
-    onClaim={handleCheckinClaim}
-  />
-)}
+  
 
-const handleCheckinClaim = (data) => {
-  localStorage.setItem('last_checkin_date', new Date().toDateString());
 
-  if (data.rewards) {
-    setCoins(prev => prev + data.rewards.coins);
-    setGems(prev => prev + data.rewards.gems);
-  }
 
-  if (typeof fetchUser === "function") {
-    fetchUser();
-  }
 
-  setTimeout(() => setShowCheckin(false), 2000);
-};
+
+
+
 
   
 
@@ -272,6 +264,12 @@ const handleCheckinClaim = (data) => {
   };
 
 
+
+
+
+  
+
+  
   
 
  const handleLanguageToggle = () => {
@@ -280,19 +278,38 @@ const handleCheckinClaim = (data) => {
 
 
 
-
-
-  useEffect(() => {
-  const lastCheckin = localStorage.getItem('last_checkin_date');
-  const today = new Date().toDateString();
-
-  // If user has not checked in today → auto-open after 2 seconds
-  if (lastCheckin !== today) {
+ // Handle daily check-in claim
+  const handleCheckinClaim = (data) => {
+    console.log('✅ Daily check-in claimed!', data);
+    
+    // Save today's date so modal doesn't show again
+    localStorage.setItem('last_checkin_date', new Date().toDateString());
+    
+    // Update coins/gems in UI
+    if (data.rewards) {
+      setCoins(prev => prev + data.rewards.coins);
+      setGems(prev => prev + data.rewards.gems);
+    }
+    
+    // Refresh user data from server
+    if (typeof fetchUser === "function") {
+      fetchUser();
+    }
+    
+    // Close modal after 2 seconds
     setTimeout(() => {
-      setShowCheckin(true);
+      setShowCheckin(false);
     }, 2000);
-  }
-}, []);
+  };
+
+
+  
+
+
+
+
+
+  
 
 
   
@@ -402,6 +419,23 @@ const handleCheckinClaim = (data) => {
           </div>
         </div>
 
+
+        
+   {/* Check-In Button (optional - can be removed if you want auto-popup only) */}
+          <button
+            className="checkin-mini-btn"
+            onClick={() => setShowCheckin(true)}
+            title="Daily Check-In"
+          >
+            📅
+          </button>
+
+
+        
+          
+          <span className="axum-logo-emoji" role="img">⚜️</span>
+        </div>
+     
         <div className="top-right">
           <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Toggle language" title={language === 'en' ? 'አማርኛ' : 'English'}>
             <img src={iconGlobe} alt="Language" className="lang-icon" />
