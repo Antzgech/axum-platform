@@ -274,14 +274,10 @@ const handleCheckinClaim = (data) => {
 
   
 
-  const handleLanguageToggle = () => {
-     className="checkin-mini-btn"
-  onClick={() => setShowCheckin(true)}
->
-  📅
-   /* const next = language === 'en' ? 'am' : 'en';
-    changeLanguage(next);*/
-  };
+ const handleLanguageToggle = () => {
+  setShowCheckin(true);   // open the modal
+};
+
 
 
 
