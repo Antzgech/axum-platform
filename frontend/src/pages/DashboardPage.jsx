@@ -17,9 +17,9 @@ import iconEarnCoins from '../assets/icon-earn-coins.png';
 export default function DashboardPage({ user = {}, fetchUser }) {
   const { language, changeLanguage } = useLanguage();
 
-  // UI state (always synced with DB)
-  const [coins, setCoins] = useState(0);
-  const [gems, setGems] = useState(0);
+  // IMPORTANT: Initialize from user prop
+  const [coins, setCoins] = useState(user.coins || 0);
+  const [gems, setGems] = useState(user.gems || 0);
   const [addingCoin, setAddingCoin] = useState(false);
 
   // User info popup
@@ -34,16 +34,16 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   const API_URL = 'https://axum-backend-production.up.railway.app';
 
-  // Sync coins/gems from user prop
+  // Sync coins/gems when user prop changes
   useEffect(() => {
-    console.log('📊 User data:', user);
+    console.log('📊 User prop:', user);
     if (user.coins !== undefined) {
       setCoins(user.coins);
-      console.log('💰 Coins from DB:', user.coins);
+      console.log('💰 Coins from user:', user.coins);
     }
     if (user.gems !== undefined) {
       setGems(user.gems);
-      console.log('💎 Gems from DB:', user.gems);
+      console.log('💎 Gems from user:', user.gems);
     }
   }, [user]);
 
@@ -55,7 +55,15 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   // ⭐ Click on SABA name → Show user info popup
   const handleNameClick = () => {
-    console.log('👤 Opening user info popup');
+    console.log('👤 Opening user info popup for:', user.username);
+    console.log('👤 User data:', {
+      name: user.first_name,
+      coins: user.coins,
+      gems: user.gems,
+      level: user.current_level,
+      tasks: user.completed_tasks?.length,
+      friends: user.invited_friends
+    });
     setShowUserInfo(true);
   };
 
@@ -81,7 +89,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       const token = localStorage.getItem("axum_token");
       
       if (!token) {
-        throw new Error('No token found');
+        throw new Error('No token found. Please login again.');
       }
 
       console.log('📡 Calling /api/user/add-coin...');
@@ -97,7 +105,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       console.log('📡 Response status:', res.status);
 
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        const errorText = await res.text();
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
       }
 
       const data = await res.json();
@@ -108,6 +118,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         setGems(data.gems);
         console.log('✅ Coin added! Total:', data.coins);
 
+        // Refresh full user data
         if (typeof fetchUser === "function") {
           fetchUser();
         }
@@ -119,7 +130,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     } catch (err) {
       setCoins(previousCoins);
       console.error("❌ Plus button error:", err);
-      alert(`Failed to add coin: ${err.message}\n\nCheck if backend is deployed with /api/user/add-coin endpoint.`);
+      alert(`Failed to add coin: ${err.message}\n\nMake sure backend is deployed with /api/user/add-coin endpoint.`);
     } finally {
       setAddingCoin(false);
     }
@@ -154,14 +165,15 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         }
       });
 
-      const data = await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setCoins(data.coins);
+          setGems(data.gems);
 
-      if (data.success) {
-        setCoins(data.coins);
-        setGems(data.gems);
-
-        if (typeof fetchUser === "function") {
-          fetchUser();
+          if (typeof fetchUser === "function") {
+            fetchUser();
+          }
         }
       } else {
         setCoins(previousCoins);
@@ -172,7 +184,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     }
   }
 
-  // Calculate stats
+  // Calculate stats from current user prop
   const completedTasksCount = user?.completed_tasks?.length || 0;
   const invitedFriends = user?.invited_friends || 0;
   const currentLevel = user?.current_level || 1;
@@ -185,7 +197,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           <div className="avatar-circle">
             <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
           </div>
-          <div className="player-name-box" onClick={handleNameClick} style={{cursor: 'pointer'}}>
+          <div className="player-name-box" onClick={handleNameClick} style={{cursor: 'pointer'}} title="Click to view stats">
             <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
           </div>
         </div>
@@ -273,7 +285,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </Link>
       </nav>
 
-      {/* USER INFO POPUP - Shows when SABA name is clicked */}
+      {/* USER INFO POPUP - Shows CURRENT logged in user's data */}
       {showUserInfo && (
         <div className="user-info-popup-overlay" onClick={closeUserInfo}>
           <div className="user-info-popup" onClick={(e) => e.stopPropagation()}>
@@ -285,7 +297,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
                   <img src={user.photo_url} alt={user.username} />
                 ) : (
                   <div className="popup-avatar-placeholder">
-                    {user?.first_name?.[0] || '👤'}
+                    {user?.first_name?.[0]?.toUpperCase() || '👤'}
                   </div>
                 )}
               </div>
@@ -295,7 +307,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
             <div className="popup-content">
               <div className="stat-row">
                 <span className="stat-label">👤 Name:</span>
-                <span className="stat-value">{user?.first_name || 'Unknown'} {user?.last_name || ''}</span>
+                <span className="stat-value">
+                  {user?.first_name || 'Unknown'} {user?.last_name || ''}
+                </span>
               </div>
               
               <div className="stat-row">
