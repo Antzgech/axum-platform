@@ -227,6 +227,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   
 <button className="checkin-mini-btn" onClick={() => setShowCheckin(true)} > 📅 </button>
   const handleLanguageToggle = () => {
+    setShowCheckin(true);
     const next = language === 'en' ? 'am' : 'en';
     changeLanguage(next);
   };
