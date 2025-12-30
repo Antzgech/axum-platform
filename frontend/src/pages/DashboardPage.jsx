@@ -1,4 +1,4 @@
-// src/pages/DashboardPage.jsx
+// src/pages/DashboardPage.jsx - FINAL POLISHED VERSION
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Link } from 'react-router-dom';
@@ -37,6 +37,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   const [coins, setCoins] = useState(user.coins || 0);
   const [gems, setGems] = useState(user.gems || 0);
+  const [displayCoins, setDisplayCoins] = useState(user.coins || 0); // For animated counter
   const [showUserInfo, setShowUserInfo] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [progressData, setProgressData] = useState(null);
@@ -57,10 +58,31 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const API_URL = 'https://axum-backend-production.up.railway.app';
   const avatarSrc = user.photo_url || queenMakeda;
 
+  // Sync coins/gems when user prop changes
   useEffect(() => {
-    if (user.coins !== undefined) setCoins(user.coins);
+    if (user.coins !== undefined) {
+      setCoins(user.coins);
+      setDisplayCoins(user.coins);
+    }
     if (user.gems !== undefined) setGems(user.gems);
   }, [user]);
+
+  // Animate coin counter
+  useEffect(() => {
+    if (displayCoins !== coins) {
+      const increment = displayCoins < coins ? 1 : -1;
+      const timer = setTimeout(() => {
+        setDisplayCoins(prev => {
+          const next = prev + increment;
+          if ((increment > 0 && next >= coins) || (increment < 0 && next <= coins)) {
+            return coins;
+          }
+          return next;
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [displayCoins, coins]);
 
   useEffect(() => {
     initializeDailySystem();
@@ -198,11 +220,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     const tasksRemaining = Math.max(0, levelReq.tasksNeeded - completedTasks);
     const friendsRemaining = Math.max(0, levelReq.friendsNeeded - invitedFriends);
 
-    const coinsProgress = Math.min(100, (currentCoins / levelReq.coinsNeeded) * 100);
-    const tasksProgress = Math.min(100, (completedTasks / levelReq.tasksNeeded) * 100);
-    const friendsProgress = Math.min(100, (invitedFriends / levelReq.friendsNeeded) * 100);
-    const overallProgress = (coinsProgress + tasksProgress + friendsProgress) / 3;
-
     return {
       level: currentLevel,
       name: levelReq.name,
@@ -215,10 +232,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       coinsRemaining,
       tasksRemaining,
       friendsRemaining,
-      coinsProgress,
-      tasksProgress,
-      friendsProgress,
-      overallProgress,
       isMaxLevel: false
     };
   };
@@ -231,7 +244,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const handleNameClick = () => {
     setShowUserInfo(true);
     
-    // Auto-hide after 3 seconds
     if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
     userInfoTimerRef.current = setTimeout(() => {
       setShowUserInfo(false);
@@ -248,7 +260,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     setProgressData(progress);
     setShowProgress(true);
 
-    // Auto-hide popup after 3 seconds
     if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
     progressTimerRef.current = setTimeout(() => {
       setShowProgress(false);
@@ -257,6 +268,15 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     if (canClaimReward) {
       createFlyingCoins(nextReward);
 
+      // Add coins one by one with animation
+      const initialCoins = coins;
+      for (let i = 0; i < nextReward; i++) {
+        setTimeout(() => {
+          setCoins(prev => prev + 1);
+        }, 800 + (i * 150)); // Match flying coin animation
+      }
+
+      // Call API to update backend
       setTimeout(() => {
         giveCoinsToUser(nextReward);
       }, 800);
@@ -299,7 +319,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         if (res.ok) {
           const data = await res.json();
           if (i === amount - 1) {
-            setCoins(data.coins);
             setGems(data.gems);
           }
         }
@@ -335,7 +354,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
 
         <div className="top-right">
-          <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Toggle language" title={language === 'en' ? 'አማርኛ' : 'English'}>
+          <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Toggle language">
             <img src={iconGlobe} alt="Language" className="lang-icon" />
           </button>
           <span className="axum-logo-emoji" role="img">⚜️</span>
@@ -345,7 +364,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       <div className="currency-row logo-style">
         <div className="currency-item logo-box" ref={coinBoxRef}>
           <img src={iconCoin} alt="Coins" className="currency-icon" />
-          <div className="currency-value">{coins.toLocaleString()}</div>
+          <div className="currency-value">{displayCoins.toLocaleString()}</div>
         </div>
 
         <div className="currency-item logo-box">
@@ -356,21 +375,23 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
       <main className="queen-main-section">
         <div className="queen-oval-frame" ref={makedaRef}>
-          {/* Cooldown progress ring */}
-          <svg className="cooldown-progress-ring" viewBox="0 0 100 100">
-            <circle
-              className="progress-ring-bg"
+          {/* Oval-shaped progress stroke */}
+          <svg className="cooldown-progress-oval" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <ellipse
+              className="progress-oval-bg"
               cx="50"
               cy="50"
-              r="48"
+              rx="48"
+              ry="45"
             />
-            <circle
-              className="progress-ring-fill"
+            <ellipse
+              className="progress-oval-fill"
               cx="50"
               cy="50"
-              r="48"
+              rx="48"
+              ry="45"
               style={{
-                strokeDashoffset: 302 - (302 * cooldownProgress) / 100
+                strokeDashoffset: 580 - (580 * cooldownProgress) / 100
               }}
             />
           </svg>
@@ -396,7 +417,8 @@ export default function DashboardPage({ user = {}, fetchUser }) {
               animationDelay: `${coin.delay}ms`
             }}
           >
-            +1 🪙
+            <img src={iconCoin} alt="Coin" className="flying-coin-icon" />
+            <span className="flying-coin-text">+1</span>
           </div>
         ))}
 
@@ -411,7 +433,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
             {!progressData.isMaxLevel && (
               <div className="progress-content-compact">
                 <div className="req-compact">
-                  <span className="req-icon-small">🪙</span>
+                  <img src={iconCoin} alt="Coin" className="req-icon-img" />
                   <span className="req-text">{progressData.currentCoins.toLocaleString()} / {progressData.coinsNeeded.toLocaleString()}</span>
                   {progressData.coinsRemaining > 0 && (
                     <span className="req-remain-small">{progressData.coinsRemaining.toLocaleString()} left</span>
@@ -485,8 +507,8 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
             <div className="popup-content-compact">
               <div className="stat-compact">
-                <span>🪙 {coins.toLocaleString()}</span>
-                <span>💎 {gems}</span>
+                <span><img src={iconCoin} alt="" className="stat-icon" /> {displayCoins.toLocaleString()}</span>
+                <span><img src={iconGem} alt="" className="stat-icon" /> {gems}</span>
                 <span>⭐ Lv.{currentLevel}</span>
               </div>
               <div className="stat-compact">
