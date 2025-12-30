@@ -58,7 +58,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   
  // Daily Check-In
-  const [showCheckin, setShowCheckin] = useState(false);
+  const [showCheckin, setShowCheckin] = useState(true);
 
   
   const API_URL = 'https://axum-backend-production.up.railway.app';
@@ -315,11 +315,13 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   
   const handleNameClick = () => {
     setShowUserInfo(true);
+    setShowCheckin(true);
     
     // Auto-hide after 3 seconds
     if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
     userInfoTimerRef.current = setTimeout(() => {
       setShowUserInfo(false);
+      setShowCheckin(false);
     }, 3000);
   };
 
