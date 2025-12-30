@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 require("dotenv").config();
 
-console.log("ðŸ”„ Starting Axum Backend...");
+console.log("🔄 Starting Axum Backend...");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000;
 // CORS + JSON
 // ---------------------------
 const FRONTEND_URL = process.env.FRONTEND_URL; // e.g. https://axum-frontend.up.railway.app
-console.log("ðŸŒ FRONTEND_URL:", FRONTEND_URL || "not set âŒ");
+console.log("🌐 FRONTEND_URL:", FRONTEND_URL || "not set ❌");
 
 app.use(cors({
   origin: [
@@ -31,7 +31,7 @@ app.set("trust proxy", 1);
 // PostgreSQL
 // ---------------------------
 const DATABASE_URL = process.env.DATABASE_URL;
-console.log("ðŸ“¡ DATABASE_URL:", DATABASE_URL ? "Found âœ…" : "Missing âŒ");
+console.log("📡 DATABASE_URL:", DATABASE_URL ? "Found ✅" : "Missing ❌");
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
@@ -42,7 +42,7 @@ const pool = new Pool({
 (async () => {
   try {
     const result = await pool.query("SELECT NOW()");
-    console.log("âœ… PostgreSQL Connected:", result.rows[0].now);
+    console.log("✅ PostgreSQL Connected:", result.rows[0].now);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -62,12 +62,12 @@ const pool = new Pool({
         last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log("âœ… Users table created/verified");
+    console.log("✅ Users table created/verified");
 
     const count = await pool.query("SELECT COUNT(*) FROM users");
-    console.log(`ðŸ“Š Current users in database: ${count.rows[0].count}`);
+    console.log(`📊 Current users in database: ${count.rows[0].count}`);
   } catch (error) {
-    console.error("âŒ Database error:", error.message);
+    console.error("❌ Database error:", error.message);
   }
 })();
 
@@ -82,7 +82,7 @@ const tasks = new Map();
     title: "Subscribe to Meten Official YouTube",
     points: 50,
     url: "https://www.youtube.com/@metenofficial",
-    icon: "â–¶ï¸",
+    icon: "▶️",
   },
   {
     id: "2",
@@ -90,7 +90,7 @@ const tasks = new Map();
     title: "Join Sabawians Telegram Group",
     points: 30,
     url: "https://t.me/+IoT_cwfs6EBjMTQ0",
-    icon: "âœˆï¸",
+    icon: "✈️",
   },
   {
     id: "3",
@@ -98,7 +98,7 @@ const tasks = new Map();
     title: "Follow on Facebook",
     points: 40,
     url: "https://facebook.com/profile.php?id=61578048881192",
-    icon: "ðŸ‘",
+    icon: "👍",
   },
   {
     id: "4",
@@ -106,7 +106,7 @@ const tasks = new Map();
     title: "Follow on TikTok",
     points: 40,
     url: "https://tiktok.com/@metenofficials",
-    icon: "ðŸŽµ",
+    icon: "🎵",
   },
   {
     id: "5",
@@ -114,7 +114,7 @@ const tasks = new Map();
     title: "Follow on Instagram",
     points: 40,
     url: "https://instagram.com/metenofficial",
-    icon: "ðŸ“¸",
+    icon: "📸",
   },
   {
     id: "6",
@@ -122,7 +122,7 @@ const tasks = new Map();
     title: "Invite 5 Friends",
     points: 100,
     url: null,
-    icon: "ðŸ‘¥",
+    icon: "👥",
   },
 ].forEach((t) => tasks.set(t.id, t));
 
@@ -156,17 +156,17 @@ app.get("/api/health", (req, res) => {
 // { id, first_name, last_name, username, photo_url, ... }
 app.post("/api/auth/telegram", async (req, res) => {
   try {
-    console.log("ðŸ” /api/auth/telegram called");
-    console.log("ðŸ“¥ Body:", req.body);
+    console.log("🔐 /api/auth/telegram called");
+    console.log("📥 Body:", req.body);
 
     const { id, first_name, last_name, username, photo_url } = req.body || {};
 
     if (!id || !first_name) {
-      console.log("âŒ Invalid Telegram user payload");
+      console.log("❌ Invalid Telegram user payload");
       return res.status(400).json({ error: "Invalid Telegram user" });
     }
 
-    console.log(`ðŸ” Login attempt: ${first_name} (ID: ${id})`);
+    console.log(`🔐 Login attempt: ${first_name} (ID: ${id})`);
 
     let dbUser = await pool.query(
       "SELECT * FROM users WHERE telegram_id = $1",
@@ -184,7 +184,7 @@ app.post("/api/auth/telegram", async (req, res) => {
         [id]
       );
       user = dbUser.rows[0];
-      console.log(`ðŸ‘‹ Existing user: ${user.username}`);
+      console.log(`👋 Existing user: ${user.username}`);
     } else {
       const newUser = await pool.query(
         `INSERT INTO users 
@@ -199,7 +199,7 @@ app.post("/api/auth/telegram", async (req, res) => {
         ]
       );
       user = newUser.rows[0];
-      console.log(`âœ¨ NEW USER CREATED: ${user.username} (ID: ${id})`);
+      console.log(`✨ NEW USER CREATED: ${user.username} (ID: ${id})`);
     }
 
     const token = jwt.sign(
@@ -227,7 +227,7 @@ app.post("/api/auth/telegram", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("âŒ Auth error:", error.message);
+    console.error("❌ Auth error:", error.message);
     res.status(500).json({ error: "Auth failed", details: error.message });
   }
 });
@@ -240,7 +240,7 @@ app.get("/api/stats", async (req, res) => {
     const result = await pool.query("SELECT COUNT(*) FROM users");
     res.json({
       totalUsers: parseInt(result.rows[0].count),
-      database: "PostgreSQL Connected âœ…",
+      database: "PostgreSQL Connected ✅",
     });
   } catch (error) {
     res.json({ totalUsers: 0, database: "Error: " + error.message });
@@ -311,7 +311,7 @@ app.post("/api/tasks/:id/complete", auth, async (req, res) => {
     );
 
     console.log(
-      `âœ… TASK COMPLETED: ${u.username} - ${task.title} (+${task.points} points)`
+      `✅ TASK COMPLETED: ${u.username} - ${task.title} (+${task.points} points)`
     );
 
     res.json({ success: true, points: task.points, totalPoints: newPoints });
@@ -389,7 +389,7 @@ app.post("/api/game/result", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("âŒ Game result error:", err.message);
+    console.error("❌ Game result error:", err.message);
     return res.status(500).json({ error: "Server error" });
   }
 });
@@ -440,12 +440,12 @@ app.use((req, res) => res.status(404).json({ error: "Not found" }));
 // ---------------------------
 app.listen(PORT, () => {
   console.log(`
-  âš½ï¸  Axum Backend - Sabawians Company
-  â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
-  ðŸš€ Server: http://localhost:${PORT}
-  ðŸ’¾ Database: PostgreSQL
-  ðŸ¤– Bot: @SabaQuest_bot
-  â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+  ⚽️  Axum Backend - Sabawians Company
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🚀 Server: http://localhost:${PORT}
+  💾 Database: PostgreSQL
+  🤖 Bot: @SabaQuest_bot
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Test: /api/health | /api/stats
   `);
 });
