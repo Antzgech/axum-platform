@@ -1,8 +1,6 @@
 /* ========================================
-   DASHBOARD PAGE - FIXED VERSION
-   - Fixed oval rotation (now matches background)
-   - Fixed coin animation (goes UP first, then to coin box)
-   - Bolder stroke
+   DASHBOARD PAGE - COMPLETE FINAL VERSION
+   Ethiopian Royal Theme - Production Ready
    ======================================== */
 
 /* Root variables */
@@ -21,6 +19,7 @@
   --radius-lg: 16px;
 }
 
+/* Global reset & full-screen background */
 * { 
   box-sizing: border-box; 
   -webkit-font-smoothing: antialiased; 
@@ -36,6 +35,10 @@ html, body, #root {
   color: var(--white); 
 }
 
+/* ========================================
+   FULL SCREEN CONTAINER
+   ======================================== */
+
 .saba-dashboard.full-screen {
   width: 100%;
   height: 100vh;
@@ -48,7 +51,10 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* TOP HEADER */
+/* ========================================
+   TOP HEADER
+   ======================================== */
+
 .top-block {
   display: flex;
   align-items: center;
@@ -59,9 +65,20 @@ html, body, #root {
   border-bottom: 0;
 }
 
-.top-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.top-right { display: flex; align-items: center; gap: 8px; }
+.top-left { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  min-width: 0; 
+}
 
+.top-right { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+
+/* Avatar */
 .avatar-circle {
   width: 68px;
   height: 68px;
@@ -76,8 +93,14 @@ html, body, #root {
   flex-shrink: 0;
 }
 
-.avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.avatar-img { 
+  width: 100%; 
+  height: 100%; 
+  border-radius: 50%; 
+  object-fit: cover; 
+}
 
+/* Player name */
 .player-name-box {
   background: rgba(255, 255, 255, 0.04);
   padding: 10px 14px;
@@ -105,6 +128,7 @@ html, body, #root {
   text-overflow: ellipsis; 
 }
 
+/* Language toggle + emoji */
 .lang-toggle-btn { 
   width: 40px; 
   height: 40px; 
@@ -124,7 +148,10 @@ html, body, #root {
   transform: scale(1.05);
 }
 
-.lang-icon { width: 20px; height: 20px; }
+.lang-icon { 
+  width: 20px; 
+  height: 20px; 
+}
 
 .axum-logo-emoji { 
   font-size: 1.6rem; 
@@ -138,8 +165,16 @@ html, body, #root {
   50% { text-shadow: 0 0 15px rgba(212, 175, 55, 0.8), 1px 1px 2px rgba(0, 0, 0, 0.45); }
 }
 
-/* CURRENCY ROW */
-.currency-row { display: flex; justify-content: center; gap: 14px; padding: 10px 16px 6px 16px; }
+/* ========================================
+   CURRENCY ROW
+   ======================================== */
+
+.currency-row { 
+  display: flex; 
+  justify-content: center; 
+  gap: 14px; 
+  padding: 10px 16px 6px 16px; 
+}
 
 .logo-box {
   display: flex; 
@@ -161,10 +196,22 @@ html, body, #root {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 
-.currency-icon { width: 24px; height: 24px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)); }
-.currency-value { font-weight: 800; font-size: 1rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
+.currency-icon { 
+  width: 24px; 
+  height: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
 
-/* QUEEN MAKEDA SECTION WITH FIXED OVAL TIMER */
+.currency-value { 
+  font-weight: 800; 
+  font-size: 1rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ========================================
+   QUEEN MAKEDA SECTION WITH OVAL TIMER
+   ======================================== */
+
 .queen-main-section {
   display: flex;
   align-items: center;
@@ -174,6 +221,7 @@ html, body, #root {
   flex: 1 1 auto;
 }
 
+/* Decorative oval frame with progress ring */
 .queen-oval-frame {
   width: 100%;
   max-width: 720px;
@@ -181,7 +229,9 @@ html, body, #root {
   background: radial-gradient(ellipse at center, #4A3070 0%, #2D1B4E 100%);
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
   border: 0;
-  box-shadow: 0 0 40px rgba(139, 110, 155, 0.45), inset 0 0 40px rgba(0, 0, 0, 0.35);
+  box-shadow: 
+    0 0 40px rgba(139, 110, 155, 0.45), 
+    inset 0 0 40px rgba(0, 0, 0, 0.35);
   display: flex; 
   align-items: center; 
   justify-content: center; 
@@ -190,52 +240,61 @@ html, body, #root {
   padding: 6px;
 }
 
-/* FIXED: Oval-shaped Progress Ring - Correct Rotation! */
+/* Oval-shaped Progress Ring (SVG) - FIXED ROTATION */
 .cooldown-progress-oval {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  transform: rotate(-90deg); /* Start from top */
+  transform: rotate(-90deg); /* FIXED: Start from top, go clockwise */
   pointer-events: none;
   z-index: 5;
 }
 
 .progress-oval-bg {
   fill: none;
-  stroke: rgba(212, 175, 55, 0.2);
-  stroke-width: 6; /* Bolder background */
+  stroke: rgba(212, 175, 55, 0.15);
+  stroke-width: 3; /* Thinner background */
+  vector-effect: non-scaling-stroke;
 }
 
 .progress-oval-fill {
   fill: none;
   stroke: #D4AF37;
-  stroke-width: 8; /* Much bolder stroke */
+  stroke-width: 4; /* Perfect thickness */
   stroke-dasharray: 580;
   stroke-dashoffset: 580;
   transition: stroke-dashoffset 1s linear;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 15px rgba(212, 175, 55, 1));
-  animation: ovalGlow 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.8));
+  animation: ovalGlowSubtle 2s ease-in-out infinite;
+  vector-effect: non-scaling-stroke;
 }
 
-@keyframes ovalGlow {
-  0%, 100% { filter: drop-shadow(0 0 15px rgba(212, 175, 55, 1)); }
-  50% { filter: drop-shadow(0 0 25px rgba(212, 175, 55, 1)); }
+@keyframes ovalGlowSubtle {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.8));
+    stroke: #D4AF37;
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(212, 175, 55, 1));
+    stroke: #F4E4B8;
+  }
 }
 
+/* Makeda image - ALWAYS TAPPABLE */
 .queen-main-img {
   width: 120%;
   max-width: 1200px;
   height: auto;
   object-fit: contain;
   transform-origin: center bottom;
-  pointer-events: auto;
+  pointer-events: auto; /* ALWAYS tappable */
   position: relative;
   top: 6px;
   filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.65));
-  cursor: pointer;
+  cursor: pointer; /* Always shows pointer */
   z-index: 10;
   transition: all 0.3s ease;
 }
@@ -245,16 +304,31 @@ html, body, #root {
   transform: scale(1.02);
 }
 
-.queen-main-img:active { transform: scale(0.98); }
+.queen-main-img:active {
+  transform: scale(0.98);
+}
 
+/* On cooldown - visual feedback but still tappable */
+.queen-main-img.on-cooldown {
+  /* Removed pointer-events: none - always tappable! */
+  opacity: 0.85; /* Slight dim but not too much */
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.65)) grayscale(20%);
+}
+
+/* Floating animation */
 @keyframes floatY {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-12px); }
 }
 
-.floating { animation: floatY 4.5s ease-in-out infinite; }
+.floating { 
+  animation: floatY 4.5s ease-in-out infinite; 
+}
 
-/* FIXED: Flying Coin Animation - Goes UP first, then to coin box! */
+/* ========================================
+   FLYING COIN ANIMATION - FIXED DIRECTION
+   ======================================== */
+
 .flying-coin {
   position: fixed;
   display: flex;
@@ -264,7 +338,7 @@ html, body, #root {
   font-weight: 900;
   pointer-events: none;
   z-index: 9999;
-  animation: flyToTarget 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: flyUpToTarget 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
   opacity: 0;
 }
 
@@ -276,29 +350,34 @@ html, body, #root {
 
 .flying-coin-text {
   color: #FFD700;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 
+    0 0 10px rgba(255, 215, 0, 0.8),
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-@keyframes flyToTarget {
+@keyframes flyUpToTarget {
   0% {
     opacity: 0;
     transform: translate(0, 0) scale(0.5) rotate(0deg);
   }
-  15% {
+  10% {
     opacity: 1;
-    transform: translate(0, -50px) scale(1.3) rotate(180deg); /* Go UP first! */
-  }
-  90% {
-    opacity: 1;
-    transform: translate(calc(var(--end-x) - var(--start-x, 0px)), calc(var(--end-y) - var(--start-y, 0px))) scale(0.8) rotate(540deg);
+    transform: translate(0, -30px) scale(1.3) rotate(180deg);
   }
   100% {
     opacity: 0;
-    transform: translate(calc(var(--end-x) - var(--start-x, 0px)), calc(var(--end-y) - var(--start-y, 0px))) scale(0) rotate(720deg);
+    transform: translate(
+      calc(var(--end-x) - var(--start-x)), 
+      calc(var(--end-y) - var(--start-y))
+    ) scale(0.3) rotate(720deg);
   }
 }
 
-/* COMPACT PROGRESS POPUP */
+/* ========================================
+   COMPACT PROGRESS POPUP (Auto-hide 3s)
+   ======================================== */
+
 .progress-popover-compact {
   position: absolute;
   bottom: 20%;
@@ -311,14 +390,22 @@ html, body, #root {
   padding: 0;
   width: 280px;
   max-width: 85%;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 0 0 40px rgba(212, 175, 55, 0.4);
+  box-shadow: 
+    0 15px 50px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(212, 175, 55, 0.4);
   z-index: 50;
   animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 @keyframes popIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.85); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
 }
 
 .close-hint-btn {
@@ -365,7 +452,9 @@ html, body, #root {
   letter-spacing: 0.02em;
 }
 
-.progress-content-compact { padding: 14px; }
+.progress-content-compact {
+  padding: 14px;
+}
 
 .req-compact {
   display: flex;
@@ -379,7 +468,9 @@ html, body, #root {
   transition: all 0.3s ease;
 }
 
-.req-compact:last-child { margin-bottom: 0; }
+.req-compact:last-child {
+  margin-bottom: 0;
+}
 
 .req-compact:hover {
   background: rgba(255, 255, 255, 0.08);
@@ -387,12 +478,37 @@ html, body, #root {
   transform: translateX(2px);
 }
 
-.req-icon-small { font-size: 1.3rem; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
-.req-icon-img { width: 20px; height: 20px; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
-.req-text { flex: 1; font-size: 0.95rem; font-weight: 700; color: #F4E4B8; }
-.req-remain-small { font-size: 0.8rem; color: rgba(255, 255, 255, 0.7); font-weight: 600; font-style: italic; }
+.req-icon-small {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
 
-/* USER INFO POPUP */
+.req-icon-img {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.req-text {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #F4E4B8;
+}
+
+.req-remain-small {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+  font-style: italic;
+}
+
+/* ========================================
+   COMPACT USER INFO POPUP (Auto-hide 3s)
+   ======================================== */
+
 .user-info-popup-overlay {
   position: fixed;
   top: 0;
@@ -421,14 +537,22 @@ html, body, #root {
   padding: 0;
   width: 280px;
   max-width: 90%;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 70px rgba(212, 175, 55, 0.4);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.9),
+    0 0 70px rgba(212, 175, 55, 0.4);
   animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   position: relative;
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.85); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .close-popup {
@@ -475,7 +599,11 @@ html, body, #root {
   box-shadow: 0 4px 20px rgba(212, 175, 55, 0.5);
 }
 
-.popup-avatar-small img { width: 100%; height: 100%; object-fit: cover; }
+.popup-avatar-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 .popup-avatar-placeholder-small {
   width: 100%;
@@ -498,7 +626,9 @@ html, body, #root {
   text-shadow: 0 2px 6px rgba(212, 175, 55, 0.5);
 }
 
-.popup-content-compact { padding: 16px; }
+.popup-content-compact {
+  padding: 16px;
+}
 
 .stat-compact {
   display: flex;
@@ -508,7 +638,9 @@ html, body, #root {
   justify-content: center;
 }
 
-.stat-compact:last-child { margin-bottom: 0; }
+.stat-compact:last-child {
+  margin-bottom: 0;
+}
 
 .stat-compact span {
   background: rgba(212, 175, 55, 0.15);
@@ -532,9 +664,16 @@ html, body, #root {
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
-.stat-icon { width: 16px; height: 16px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+.stat-icon {
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
 
-/* BOTTOM NAV */
+/* ========================================
+   BOTTOM NAVIGATION
+   ======================================== */
+
 .bottom-nav-bar {
   display: flex; 
   gap: 18px; 
@@ -545,7 +684,12 @@ html, body, #root {
   border-top: 2px solid rgba(212, 175, 55, 0.1);
 }
 
-.nav-btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+.nav-btn { 
+  text-decoration: none; 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+}
 
 .nav-btn-circle {
   width: 72px; 
@@ -556,39 +700,130 @@ html, body, #root {
   display: flex; 
   align-items: center; 
   justify-content: center;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), inset 0 2px 8px rgba(255, 255, 255, 0.06);
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.45), 
+    inset 0 2px 8px rgba(255, 255, 255, 0.06);
   transition: all 0.3s ease;
 }
 
 .nav-btn:hover .nav-btn-circle,
 .nav-btn:active .nav-btn-circle { 
   transform: translateY(-6px) scale(1.05); 
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.6), 0 0 25px rgba(212, 175, 55, 0.3); 
+  box-shadow: 
+    0 14px 32px rgba(0, 0, 0, 0.6), 
+    0 0 25px rgba(212, 175, 55, 0.3); 
   border-color: #F4E4B8; 
 }
 
-.nav-icon { width: 40px; height: 40px; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45)); }
+.nav-icon { 
+  width: 40px; 
+  height: 40px; 
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45)); 
+}
 
-/* RESPONSIVE */
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
 @media (max-width: 480px) {
-  .avatar-circle { width: 60px; height: 60px; }
-  .player-name { font-size: 0.95rem; }
-  .logo-box { min-width: 96px; padding: 8px 10px; }
-  .queen-oval-frame { max-width: 420px; }
-  .queen-main-img { width: 140%; top: 8px; }
-  .nav-btn-circle { width: 60px; height: 60px; }
-  .nav-icon { width: 32px; height: 32px; }
-  .progress-popover-compact { width: 260px; bottom: 18%; }
-  .progress-header-compact h4 { font-size: 0.95rem; }
-  .req-compact { padding: 8px 10px; }
-  .req-icon-img { width: 18px; height: 18px; }
-  .req-text { font-size: 0.85rem; }
-  .user-info-popup-compact { width: 260px; }
-  .popup-avatar-small { width: 60px; height: 60px; }
-  .stat-compact span { font-size: 0.85rem; padding: 6px 11px; }
-  .stat-icon { width: 14px; height: 14px; }
-  .flying-coin-icon { width: 20px; height: 20px; }
-  .flying-coin-text { font-size: 1.2rem; }
-  .progress-oval-fill { stroke-width: 6; }
-  .progress-oval-bg { stroke-width: 4; }
+  .avatar-circle { 
+    width: 60px; 
+    height: 60px; 
+  }
+  
+  .player-name { 
+    font-size: 0.95rem; 
+  }
+  
+  .logo-box { 
+    min-width: 96px; 
+    padding: 8px 10px; 
+  }
+  
+  .queen-oval-frame { 
+    max-width: 420px; 
+  }
+  
+  .queen-main-img { 
+    width: 140%; 
+    top: 8px; 
+  }
+  
+  .nav-btn-circle { 
+    width: 60px; 
+    height: 60px; 
+  }
+  
+  .nav-icon { 
+    width: 32px; 
+    height: 32px; 
+  }
+  
+  .progress-popover-compact {
+    width: 260px;
+    bottom: 18%;
+  }
+
+  .progress-header-compact h4 {
+    font-size: 0.95rem;
+  }
+
+  .req-compact {
+    padding: 8px 10px;
+  }
+
+  .req-icon-img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .req-text {
+    font-size: 0.85rem;
+  }
+
+  .user-info-popup-compact {
+    width: 260px;
+  }
+
+  .popup-avatar-small {
+    width: 60px;
+    height: 60px;
+  }
+
+  .stat-compact span {
+    font-size: 0.85rem;
+    padding: 6px 11px;
+  }
+
+  .stat-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .flying-coin-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .flying-coin-text {
+    font-size: 1.2rem;
+  }
+
+  .progress-oval-fill {
+    stroke-width: 3;
+  }
+
+  .progress-oval-bg {
+    stroke-width: 2;
+  }
+}
+
+@media (max-width: 360px) {
+  .progress-popover-compact {
+    width: 250px;
+  }
+
+  .user-info-popup-compact {
+    width: 250px;
+  }
 }
