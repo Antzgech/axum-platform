@@ -34,7 +34,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     changeLanguage(next);
   };
 
-  // â­ When Makeda is tapped â†’ show hint + add 1 coin to DB
+  // ⭐ When Makeda is tapped → show hint + add 1 coin to DB
   async function handleQueenTap() {
     // Show hint popup
     setHintText('Complete 3 battles\nCollect 10,000 coins\nFinish 5 tasks');
@@ -46,7 +46,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       hideTimerRef.current = null;
     }, 3000);
 
-    // â­ Add 1 coin to database
+    // ⭐ Add 1 coin to database
     try {
       const token = localStorage.getItem("token");
 
@@ -99,11 +99,11 @@ export default function DashboardPage({ user = {}, fetchUser }) {
             className="lang-toggle-btn"
             onClick={handleLanguageToggle}
             aria-label="Toggle language"
-            title={language === 'en' ? 'áŠ áˆ›áˆ­áŠ›' : 'English'}
+            title={language === 'en' ? 'አማርኛ' : 'English'}
           >
             <img src={iconGlobe} alt="Language" className="lang-icon" />
           </button>
-          <span className="axum-logo-emoji" role="img">âšœï¸</span>
+          <span className="axum-logo-emoji" role="img">⚜️</span>
         </div>
       </header>
 
