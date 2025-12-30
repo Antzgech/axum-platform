@@ -15,68 +15,6 @@
 
 
 
-
-
-
-/* Add this to your DashboardPage.css */
-
-/* ========================================
-   PLUS BUTTON
-   ======================================== */
-
-.currency-value-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.plus-coin-btn {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #D4AF37 0%, #C9A332 100%);
-  border: 2px solid #F4E4B8;
-  color: #1a1a1a;
-  font-size: 1.4rem;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  box-shadow: 0 3px 10px rgba(212, 175, 55, 0.4);
-  line-height: 1;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-.plus-coin-btn:hover {
-  transform: scale(1.15) rotate(90deg);
-  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.6);
-  background: linear-gradient(135deg, #F4E4B8 0%, #D4AF37 100%);
-}
-
-.plus-coin-btn:active {
-  transform: scale(0.95) rotate(90deg);
-}
-
-.plus-coin-btn.adding {
-  animation: btnSpin 0.5s linear;
-  pointer-events: none;
-  opacity: 0.7;
-}
-
-@keyframes btnSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.plus-coin-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 /* ========================================
    USER INFO POPUP
    ======================================== */
@@ -1028,4 +966,377 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+/* Add this to the end of your DashboardPage.css */
+
+/* ========================================
+   DAILY REWARD SYSTEM STYLES
+   ======================================== */
+
+/* Remove plus button wrapper */
+.currency-value-wrapper {
+  display: block;
+}
+
+/* Reward Ready Badge (when can claim) */
+.reward-ready-badge {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 20;
+  pointer-events: none;
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.3) translateY(20px);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.05) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1) translateY(0);
+  }
+}
+
+.reward-amount {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: #1a1a1a;
+  padding: 12px 24px;
+  border-radius: 20px;
+  font-size: 1.8rem;
+  font-weight: 900;
+  font-family: 'Georgia', serif;
+  box-shadow: 
+    0 8px 24px rgba(255, 215, 0, 0.6),
+    0 0 40px rgba(255, 215, 0, 0.4);
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 
+      0 8px 24px rgba(255, 215, 0, 0.6),
+      0 0 40px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    box-shadow: 
+      0 12px 32px rgba(255, 215, 0, 0.8),
+      0 0 60px rgba(255, 215, 0, 0.6);
+  }
+}
+
+.reward-label {
+  background: rgba(212, 175, 55, 0.3);
+  color: #FFD700;
+  padding: 6px 16px;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  backdrop-filter: blur(10px);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Cooldown Overlay */
+.cooldown-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.cooldown-text {
+  background: linear-gradient(135deg, rgba(45, 27, 58, 0.95) 0%, rgba(26, 26, 26, 0.95) 100%);
+  color: #D4AF37;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 1.5rem;
+  font-weight: 900;
+  font-family: 'Georgia', serif;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(212, 175, 55, 0.3);
+  border: 3px solid rgba(212, 175, 55, 0.5);
+  margin-bottom: 10px;
+  animation: cooldownPulse 2s ease-in-out infinite;
+}
+
+@keyframes cooldownPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 40px rgba(212, 175, 55, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.9), 0 0 60px rgba(212, 175, 55, 0.5);
+  }
+}
+
+.next-reward-preview {
+  background: rgba(255, 215, 0, 0.2);
+  color: #FFD700;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.queen-main-img.on-cooldown {
+  filter: grayscale(40%) brightness(0.7);
+}
+
+/* ========================================
+   SIMPLIFIED PROGRESS POPOVER
+   ======================================== */
+
+.progress-popover {
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(30, 28, 36, 0.98) 0%, rgba(18, 16, 22, 0.98) 100%);
+  color: #fff;
+  padding: 0;
+  border-radius: 20px;
+  border: 3px solid rgba(212, 175, 55, 0.5);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.9),
+    0 0 50px rgba(212, 175, 55, 0.4);
+  max-width: 90%;
+  min-width: 350px;
+  z-index: 60;
+  animation: slideUpScale 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+
+@keyframes slideUpScale {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.close-hint-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.2);
+  border: 2px solid rgba(212, 175, 55, 0.5);
+  color: var(--gold-shine);
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  line-height: 1;
+  z-index: 10;
+}
+
+.close-hint-btn:hover {
+  background: rgba(212, 175, 55, 0.4);
+  transform: rotate(90deg);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+}
+
+.progress-header {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(30, 95, 62, 0.15) 100%);
+  border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+}
+
+.progress-header h3 {
+  font-size: 1.4rem;
+  color: var(--gold-shine);
+  margin: 0;
+  font-weight: 900;
+  font-family: 'Georgia', serif;
+  text-shadow: 0 2px 10px rgba(212, 175, 55, 0.6);
+  letter-spacing: 0.05em;
+}
+
+.progress-content {
+  padding: 20px;
+}
+
+/* Overall Progress */
+.overall-progress {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 12px;
+  border: 2px solid rgba(212, 175, 55, 0.3);
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.progress-percentage {
+  color: var(--gold-shine);
+  font-size: 1.3rem;
+  font-weight: 900;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+}
+
+/* Progress Bars */
+.progress-bar {
+  height: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.progress-fill.overall {
+  background: linear-gradient(90deg, #D4AF37 0%, #F4E4B8 50%, #D4AF37 100%);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+}
+
+.progress-fill.coins {
+  background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.progress-fill.tasks {
+  background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.progress-fill.friends {
+  background: linear-gradient(90deg, #2196F3 0%, #03A9F4 100%);
+  box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+}
+
+/* Requirement Items */
+.requirement-item {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.requirement-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.req-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.req-icon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.req-label {
+  flex: 1;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.req-status {
+  font-weight: 900;
+  color: var(--gold-shine);
+  font-size: 1.1rem;
+}
+
+.req-remaining {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  color: #FFD700;
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+  .progress-popover {
+    min-width: 0;
+    max-width: 95%;
+    bottom: 10%;
+  }
+
+  .reward-amount {
+    font-size: 1.5rem;
+    padding: 10px 20px;
+  }
+
+  .cooldown-text {
+    font-size: 1.2rem;
+    padding: 10px 20px;
+  }
+
+  .next-reward-preview {
+    font-size: 0.95rem;
+    padding: 6px 16px;
+  }
+
+  .progress-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .req-icon {
+    font-size: 1.3rem;
+  }
 }
