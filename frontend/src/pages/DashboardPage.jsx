@@ -14,10 +14,60 @@ import iconBoosts from '../assets/icon-boosts.png';
 import iconFriends from '../assets/icon-friends.png';
 import iconEarnCoins from '../assets/icon-earn-coins.png';
 
+// ========================================
+// LEVEL SYSTEM CONFIGURATION
+// ========================================
+const LEVEL_REQUIREMENTS = {
+  1: { 
+    name: "Novice Warrior",
+    coinsNeeded: 1000,
+    tasksNeeded: 3,
+    friendsNeeded: 1,
+    reward: { coins: 100, gems: 5 }
+  },
+  2: { 
+    name: "Skilled Fighter",
+    coinsNeeded: 5000,
+    tasksNeeded: 8,
+    friendsNeeded: 3,
+    reward: { coins: 500, gems: 10 }
+  },
+  3: { 
+    name: "Elite Guard",
+    coinsNeeded: 15000,
+    tasksNeeded: 15,
+    friendsNeeded: 10,
+    reward: { coins: 1500, gems: 25 }
+  },
+  4: { 
+    name: "Royal Commander",
+    coinsNeeded: 50000,
+    tasksNeeded: 25,
+    friendsNeeded: 25,
+    reward: { coins: 5000, gems: 50 }
+  },
+  5: { 
+    name: "Legendary Hero",
+    coinsNeeded: 150000,
+    tasksNeeded: 40,
+    friendsNeeded: 50,
+    reward: { coins: 15000, gems: 100 }
+  },
+  6: { 
+    name: "Queen's Champion",
+    coinsNeeded: 500000,
+    tasksNeeded: 60,
+    friendsNeeded: 100,
+    reward: { coins: 50000, gems: 250 }
+  }
+};
+
+const MAKEDA_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+
 export default function DashboardPage({ user = {}, fetchUser }) {
   const { language, changeLanguage } = useLanguage();
 
-  // IMPORTANT: Initialize from user prop
+  // UI state
   const [coins, setCoins] = useState(user.coins || 0);
   const [gems, setGems] = useState(user.gems || 0);
   const [addingCoin, setAddingCoin] = useState(false);
@@ -25,27 +75,122 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   // User info popup
   const [showUserInfo, setShowUserInfo] = useState(false);
 
-  // Makeda hint
+  // Makeda hint with cooldown
   const [hintVisible, setHintVisible] = useState(false);
-  const [hintText, setHintText] = useState('');
+  const [hintData, setHintData] = useState(null);
+  const [makedaCooldown, setMakedaCooldown] = useState(0);
   const hideTimerRef = useRef(null);
+  const cooldownIntervalRef = useRef(null);
 
   const avatarSrc = user.photo_url || queenMakeda;
-
   const API_URL = 'https://axum-backend-production.up.railway.app';
 
   // Sync coins/gems when user prop changes
   useEffect(() => {
-    console.log('📊 User prop:', user);
-    if (user.coins !== undefined) {
-      setCoins(user.coins);
-      console.log('💰 Coins from user:', user.coins);
-    }
-    if (user.gems !== undefined) {
-      setGems(user.gems);
-      console.log('💎 Gems from user:', user.gems);
-    }
+    if (user.coins !== undefined) setCoins(user.coins);
+    if (user.gems !== undefined) setGems(user.gems);
   }, [user]);
+
+  // Check Makeda cooldown on mount
+  useEffect(() => {
+    checkMakedaCooldown();
+    
+    return () => {
+      if (cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Check if Makeda is on cooldown
+  const checkMakedaCooldown = () => {
+    const lastTap = localStorage.getItem('makeda_last_tap');
+    if (lastTap) {
+      const timePassed = Date.now() - parseInt(lastTap);
+      if (timePassed < MAKEDA_COOLDOWN_MS) {
+        const remaining = Math.ceil((MAKEDA_COOLDOWN_MS - timePassed) / 1000);
+        setMakedaCooldown(remaining);
+        startCooldownTimer();
+      }
+    }
+  };
+
+  // Start countdown timer
+  const startCooldownTimer = () => {
+    if (cooldownIntervalRef.current) {
+      clearInterval(cooldownIntervalRef.current);
+    }
+
+    cooldownIntervalRef.current = setInterval(() => {
+      setMakedaCooldown(prev => {
+        if (prev <= 1) {
+          clearInterval(cooldownIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Format cooldown time
+  const formatCooldown = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Calculate level progress
+  const calculateProgress = () => {
+    const currentLevel = user.current_level || 1;
+    const levelReq = LEVEL_REQUIREMENTS[currentLevel];
+    
+    if (!levelReq) {
+      return {
+        level: currentLevel,
+        name: "Max Level",
+        isMaxLevel: true
+      };
+    }
+
+    const completedTasks = user.completed_tasks?.length || 0;
+    const invitedFriends = user.invited_friends || 0;
+    const currentCoins = user.coins || 0;
+
+    // Calculate remaining
+    const coinsRemaining = Math.max(0, levelReq.coinsNeeded - currentCoins);
+    const tasksRemaining = Math.max(0, levelReq.tasksNeeded - completedTasks);
+    const friendsRemaining = Math.max(0, levelReq.friendsNeeded - invitedFriends);
+
+    // Calculate percentages
+    const coinsProgress = Math.min(100, (currentCoins / levelReq.coinsNeeded) * 100);
+    const tasksProgress = Math.min(100, (completedTasks / levelReq.tasksNeeded) * 100);
+    const friendsProgress = Math.min(100, (invitedFriends / levelReq.friendsNeeded) * 100);
+    const overallProgress = (coinsProgress + tasksProgress + friendsProgress) / 3;
+
+    // Check if level complete
+    const isLevelComplete = coinsRemaining === 0 && tasksRemaining === 0 && friendsRemaining === 0;
+
+    return {
+      level: currentLevel,
+      name: levelReq.name,
+      coinsNeeded: levelReq.coinsNeeded,
+      tasksNeeded: levelReq.tasksNeeded,
+      friendsNeeded: levelReq.friendsNeeded,
+      currentCoins,
+      completedTasks,
+      invitedFriends,
+      coinsRemaining,
+      tasksRemaining,
+      friendsRemaining,
+      coinsProgress,
+      tasksProgress,
+      friendsProgress,
+      overallProgress,
+      isLevelComplete,
+      reward: levelReq.reward,
+      isMaxLevel: false
+    };
+  };
 
   // Toggle language
   const handleLanguageToggle = () => {
@@ -53,17 +198,8 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     changeLanguage(next);
   };
 
-  // ⭐ Click on SABA name → Show user info popup
+  // Click on username → Show user info popup
   const handleNameClick = () => {
-    console.log('👤 Opening user info popup for:', user.username);
-    console.log('👤 User data:', {
-      name: user.first_name,
-      coins: user.coins,
-      gems: user.gems,
-      level: user.current_level,
-      tasks: user.completed_tasks?.length,
-      friends: user.invited_friends
-    });
     setShowUserInfo(true);
   };
 
@@ -71,17 +207,13 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     setShowUserInfo(false);
   };
 
-  // ⭐ PLUS BUTTON - Add 1 coin manually
+  // PLUS BUTTON - Add 1 coin manually
   async function handlePlusClick(e) {
     e.stopPropagation();
     
     if (addingCoin) return;
 
-    console.log('➕ Plus button clicked');
-
     setAddingCoin(true);
-    
-    // Optimistically update UI
     const previousCoins = coins;
     setCoins(prev => prev + 1);
 
@@ -92,8 +224,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         throw new Error('No token found. Please login again.');
       }
 
-      console.log('📡 Calling /api/user/add-coin...');
-
       const res = await fetch(`${API_URL}/api/user/add-coin`, {
         method: "POST",
         headers: {
@@ -102,89 +232,68 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         }
       });
 
-      console.log('📡 Response status:', res.status);
-
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error('Error response:', errorText);
-        throw new Error(`HTTP ${res.status}: ${errorText}`);
+        throw new Error(`HTTP ${res.status}`);
       }
 
       const data = await res.json();
-      console.log('📡 Response data:', data);
 
       if (data.success) {
         setCoins(data.coins);
         setGems(data.gems);
-        console.log('✅ Coin added! Total:', data.coins);
-
-        // Refresh full user data
+        
         if (typeof fetchUser === "function") {
           fetchUser();
         }
       } else {
         setCoins(previousCoins);
-        console.error('Failed to add coin:', data);
-        alert('Failed to add coin');
       }
     } catch (err) {
       setCoins(previousCoins);
-      console.error("❌ Plus button error:", err);
-      alert(`Failed to add coin: ${err.message}\n\nMake sure backend is deployed with /api/user/add-coin endpoint.`);
+      console.error("Plus button error:", err);
     } finally {
       setAddingCoin(false);
     }
   }
 
-  // ⭐ When Makeda is tapped → show hint + add 1 coin to DB
+  // When Makeda is tapped → Show progress info with cooldown
   async function handleQueenTap() {
+    // Check cooldown
+    if (makedaCooldown > 0) {
+      alert(`⏰ Queen Makeda needs rest!\n\nPlease wait ${formatCooldown(makedaCooldown)} before tapping again.`);
+      return;
+    }
+
     console.log('👑 Queen Makeda tapped');
 
-    // Show hint popup
-    setHintText('Complete 3 battles\nCollect 10,000 coins\nFinish 5 tasks');
+    // Calculate progress
+    const progress = calculateProgress();
+    setHintData(progress);
     setHintVisible(true);
 
-    if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = window.setTimeout(() => {
+    // Set cooldown
+    localStorage.setItem('makeda_last_tap', Date.now().toString());
+    setMakedaCooldown(MAKEDA_COOLDOWN_MS / 1000);
+    startCooldownTimer();
+
+    // Auto-hide after 10 seconds
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => {
       setHintVisible(false);
       hideTimerRef.current = null;
-    }, 3000);
-
-    // Add 1 coin to database
-    const previousCoins = coins;
-    setCoins(prev => prev + 1);
-
-    try {
-      const token = localStorage.getItem("axum_token");
-
-      const res = await fetch(`${API_URL}/api/user/add-coin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setCoins(data.coins);
-          setGems(data.gems);
-
-          if (typeof fetchUser === "function") {
-            fetchUser();
-          }
-        }
-      } else {
-        setCoins(previousCoins);
-      }
-    } catch (err) {
-      setCoins(previousCoins);
-      console.error("Makeda coin error:", err);
-    }
+    }, 10000);
   }
 
-  // Calculate stats from current user prop
+  // Close hint popup
+  const closeHint = () => {
+    setHintVisible(false);
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+
+  // Calculate stats
   const completedTasksCount = user?.completed_tasks?.length || 0;
   const invitedFriends = user?.invited_friends || 0;
   const currentLevel = user?.current_level || 1;
@@ -238,22 +347,152 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </div>
 
-      {/* Makeda */}
+      {/* Makeda with Cooldown Indicator */}
       <main className="queen-main-section">
         <div className="queen-oval-frame">
           <img
             src={queenMakeda}
             alt="Queen Makeda"
-            className="queen-main-img floating"
+            className={`queen-main-img floating ${makedaCooldown > 0 ? 'on-cooldown' : ''}`}
             onClick={handleQueenTap}
             role="button"
+            style={{
+              opacity: makedaCooldown > 0 ? 0.5 : 1,
+              cursor: makedaCooldown > 0 ? 'not-allowed' : 'pointer'
+            }}
           />
+          
+          {makedaCooldown > 0 && (
+            <div className="cooldown-overlay">
+              <div className="cooldown-text">
+                ⏰ {formatCooldown(makedaCooldown)}
+              </div>
+            </div>
+          )}
         </div>
 
-        {hintVisible && (
-          <aside className="hint-popover" role="status">
-            <div className="hint-header">Quick Hint</div>
-            <pre className="hint-text">{hintText}</pre>
+        {/* Enhanced Progress Popup */}
+        {hintVisible && hintData && (
+          <aside className="progress-popover" role="status">
+            <button className="close-hint-btn" onClick={closeHint}>×</button>
+            
+            <div className="progress-header">
+              <h3>🏆 Level {hintData.level}: {hintData.name}</h3>
+              {hintData.isMaxLevel && <p className="max-level-badge">⭐ MAX LEVEL ⭐</p>}
+            </div>
+
+            {!hintData.isMaxLevel && (
+              <div className="progress-content">
+                {/* Overall Progress */}
+                <div className="overall-progress">
+                  <div className="progress-label">
+                    <span>Overall Progress</span>
+                    <span className="progress-percentage">{hintData.overallProgress.toFixed(1)}%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill overall" 
+                      style={{width: `${hintData.overallProgress}%`}}
+                    />
+                  </div>
+                </div>
+
+                {/* Coins Progress */}
+                <div className="requirement-item">
+                  <div className="req-header">
+                    <span className="req-icon">🪙</span>
+                    <span className="req-label">Coins</span>
+                    <span className="req-status">
+                      {hintData.currentCoins.toLocaleString()} / {hintData.coinsNeeded.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill coins" 
+                      style={{width: `${hintData.coinsProgress}%`}}
+                    />
+                  </div>
+                  {hintData.coinsRemaining > 0 && (
+                    <div className="req-remaining">
+                      Need {hintData.coinsRemaining.toLocaleString()} more coins
+                    </div>
+                  )}
+                </div>
+
+                {/* Tasks Progress */}
+                <div className="requirement-item">
+                  <div className="req-header">
+                    <span className="req-icon">✅</span>
+                    <span className="req-label">Tasks</span>
+                    <span className="req-status">
+                      {hintData.completedTasks} / {hintData.tasksNeeded}
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill tasks" 
+                      style={{width: `${hintData.tasksProgress}%`}}
+                    />
+                  </div>
+                  {hintData.tasksRemaining > 0 && (
+                    <div className="req-remaining">
+                      Complete {hintData.tasksRemaining} more tasks
+                    </div>
+                  )}
+                </div>
+
+                {/* Friends Progress */}
+                <div className="requirement-item">
+                  <div className="req-header">
+                    <span className="req-icon">👥</span>
+                    <span className="req-label">Friends</span>
+                    <span className="req-status">
+                      {hintData.invitedFriends} / {hintData.friendsNeeded}
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill friends" 
+                      style={{width: `${hintData.friendsProgress}%`}}
+                    />
+                  </div>
+                  {hintData.friendsRemaining > 0 && (
+                    <div className="req-remaining">
+                      Invite {hintData.friendsRemaining} more friends
+                    </div>
+                  )}
+                </div>
+
+                {/* Level Completion */}
+                {hintData.isLevelComplete ? (
+                  <div className="level-complete">
+                    <div className="complete-badge">🎉 LEVEL COMPLETE! 🎉</div>
+                    <div className="reward-info">
+                      <div className="reward-label">Next Level Reward:</div>
+                      <div className="reward-items">
+                        <span>🪙 +{hintData.reward.coins.toLocaleString()}</span>
+                        <span>💎 +{hintData.reward.gems}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="next-level-reward">
+                    <div className="reward-label">Complete Level {hintData.level} to earn:</div>
+                    <div className="reward-items">
+                      <span>🪙 {hintData.reward.coins.toLocaleString()}</span>
+                      <span>💎 {hintData.reward.gems}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {hintData.isMaxLevel && (
+              <div className="max-level-message">
+                <p>🏆 You've reached the highest level!</p>
+                <p>Keep earning coins and completing tasks!</p>
+              </div>
+            )}
           </aside>
         )}
       </main>
@@ -285,7 +524,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </Link>
       </nav>
 
-      {/* USER INFO POPUP - Shows CURRENT logged in user's data */}
+      {/* USER INFO POPUP */}
       {showUserInfo && (
         <div className="user-info-popup-overlay" onClick={closeUserInfo}>
           <div className="user-info-popup" onClick={(e) => e.stopPropagation()}>
