@@ -223,11 +223,31 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     };
   };
 
+
+  
+<button className="checkin-mini-btn" onClick={() => setShowCheckin(true)} > 📅 </button>
   const handleLanguageToggle = () => {
     const next = language === 'en' ? 'am' : 'en';
     changeLanguage(next);
   };
 
+
+
+
+  useEffect(() => {
+  const lastCheckin = localStorage.getItem('last_checkin_date');
+  const today = new Date().toDateString();
+
+  // If user has not checked in today → auto-open after 2 seconds
+  if (lastCheckin !== today) {
+    setTimeout(() => {
+      setShowCheckin(true);
+    }, 2000);
+  }
+}, []);
+
+
+  
   const handleNameClick = () => {
     setShowUserInfo(true);
     
