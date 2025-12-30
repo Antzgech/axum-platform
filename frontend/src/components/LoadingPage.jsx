@@ -1,13 +1,19 @@
 // src/components/LoadingPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './LoadingPage.css';
 
 export default function LoadingPage() {
   const [progress, setProgress] = useState(0);
+  const videoRef = useRef(null);
 
   useEffect(() => {
-    // Animate progress from 0 to 100 over 7 seconds
-    const duration = 10000; // 10 seconds
+    // Force fullscreen and top of page
+    window.scrollTo(0, 0);
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    // Animate progress from 0 to 100 over 14 seconds
+    const duration = 14000; // 14 seconds
     const interval = 50; // Update every 50ms
     const steps = duration / interval;
     const increment = 100 / steps;
@@ -22,18 +28,31 @@ export default function LoadingPage() {
       setProgress(currentProgress);
     }, interval);
 
-    return () => clearInterval(timer);
+    // Handle video end - pause on last frame
+    const video = videoRef.current;
+    if (video) {
+      video.addEventListener('ended', () => {
+        // Video stays on last frame (no loop)
+      });
+    }
+
+    return () => {
+      clearInterval(timer);
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
   }, []);
 
   return (
     <div className="loading-page-fullscreen">
-      {/* Video Background */}
+      {/* Video Background - Fitted, No Zoom */}
       <video
-        className="loading-video"
+        ref={videoRef}
+        className="loading-video-fitted"
         autoPlay
-        loop
         muted
         playsInline
+        preload="auto"
       >
         <source src="/queen-makeda-video.mp4" type="video/mp4" />
         {/* Fallback to image if video doesn't load */}
@@ -43,29 +62,32 @@ export default function LoadingPage() {
       {/* Dark overlay for better text readability */}
       <div className="loading-overlay" />
 
-      {/* Welcome Message Popup */}
-      <div className="loading-welcome-popup">
-        <div className="welcome-text">
-          Hi, I Am Queen Of Saba.
-          <br />
-          Welcome to My Castle.
-          <br />
-          Are you wise and smart?
-          <br />
-          We'll see...
+      {/* Bottom Section: Welcome + Progress */}
+      <div className="loading-bottom-section">
+        {/* Welcome Message Popup */}
+        <div className="loading-welcome-popup">
+          <div className="welcome-text">
+            Hi, I Am Queen Of Saba.
+            <br />
+            Welcome to My Castle.
+            <br />
+            Are you wise and smart?
+            <br />
+            We'll see...
+          </div>
         </div>
-      </div>
 
-      {/* Progress Bar */}
-      <div className="loading-progress-container">
-        <div className="loading-progress-bar">
-          <div 
-            className="loading-progress-fill"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div className="loading-progress-text">
-          {Math.round(progress)}%
+        {/* Progress Bar */}
+        <div className="loading-progress-container">
+          <div className="loading-progress-bar">
+            <div 
+              className="loading-progress-fill"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="loading-progress-text">
+            {Math.round(progress)}%
+          </div>
         </div>
       </div>
 
