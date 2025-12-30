@@ -7,7 +7,7 @@ export default function LoadingPage() {
 
   useEffect(() => {
     // Animate progress from 0 to 100 over 7 seconds
-    const duration = 7000; // 7 seconds
+    const duration = 10000; // 10 seconds
     const interval = 50; // Update every 50ms
     const steps = duration / interval;
     const increment = 100 / steps;
