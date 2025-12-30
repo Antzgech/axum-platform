@@ -14,57 +14,16 @@ import iconBoosts from '../assets/icon-boosts.png';
 import iconFriends from '../assets/icon-friends.png';
 import iconEarnCoins from '../assets/icon-earn-coins.png';
 
-// ========================================
-// LEVEL SYSTEM CONFIGURATION
-// ========================================
+// Level system configuration
 const LEVEL_REQUIREMENTS = {
-  1: { 
-    name: "Novice Warrior",
-    coinsNeeded: 1000,
-    tasksNeeded: 3,
-    friendsNeeded: 1,
-    reward: { coins: 100, gems: 5 }
-  },
-  2: { 
-    name: "Skilled Fighter",
-    coinsNeeded: 5000,
-    tasksNeeded: 8,
-    friendsNeeded: 3,
-    reward: { coins: 500, gems: 10 }
-  },
-  3: { 
-    name: "Elite Guard",
-    coinsNeeded: 15000,
-    tasksNeeded: 15,
-    friendsNeeded: 10,
-    reward: { coins: 1500, gems: 25 }
-  },
-  4: { 
-    name: "Royal Commander",
-    coinsNeeded: 50000,
-    tasksNeeded: 25,
-    friendsNeeded: 25,
-    reward: { coins: 5000, gems: 50 }
-  },
-  5: { 
-    name: "Legendary Hero",
-    coinsNeeded: 150000,
-    tasksNeeded: 40,
-    friendsNeeded: 50,
-    reward: { coins: 15000, gems: 100 }
-  },
-  6: { 
-    name: "Queen's Champion",
-    coinsNeeded: 500000,
-    tasksNeeded: 60,
-    friendsNeeded: 100,
-    reward: { coins: 50000, gems: 250 }
-  }
+  1: { name: "Novice Warrior", coinsNeeded: 1000, tasksNeeded: 3, friendsNeeded: 1, reward: { coins: 100, gems: 5 } },
+  2: { name: "Skilled Fighter", coinsNeeded: 5000, tasksNeeded: 8, friendsNeeded: 3, reward: { coins: 500, gems: 10 } },
+  3: { name: "Elite Guard", coinsNeeded: 15000, tasksNeeded: 15, friendsNeeded: 10, reward: { coins: 1500, gems: 25 } },
+  4: { name: "Royal Commander", coinsNeeded: 50000, tasksNeeded: 25, friendsNeeded: 25, reward: { coins: 5000, gems: 50 } },
+  5: { name: "Legendary Hero", coinsNeeded: 150000, tasksNeeded: 40, friendsNeeded: 50, reward: { coins: 15000, gems: 100 } },
+  6: { name: "Queen's Champion", coinsNeeded: 500000, tasksNeeded: 60, friendsNeeded: 100, reward: { coins: 50000, gems: 250 } }
 };
 
-// ========================================
-// DAILY PROGRESSIVE REWARD SYSTEM
-// ========================================
 const STORAGE_KEYS = {
   LAST_RESET: 'makeda_last_reset',
   TAP_COUNT: 'makeda_tap_count',
@@ -76,60 +35,48 @@ const STORAGE_KEYS = {
 export default function DashboardPage({ user = {}, fetchUser }) {
   const { language, changeLanguage } = useLanguage();
 
-  // UI state
   const [coins, setCoins] = useState(user.coins || 0);
   const [gems, setGems] = useState(user.gems || 0);
-
-  // User info popup
   const [showUserInfo, setShowUserInfo] = useState(false);
-
-  // Makeda progress popup
   const [showProgress, setShowProgress] = useState(false);
   const [progressData, setProgressData] = useState(null);
-
-  // Coin animations
   const [flyingCoins, setFlyingCoins] = useState([]);
-
-  // Daily reward system
   const [nextReward, setNextReward] = useState(2);
   const [nextCooldown, setNextCooldown] = useState(2);
   const [tapCount, setTapCount] = useState(0);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [cooldownProgress, setCooldownProgress] = useState(0);
   const [canClaimReward, setCanClaimReward] = useState(true);
 
   const cooldownIntervalRef = useRef(null);
+  const progressTimerRef = useRef(null);
+  const userInfoTimerRef = useRef(null);
   const coinBoxRef = useRef(null);
   const makedaRef = useRef(null);
 
   const API_URL = 'https://axum-backend-production.up.railway.app';
-
   const avatarSrc = user.photo_url || queenMakeda;
 
-  // Sync coins/gems when user prop changes
   useEffect(() => {
     if (user.coins !== undefined) setCoins(user.coins);
     if (user.gems !== undefined) setGems(user.gems);
   }, [user]);
 
-  // Initialize daily reward system on mount
   useEffect(() => {
     initializeDailySystem();
-    
     return () => {
-      if (cooldownIntervalRef.current) {
-        clearInterval(cooldownIntervalRef.current);
-      }
+      if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
+      if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
+      if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
     };
   }, []);
 
-  // Check if it's a new day and reset if needed
   const checkAndResetDaily = () => {
     const lastReset = localStorage.getItem(STORAGE_KEYS.LAST_RESET);
     const now = new Date();
     const today = now.toDateString();
 
     if (!lastReset || lastReset !== today) {
-      console.log('🌅 New day detected! Resetting daily rewards...');
       localStorage.setItem(STORAGE_KEYS.LAST_RESET, today);
       localStorage.setItem(STORAGE_KEYS.TAP_COUNT, '0');
       localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, '2');
@@ -140,6 +87,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       setNextReward(2);
       setNextCooldown(2);
       setCooldownRemaining(0);
+      setCooldownProgress(0);
       setCanClaimReward(true);
       
       return true;
@@ -147,7 +95,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     return false;
   };
 
-  // Initialize the daily reward system
   const initializeDailySystem = () => {
     const isNewDay = checkAndResetDaily();
     
@@ -168,42 +115,42 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         
         if (timePassed < cooldownMs) {
           const remainingSec = Math.ceil((cooldownMs - timePassed) / 1000);
+          const totalSec = savedNextCooldown * 60;
+          const progress = ((totalSec - remainingSec) / totalSec) * 100;
+          
           setCooldownRemaining(remainingSec);
+          setCooldownProgress(progress);
           setCanClaimReward(false);
-          startCooldownTimer();
+          startCooldownTimer(savedNextCooldown);
         } else {
           setCanClaimReward(true);
+          setCooldownProgress(0);
         }
       }
     }
   };
 
-  // Start countdown timer
-  const startCooldownTimer = () => {
-    if (cooldownIntervalRef.current) {
-      clearInterval(cooldownIntervalRef.current);
-    }
+  const startCooldownTimer = (cooldownMinutes) => {
+    if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
+
+    const totalSeconds = cooldownMinutes * 60;
 
     cooldownIntervalRef.current = setInterval(() => {
       setCooldownRemaining(prev => {
         if (prev <= 1) {
           clearInterval(cooldownIntervalRef.current);
           setCanClaimReward(true);
+          setCooldownProgress(0);
           return 0;
         }
-        return prev - 1;
+        const newRemaining = prev - 1;
+        const progress = ((totalSeconds - newRemaining) / totalSeconds) * 100;
+        setCooldownProgress(progress);
+        return newRemaining;
       });
     }, 1000);
   };
 
-  // Format cooldown time
-  const formatCooldown = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Create flying coin animations
   const createFlyingCoins = (amount) => {
     const makedaRect = makedaRef.current?.getBoundingClientRect();
     const coinBoxRect = coinBoxRef.current?.getBoundingClientRect();
@@ -224,29 +171,23 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         startY,
         endX,
         endY,
-        delay: i * 150 // Stagger each coin by 150ms
+        delay: i * 150
       });
     }
 
     setFlyingCoins(prev => [...prev, ...newCoins]);
 
-    // Remove coins after animation completes
     setTimeout(() => {
       setFlyingCoins(prev => prev.filter(coin => !newCoins.find(c => c.id === coin.id)));
     }, 1500 + (amount * 150));
   };
 
-  // Calculate level progress
   const calculateProgress = () => {
     const currentLevel = user.current_level || 1;
     const levelReq = LEVEL_REQUIREMENTS[currentLevel];
     
     if (!levelReq) {
-      return {
-        level: currentLevel,
-        name: "Max Level",
-        isMaxLevel: true
-      };
+      return { level: currentLevel, name: "Max Level", isMaxLevel: true };
     }
 
     const completedTasks = user.completed_tasks?.length || 0;
@@ -289,34 +230,37 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   const handleNameClick = () => {
     setShowUserInfo(true);
+    
+    // Auto-hide after 3 seconds
+    if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
+    userInfoTimerRef.current = setTimeout(() => {
+      setShowUserInfo(false);
+    }, 3000);
   };
 
   const closeUserInfo = () => {
     setShowUserInfo(false);
+    if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
   };
 
-  // Handle Makeda tap with daily progressive reward
   const handleQueenTap = async () => {
-    console.log('👑 Queen Makeda tapped');
-
-    // Always calculate and show progress
     const progress = calculateProgress();
     setProgressData(progress);
     setShowProgress(true);
 
-    // Check if can claim reward
+    // Auto-hide popup after 3 seconds
+    if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
+    progressTimerRef.current = setTimeout(() => {
+      setShowProgress(false);
+    }, 3000);
+
     if (canClaimReward) {
-      console.log(`💰 Claiming ${nextReward} coins!`);
-      
-      // Create flying coin animation
       createFlyingCoins(nextReward);
 
-      // Give coins to user (with delay for animation)
       setTimeout(() => {
         giveCoinsToUser(nextReward);
       }, 800);
 
-      // Update state for next tap
       const newTapCount = tapCount + 1;
       const newNextReward = nextReward * 2;
       const newNextCooldown = nextCooldown * 2;
@@ -332,24 +276,16 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
       const cooldownSec = newNextCooldown * 60;
       setCooldownRemaining(cooldownSec);
+      setCooldownProgress(0);
       setCanClaimReward(false);
-      startCooldownTimer();
-
-      console.log(`⏰ Next reward: ${newNextReward} coins in ${newNextCooldown} minutes`);
-    } else {
-      console.log(`⏳ Still on cooldown: ${formatCooldown(cooldownRemaining)} remaining`);
+      startCooldownTimer(newNextCooldown);
     }
   };
 
-  // Give coins to user via API
   const giveCoinsToUser = async (amount) => {
     try {
       const token = localStorage.getItem("axum_token");
-      
-      if (!token) {
-        console.error('No token found');
-        return;
-      }
+      if (!token) return;
 
       for (let i = 0; i < amount; i++) {
         const res = await fetch(`${API_URL}/api/user/add-coin`, {
@@ -372,8 +308,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       if (typeof fetchUser === "function") {
         fetchUser();
       }
-
-      console.log(`✅ Successfully added ${amount} coins!`);
     } catch (err) {
       console.error("Error giving coins:", err);
     }
@@ -381,6 +315,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   const closeProgress = () => {
     setShowProgress(false);
+    if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
   };
 
   const completedTasksCount = user?.completed_tasks?.length || 0;
@@ -389,7 +324,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   return (
     <div className="saba-dashboard full-screen">
-      {/* Header */}
       <header className="top-block" role="banner">
         <div className="top-left">
           <div className="avatar-circle">
@@ -401,19 +335,13 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
 
         <div className="top-right">
-          <button
-            className="lang-toggle-btn"
-            onClick={handleLanguageToggle}
-            aria-label="Toggle language"
-            title={language === 'en' ? 'አማርኛ' : 'English'}
-          >
+          <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Toggle language" title={language === 'en' ? 'አማርኛ' : 'English'}>
             <img src={iconGlobe} alt="Language" className="lang-icon" />
           </button>
           <span className="axum-logo-emoji" role="img">⚜️</span>
         </div>
       </header>
 
-      {/* Coins & Gems */}
       <div className="currency-row logo-style">
         <div className="currency-item logo-box" ref={coinBoxRef}>
           <img src={iconCoin} alt="Coins" className="currency-icon" />
@@ -426,9 +354,27 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
       </div>
 
-      {/* Makeda */}
       <main className="queen-main-section">
         <div className="queen-oval-frame" ref={makedaRef}>
+          {/* Cooldown progress ring */}
+          <svg className="cooldown-progress-ring" viewBox="0 0 100 100">
+            <circle
+              className="progress-ring-bg"
+              cx="50"
+              cy="50"
+              r="48"
+            />
+            <circle
+              className="progress-ring-fill"
+              cx="50"
+              cy="50"
+              r="48"
+              style={{
+                strokeDashoffset: 302 - (302 * cooldownProgress) / 100
+              }}
+            />
+          </svg>
+
           <img
             src={queenMakeda}
             alt="Queen Makeda"
@@ -438,8 +384,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           />
         </div>
 
-        {/* Flying Coin Animations */}
-        {flyingCoins.map((coin, index) => (
+        {flyingCoins.map((coin) => (
           <div
             key={coin.id}
             className="flying-coin"
@@ -455,7 +400,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           </div>
         ))}
 
-        {/* Compact Progress Popup */}
         {showProgress && progressData && (
           <aside className="progress-popover-compact" role="status">
             <button className="close-hint-btn" onClick={closeProgress}>×</button>
@@ -466,7 +410,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
             {!progressData.isMaxLevel && (
               <div className="progress-content-compact">
-                {/* Coins */}
                 <div className="req-compact">
                   <span className="req-icon-small">🪙</span>
                   <span className="req-text">{progressData.currentCoins.toLocaleString()} / {progressData.coinsNeeded.toLocaleString()}</span>
@@ -475,7 +418,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
                   )}
                 </div>
 
-                {/* Tasks */}
                 <div className="req-compact">
                   <span className="req-icon-small">✅</span>
                   <span className="req-text">{progressData.completedTasks} / {progressData.tasksNeeded}</span>
@@ -484,7 +426,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
                   )}
                 </div>
 
-                {/* Friends */}
                 <div className="req-compact">
                   <span className="req-icon-small">👥</span>
                   <span className="req-text">{progressData.invitedFriends} / {progressData.friendsNeeded}</span>
@@ -498,7 +439,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         )}
       </main>
 
-      {/* Bottom Nav */}
       <nav className="bottom-nav-bar">
         <Link to="/rewards" className="nav-btn">
           <div className="nav-btn-circle">
@@ -525,7 +465,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </Link>
       </nav>
 
-      {/* Compact User Info Popup */}
       {showUserInfo && (
         <div className="user-info-popup-overlay" onClick={closeUserInfo}>
           <div className="user-info-popup-compact" onClick={(e) => e.stopPropagation()}>
