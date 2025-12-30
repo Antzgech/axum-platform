@@ -13,7 +13,7 @@ export default function LoadingPage() {
     document.documentElement.style.overflow = 'hidden';
 
     // Animate progress from 0 to 100 over 14 seconds
-    const duration = 8000; // 8 seconds
+    const duration = 7150; // 7.25 seconds
     const interval = 50; // Update every 50ms
     const steps = duration / interval;
     const increment = 100 / steps;
