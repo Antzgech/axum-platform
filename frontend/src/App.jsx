@@ -1,175 +1,215 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-
-import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
-
-import LoadingPage from './components/LoadingPage';
-import LanguageSelector from './components/LanguageSelector';
-
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import HomePage from './pages/HomePage';
-import OnboardingPage from './pages/OnboardingPage';
-import DashboardPage from './pages/DashboardPage';
-import GamePage from './pages/GamePage';
-import LeaderboardPage from './pages/LeaderboardPage';
-import RewardsPage from './pages/RewardsPage';
-import TasksPage from './pages/TasksPage';
-import SponsorsPage from './pages/SponsorsPage';
-// In App.jsx
-import InviteFriendsPage from './pages/InviteFriendsPage';
-
-
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
+
+// Pages
+import DashboardPage from './pages/DashboardPage';
+import TasksPage from './pages/TasksPage';
+import InviteFriendsPage from './pages/InviteFriendsPage';
+import LeaderboardPage from './pages/LeaderboardPage';
+import GamePage from './pages/GamePage';
+import RewardsPage from './pages/RewardsPage';
+import LoadingPage from './pages/LoadingPage';
 
 const API_URL = 'https://axum-backend-production.up.railway.app';
 
-function AppContent() {
-  const { language, changeLanguage } = useLanguage();
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
-  const location = useLocation();
 
-  const isDashboard = location.pathname === '/dashboard';
+  useEffect(() => {
+    initializeTelegramAuth();
+  }, []);
 
-  const fetchUser = async () => {
+  const initializeTelegramAuth = async () => {
     try {
-      const token = localStorage.getItem('axum_token');
-      if (!token) return;
+      // Check if we're in Telegram WebApp
+      if (window.Telegram?.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
 
+        // Get user data from Telegram
+        const initData = tg.initDataUnsafe;
+        
+        if (initData?.user) {
+          const telegramUser = initData.user;
+          
+          // Authenticate with backend
+          const response = await fetch(`${API_URL}/api/auth/telegram`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: telegramUser.id,
+              first_name: telegramUser.first_name,
+              last_name: telegramUser.last_name || '',
+              username: telegramUser.username || telegramUser.first_name,
+              photo_url: telegramUser.photo_url || '',
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Save token
+            localStorage.setItem('axum_token', data.token);
+            
+            // Set user data
+            setUser(data.user);
+            setIsAuthenticated(true);
+          } else {
+            console.error('Authentication failed');
+          }
+        }
+      } else {
+        // Development mode - check for existing token
+        const token = localStorage.getItem('axum_token');
+        if (token) {
+          await fetchUser(token);
+        }
+      }
+    } catch (error) {
+      console.error('Initialization error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchUser = async (token) => {
+    try {
       const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'Authorization': `Bearer ${token || localStorage.getItem('axum_token')}`,
+        },
       });
 
       if (response.ok) {
         const userData = await response.json();
-        console.log('✅ User refreshed:', userData);
         setUser(userData);
+        setIsAuthenticated(true);
       } else {
-        console.error('Failed to fetch user');
         localStorage.removeItem('axum_token');
-        setUser(null);
+        setIsAuthenticated(false);
       }
     } catch (error) {
       console.error('Fetch user error:', error);
+      setIsAuthenticated(false);
     }
   };
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const onboardingComplete = localStorage.getItem('axum_onboarding_complete');
-        setHasSeenOnboarding(!!onboardingComplete);
+  if (isLoading) {
+    return <LoadingPage />;
+  }
 
-        const token = localStorage.getItem('axum_token');
-        if (token) {
-          const response = await fetch(`${API_URL}/api/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-
-          if (response.ok) {
-            const userData = await response.json();
-            console.log('✅ User logged in:', userData);
-            setUser(userData);
-          } else {
-            console.error('Auth failed');
-            localStorage.removeItem('axum_token');
-          }
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
-        // Show loading screen for exactly 8 seconds
-        setTimeout(() => setLoading(false), 8000);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('axum_onboarding_complete', 'true');
-    setHasSeenOnboarding(true);
-  };
-
-  if (loading) return <LoadingPage />;
-  if (!language) return <LanguageSelector onSelectLanguage={changeLanguage} />;
-
-  return (
-    <div className="app-container">
-      {user && hasSeenOnboarding && !isDashboard && <Navbar />}
-
-      <main className={isDashboard ? "" : "main-content"}>
-        <Routes>
-          <Route path="/" element={
-            !user ? <HomePage setUser={setUser} language={language} /> :
-            !hasSeenOnboarding ? <Navigate to="/onboarding" /> :
-            <Navigate to="/dashboard" />
-          } />
-
-          <Route path="/onboarding" element={
-            user && !hasSeenOnboarding ?
-            <OnboardingPage onComplete={handleOnboardingComplete} language={language} /> :
-            <Navigate to={user ? "/dashboard" : "/"} />
-          } />
-
-          <Route path="/dashboard" element={
-            user && hasSeenOnboarding ?
-            <DashboardPage user={user} fetchUser={fetchUser} language={language} /> :
-            <Navigate to="/" />
-          } />
-
-          <Route path="/game" element={
-            user && hasSeenOnboarding ?
-            <GamePage user={user} fetchUser={fetchUser} language={language} /> :
-            <Navigate to="/" />
-          } />
-
-          <Route path="/leaderboard" element={
-            user && hasSeenOnboarding ?
-            <LeaderboardPage language={language} /> :
-            <Navigate to="/" />
-          } />
-
-          <Route path="/rewards" element={
-            user && hasSeenOnboarding ?
-            <RewardsPage user={user} language={language} /> :
-            <Navigate to="/" />
-          } />
-
-          <Route path="/tasks" element={
-            user && hasSeenOnboarding ?
-            <TasksPage user={user} fetchUser={fetchUser} language={language} /> :
-            <Navigate to="/" />
-          } />
-
-          <Route path="/sponsors" element={
-            user && hasSeenOnboarding ?
-            <SponsorsPage language={language} /> :
-            <Navigate to="/" />
-          } />
-        </Routes>
-      </main>
-
-      {user && hasSeenOnboarding && !isDashboard && <Footer />}
-    </div>
-  );
-}
-
-function AppWrapper() {
   return (
     <Router>
-      <AppContent />
-    </Router>
-  );
-}
+      <div className="App">
+        <Routes>
+          {/* Dashboard - Main page */}
+          <Route 
+            path="/" 
+            element={
+              isAuthenticated ? (
+                <DashboardPage user={user} fetchUser={fetchUser} />
+              ) : (
+                <Navigate to="/auth" />
+              )
+            } 
+          />
 
-function App() {
-  return (
-    <LanguageProvider>
-      <AppWrapper />
-    </LanguageProvider>
+          {/* Tasks Page */}
+          <Route 
+            path="/tasks" 
+            element={
+              isAuthenticated ? (
+                <TasksPage user={user} />
+              ) : (
+                <Navigate to="/auth" />
+              )
+            } 
+          />
+
+          {/* Invite Friends Page */}
+          <Route 
+            path="/invite" 
+            element={
+              isAuthenticated ? (
+                <InviteFriendsPage user={user} />
+              ) : (
+                <Navigate to="/auth" />
+              )
+            } 
+          />
+
+          {/* Game Page */}
+          <Route 
+            path="/game" 
+            element={
+              isAuthenticated ? (
+                <GamePage user={user} />
+              ) : (
+                <Navigate to="/auth" />
+              )
+            } 
+          />
+
+          {/* Leaderboard Page */}
+          <Route 
+            path="/leaderboard" 
+            element={
+              isAuthenticated ? (
+                <LeaderboardPage user={user} />
+              ) : (
+                <Navigate to="/auth" />
+              )
+            } 
+          />
+
+          {/* Rewards/Store Page */}
+          <Route 
+            path="/rewards" 
+            element={
+              isAuthenticated ? (
+                <RewardsPage user={user} />
+              ) : (
+                <Navigate to="/auth" />
+              )
+            } 
+          />
+
+          {/* Auth fallback */}
+          <Route 
+            path="/auth" 
+            element={
+              <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(180deg, #8B6F47, #4A3622)',
+                color: 'white',
+                textAlign: 'center',
+                padding: '20px'
+              }}>
+                <div>
+                  <h1>⚜️ Queen Makeda's Quest</h1>
+                  <p>Please open this app through Telegram</p>
+                  <p style={{ marginTop: '20px', fontSize: '0.9rem', opacity: 0.7 }}>
+                    Search for @SabaQuest_bot in Telegram
+                  </p>
+                </div>
+              </div>
+            } 
+          />
+
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
