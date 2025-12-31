@@ -1,4 +1,4 @@
-/* LevelProgress.css */
+/* COMPACT Level Progress - Like Makeda popup */
 
 .level-progress-overlay {
   position: fixed;
@@ -6,8 +6,8 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,17 +23,17 @@
 
 .level-progress-modal {
   background: linear-gradient(135deg, #2D1B3A 0%, #1a1a1a 100%);
-  border: 3px solid #D4AF37;
-  border-radius: 20px;
+  border: 2px solid #D4AF37;
+  border-radius: 16px;
   padding: 0;
-  width: 500px;
-  max-width: 95%;
-  max-height: 90vh;
+  width: 320px;
+  max-width: 90%;
+  max-height: 85vh;
   overflow-y: auto;
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.9),
-    0 0 80px rgba(212, 175, 55, 0.4);
-  animation: scaleIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    0 15px 40px rgba(0, 0, 0, 0.9),
+    0 0 60px rgba(212, 175, 55, 0.4);
+  animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   position: relative;
 }
 
@@ -50,41 +50,41 @@
 
 .close-btn {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 35px;
-  height: 35px;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: rgba(212, 175, 55, 0.2);
-  border: 2px solid rgba(212, 175, 55, 0.5);
+  border: 2px solid rgba(212, 175, 55, 0.4);
   color: #D4AF37;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   line-height: 1;
   z-index: 10;
 }
 
 .close-btn:hover {
   background: rgba(212, 175, 55, 0.4);
-  transform: rotate(90deg) scale(1.1);
+  transform: rotate(90deg);
 }
 
 .level-header {
   text-align: center;
-  padding: 30px 20px 20px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(30, 95, 62, 0.15) 100%);
-  border-bottom: 2px solid rgba(212, 175, 55, 0.3);
-  border-radius: 20px 20px 0 0;
+  padding: 20px 20px 15px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(30, 95, 62, 0.1));
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 16px 16px 0 0;
 }
 
 .level-header h2 {
-  margin: 0 0 10px 0;
-  font-size: 2rem;
+  margin: 0 0 5px 0;
+  font-size: 1.5rem;
   font-weight: 900;
   color: #FFD700;
   font-family: 'Georgia', serif;
@@ -93,25 +93,25 @@
 
 .level-name {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1rem;
   color: #F4E4B8;
   font-weight: 700;
 }
 
 .requirements-section {
-  padding: 25px 20px;
+  padding: 15px;
 }
 
 .requirements-section h3 {
-  margin: 0 0 20px 0;
-  font-size: 1.1rem;
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
   color: #D4AF37;
   font-weight: 800;
   text-align: center;
 }
 
 .requirement {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .requirement:last-child {
@@ -121,24 +121,24 @@
 .req-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .req-icon {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   flex-shrink: 0;
 }
 
 .req-title {
   flex: 1;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #F4E4B8;
 }
 
 .req-count {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #FFD700;
   font-family: monospace;
@@ -146,9 +146,9 @@
 
 .progress-bar {
   width: 100%;
-  height: 12px;
+  height: 10px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(212, 175, 55, 0.3);
 }
@@ -156,19 +156,19 @@
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #D4AF37, #FFD700);
-  border-radius: 10px;
+  border-radius: 8px;
   transition: width 0.5s ease;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
 }
 
 .level-up-ready {
-  margin: 20px;
-  padding: 20px;
+  margin: 15px;
+  padding: 15px;
   background: linear-gradient(135deg, rgba(0, 255, 0, 0.2), rgba(0, 200, 0, 0.1));
-  border: 3px solid rgba(0, 255, 0, 0.5);
-  border-radius: 15px;
+  border: 2px solid rgba(0, 255, 0, 0.5);
+  border-radius: 12px;
   text-align: center;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 900;
   color: #90EE90;
   animation: celebration 1s ease-in-out infinite;
@@ -180,48 +180,49 @@
 }
 
 .next-level-reward {
-  margin-top: 10px;
-  font-size: 1.1rem;
+  margin-top: 8px;
+  font-size: 0.95rem;
   color: #FFD700;
 }
 
 .level-up-hint {
   text-align: center;
-  padding: 15px 20px 20px;
+  padding: 10px 15px 15px;
   color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
 }
 
-/* Mobile responsive */
+/* Mobile */
 @media (max-width: 480px) {
   .level-progress-modal {
-    width: 95%;
+    width: 300px;
   }
 
   .level-header h2 {
-    font-size: 1.6rem;
+    font-size: 1.3rem;
   }
 
   .level-name {
-    font-size: 1rem;
-  }
-
-  .req-icon {
-    font-size: 1.2rem;
-  }
-
-  .req-title {
     font-size: 0.9rem;
   }
 
-  .req-count {
-    font-size: 0.85rem;
-  }
-
-  .level-up-ready {
+  .req-icon {
     font-size: 1.1rem;
   }
 
-  .next-level-reward {
+  .req-title {
+    font-size: 0.85rem;
+  }
+
+  .req-count {
+    font-size: 0.8rem;
+  }
+
+  .level-up-ready {
     font-size: 1rem;
+  }
+
+  .next-level-reward {
+    font-size: 0.85rem;
   }
 }
