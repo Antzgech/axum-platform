@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 import OnboardingPage from './OnboardingPage';
+import DailyCheckIn from '../components/DailyCheckIn';
+import LevelProgress from '../components/LevelProgress';
 
 // NO IMAGE IMPORTS - Using emojis and public folder images instead
 
