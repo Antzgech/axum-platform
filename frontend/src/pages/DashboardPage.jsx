@@ -25,6 +25,13 @@ const LEVEL_REQUIREMENTS = {
   6: { name: "Queen's Champion", coinsNeeded: 500000, tasksNeeded: 60, friendsNeeded: 100, reward: { coins: 50000, gems: 250 } }
 };
 
+// Shows current level, click to see progress
+<button onClick={() => setShowLevelProgress(true)}>
+  ⭐ Level {user?.current_level || 1}
+</button>
+
+
+
 const STORAGE_KEYS = {
   LAST_RESET: 'makeda_last_reset',
   TAP_COUNT: 'makeda_tap_count',
