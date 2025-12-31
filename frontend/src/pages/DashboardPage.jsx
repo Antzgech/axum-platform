@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 import OnboardingPage from './OnboardingPage';
 
-// Import images
-import iconStore from '../assets/icons/store.svg';
-import iconBoosts from '../assets/icons/boosts.svg';
-import iconFriends from '../assets/icons/friends.svg';
-import iconEarnCoins from '../assets/icons/earn-coins.svg';
+// FIXED IMPORTS - Updated to match your existing asset structure
+import iconStore from '../assets/icons/icon-store.png';
+import iconBoosts from '../assets/icons/icon-boosts.png';
+import iconFriends from '../assets/icons/icon-friends.png';
+import iconEarnCoins from '../assets/icons/icon-earn-coins.png';
 import queenMakeda from '../assets/queen-makeda.png';
-import coin from '../assets/coin.png';
+import coin from '../assets/icons/icon-coin.png';
 
 const API_URL = 'https://axum-backend-production.up.railway.app';
 
@@ -81,7 +81,6 @@ export default function DashboardPage({ user, fetchUser }) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Add flying coin animation
     const newCoin = {
       id: Date.now() + Math.random(),
       x,
@@ -89,15 +88,12 @@ export default function DashboardPage({ user, fetchUser }) {
     };
     setFlyingCoins(prev => [...prev, newCoin]);
 
-    // Remove coin after animation
     setTimeout(() => {
       setFlyingCoins(prev => prev.filter(c => c.id !== newCoin.id));
     }, 1000);
 
-    // Update coins locally
     setCoins(prev => prev + 1);
 
-    // Send to backend
     try {
       const token = localStorage.getItem('axum_token');
       const response = await fetch(`${API_URL}/api/user/add-coin`, {
@@ -118,21 +114,10 @@ export default function DashboardPage({ user, fetchUser }) {
     }
   };
 
-  const openUserInfo = () => {
-    setShowUserInfo(true);
-  };
-
-  const closeUserInfo = () => {
-    setShowUserInfo(false);
-  };
-
-  const closeLevelProgress = () => {
-    setShowLevelProgress(false);
-  };
-
-  const closeCheckin = () => {
-    setShowCheckin(false);
-  };
+  const openUserInfo = () => setShowUserInfo(true);
+  const closeUserInfo = () => setShowUserInfo(false);
+  const closeLevelProgress = () => setShowLevelProgress(false);
+  const closeCheckin = () => setShowCheckin(false);
 
   const getLevelProgress = () => {
     const requirements = LEVEL_REQUIREMENTS[currentLevel];
@@ -163,7 +148,6 @@ export default function DashboardPage({ user, fetchUser }) {
 
   return (
     <div className="dashboard-page">
-      {/* Header */}
       <header className="top-block">
         <div className="top-left">
           <div 
@@ -211,7 +195,6 @@ export default function DashboardPage({ user, fetchUser }) {
         </div>
       </header>
 
-      {/* Coins & Gems Display */}
       <div className="currency-display">
         <div className="currency-item">
           <img src={coin} alt="Coin" className="currency-icon" />
@@ -223,7 +206,6 @@ export default function DashboardPage({ user, fetchUser }) {
         </div>
       </div>
 
-      {/* Queen Makeda Tap Area */}
       <div className="tap-area">
         <div className="makeda-container" onClick={handleTap}>
           <img 
@@ -232,7 +214,6 @@ export default function DashboardPage({ user, fetchUser }) {
             className="makeda-image"
           />
           
-          {/* Flying coins */}
           {flyingCoins.map(flyingCoin => (
             <div
               key={flyingCoin.id}
@@ -250,7 +231,6 @@ export default function DashboardPage({ user, fetchUser }) {
         <p className="tap-instruction">👆 Tap Queen Makeda to earn coins!</p>
       </div>
 
-      {/* Bottom Navigation */}
       <nav className="bottom-nav-bar">
         <Link to="/rewards" className="nav-btn">
           <div className="nav-btn-circle">
@@ -281,7 +261,6 @@ export default function DashboardPage({ user, fetchUser }) {
         </Link>
       </nav>
 
-      {/* User Info Modal */}
       {showUserInfo && (
         <div className="modal-overlay" onClick={closeUserInfo}>
           <div className="modal-content user-info-modal" onClick={(e) => e.stopPropagation()}>
@@ -325,7 +304,6 @@ export default function DashboardPage({ user, fetchUser }) {
         </div>
       )}
 
-      {/* Level Progress Modal */}
       {showLevelProgress && (() => {
         const progress = getLevelProgress();
         if (!progress) return null;
@@ -390,7 +368,6 @@ export default function DashboardPage({ user, fetchUser }) {
         );
       })()}
 
-      {/* Daily Check-in Modal */}
       {showCheckin && (
         <div className="modal-overlay" onClick={closeCheckin}>
           <div className="modal-content checkin-modal" onClick={(e) => e.stopPropagation()}>
@@ -402,7 +379,6 @@ export default function DashboardPage({ user, fetchUser }) {
         </div>
       )}
 
-      {/* Story Modal */}
       {showStory && (
         <div className="story-overlay" onClick={() => setShowStory(false)}>
           <div className="story-content" onClick={(e) => e.stopPropagation()}>
