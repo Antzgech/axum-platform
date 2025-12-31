@@ -3,13 +3,7 @@ import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 import OnboardingPage from './OnboardingPage';
 
-// FIXED IMPORTS - Updated to match your existing asset structure
-import iconStore from '../assets/icons/icon-store.png';
-import iconBoosts from '../assets/icons/icon-boosts.png';
-import iconFriends from '../assets/icons/icon-friends.png';
-import iconEarnCoins from '../assets/icons/icon-earn-coins.png';
-import queenMakeda from '../assets/queen-makeda.png';
-import coin from '../assets/icons/icon-coin.png';
+// NO IMAGE IMPORTS - Using emojis and public folder images instead
 
 const API_URL = 'https://axum-backend-production.up.railway.app';
 
@@ -197,7 +191,7 @@ export default function DashboardPage({ user, fetchUser }) {
 
       <div className="currency-display">
         <div className="currency-item">
-          <img src={coin} alt="Coin" className="currency-icon" />
+          <span style={{ fontSize: '32px' }}>🪙</span>
           <span className="currency-value">{coins.toLocaleString()}</span>
         </div>
         <div className="currency-item">
@@ -209,7 +203,7 @@ export default function DashboardPage({ user, fetchUser }) {
       <div className="tap-area">
         <div className="makeda-container" onClick={handleTap}>
           <img 
-            src={queenMakeda} 
+            src="/queen-makeda.png" 
             alt="Queen Makeda" 
             className="makeda-image"
           />
@@ -223,7 +217,7 @@ export default function DashboardPage({ user, fetchUser }) {
                 top: `${flyingCoin.y}px`
               }}
             >
-              <img src={coin} alt="coin" />
+              <span style={{ fontSize: '40px' }}>🪙</span>
             </div>
           ))}
         </div>
@@ -234,28 +228,28 @@ export default function DashboardPage({ user, fetchUser }) {
       <nav className="bottom-nav-bar">
         <Link to="/rewards" className="nav-btn">
           <div className="nav-btn-circle">
-            <img src={iconStore} alt="Store" className="nav-icon" />
+            <span style={{ fontSize: '24px' }}>🏪</span>
           </div>
           <span className="nav-label">Store</span>
         </Link>
 
         <Link to="/game" className="nav-btn">
           <div className="nav-btn-circle">
-            <img src={iconBoosts} alt="Game" className="nav-icon" />
+            <span style={{ fontSize: '24px' }}>🎮</span>
           </div>
           <span className="nav-label">Game</span>
         </Link>
 
         <Link to="/invite" className="nav-btn">
           <div className="nav-btn-circle">
-            <img src={iconFriends} alt="Invite" className="nav-icon" />
+            <span style={{ fontSize: '24px' }}>👥</span>
           </div>
           <span className="nav-label">Invite</span>
         </Link>
 
         <Link to="/tasks" className="nav-btn">
           <div className="nav-btn-circle">
-            <img src={iconEarnCoins} alt="Tasks" className="nav-icon" />
+            <span style={{ fontSize: '24px' }}>📋</span>
           </div>
           <span className="nav-label">Tasks</span>
         </Link>
