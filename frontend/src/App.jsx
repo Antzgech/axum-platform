@@ -8,7 +8,6 @@ import LanguageSelector from './components/LanguageSelector';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-
 import HomePage from './pages/HomePage';
 import OnboardingPage from './pages/OnboardingPage';
 import DashboardPage from './pages/DashboardPage';
@@ -17,6 +16,9 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import RewardsPage from './pages/RewardsPage';
 import TasksPage from './pages/TasksPage';
 import SponsorsPage from './pages/SponsorsPage';
+// In App.jsx
+import InviteFriendsPage from './pages/InviteFriendsPage';
+
 
 import './App.css';
 
