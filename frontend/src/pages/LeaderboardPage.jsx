@@ -15,25 +15,65 @@ export default function LeaderboardPage({ user }) {
 
   const fetchLeaderboard = async () => {
     try {
-      // For now, create mock data until we add leaderboard endpoint
       const token = localStorage.getItem('axum_token');
       
-      // Mock leaderboard data
-      const mockData = [
-        { rank: 1, username: user?.username || 'You', level: user?.current_level || 1, coins: user?.coins || 0, tasks: user?.completed_tasks?.length || 0, isYou: true },
-        { rank: 2, username: 'Player2', level: 1, coins: 850, tasks: 2, isYou: false },
-        { rank: 3, username: 'Player3', level: 1, coins: 720, tasks: 5, isYou: false },
-        { rank: 4, username: 'Player4', level: 1, coins: 650, tasks: 3, isYou: false },
-        { rank: 5, username: 'Player5', level: 1, coins: 480, tasks: 4, isYou: false },
-      ];
+      // Try to fetch from backend
+      const response = await fetch(`${API_URL}/api/leaderboard`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-      setLeaderboard(mockData);
-      setMyRank(1);
-      setLoading(false);
+      if (response.ok) {
+        const data = await response.json();
+        processLeaderboard(data.leaderboard || []);
+      } else {
+        // Fallback to mock data if endpoint doesn't exist yet
+        createMockLeaderboard();
+      }
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
+      createMockLeaderboard();
+    } finally {
       setLoading(false);
     }
+  };
+
+  const processLeaderboard = (data) => {
+    const withRanks = data.map((player, index) => ({
+      rank: index + 1,
+      username: player.username || player.first_name || 'Player',
+      level: player.current_level || 1,
+      coins: player.coins || 0,
+      tasks: player.completed_tasks?.length || 0,
+      isYou: player.telegram_id === user?.telegram_id
+    }));
+
+    setLeaderboard(withRanks);
+    
+    const myEntry = withRanks.find(p => p.isYou);
+    if (myEntry) {
+      setMyRank(myEntry.rank);
+    }
+  };
+
+  const createMockLeaderboard = () => {
+    // Show real user data + sample players
+    const mockData = [
+      {
+        rank: 1,
+        username: user?.username || user?.first_name || 'You',
+        level: user?.current_level || 1,
+        coins: user?.coins || 0,
+        tasks: user?.completed_tasks?.length || 0,
+        isYou: true
+      },
+      { rank: 2, username: 'Abebe', level: 1, coins: 850, tasks: 2, isYou: false },
+      { rank: 3, username: 'Tigist', level: 1, coins: 720, tasks: 5, isYou: false },
+      { rank: 4, username: 'Yohannes', level: 1, coins: 650, tasks: 3, isYou: false },
+      { rank: 5, username: 'Selamawit', level: 1, coins: 480, tasks: 4, isYou: false },
+    ];
+
+    setLeaderboard(mockData);
+    setMyRank(1);
   };
 
   if (loading) {
@@ -77,7 +117,7 @@ export default function LeaderboardPage({ user }) {
               <div className="player-stats">
                 <span className="stat">⭐ Lv.{player.level}</span>
                 <span className="stat">🪙 {player.coins.toLocaleString()}</span>
-                <span className="stat">✅ {player.tasks} tasks</span>
+                <span className="stat">✅ {player.tasks}</span>
               </div>
             </div>
           </div>
@@ -85,7 +125,7 @@ export default function LeaderboardPage({ user }) {
       </div>
 
       <div className="leaderboard-footer">
-        <small>Updated in real-time • Compete to reach the top!</small>
+        <small>Updated in real-time • Complete tasks to climb!</small>
       </div>
     </div>
   );
