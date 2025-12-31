@@ -5,29 +5,37 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://axum-frontend-production.up.railway.app';
 
 if (!BOT_TOKEN) {
-  console.error('❌ TELEGRAM_BOT_TOKEN not found in environment variables!');
+  console.error('❌ TELEGRAM_BOT_TOKEN not found!');
   process.exit(1);
 }
 
-// Create bot - NO POLLING (webhook mode for Railway)
+console.log('🤖 Initializing Telegram Bot...');
+console.log('🌐 Frontend URL:', FRONTEND_URL);
+
+// Create bot instance
 const bot = new TelegramBot(BOT_TOKEN, {
-  polling: false,
-  webHook: false
+  polling: true
 });
 
-console.log('🤖 Telegram Bot initialized (webhook mode)');
-
-// Suppress polling errors
-bot.on('polling_error', () => {});
-bot.on('error', () => {});
+console.log('✅ Bot polling started');
 
 // /start command
-bot.onText(/\/start/, async (msg) => {
+bot.onText(/\/start(.*)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const firstName = msg.from.first_name || 'Warrior';
+  const startParam = match[1].trim();
   
+  console.log(`📱 /start from ${firstName} (${chatId})`, startParam ? `with param: ${startParam}` : '');
+
   try {
-    const message = `👋 Welcome, ${firstName}!\n\n🏛️ *Queen Makeda's Quest*\n\nEmbark on an epic journey from Axum to Jerusalem!\n\n🎮 Play games\n💰 Earn coins & gems\n⭐ Level up\n👥 Invite friends\n\nReady to begin your adventure?`;
+    const message = `👋 *Welcome, ${firstName}!*\n\n` +
+      `🏛️ *Queen Makeda's Quest*\n\n` +
+      `Embark on an epic journey from Axum to Jerusalem!\n\n` +
+      `🎮 Play games to earn coins\n` +
+      `💰 Complete tasks for rewards\n` +
+      `⭐ Level up your character\n` +
+      `👥 Invite friends to get bonuses\n\n` +
+      `*Ready to begin your adventure?*`;
 
     const keyboard = {
       inline_keyboard: [
@@ -38,8 +46,8 @@ bot.onText(/\/start/, async (msg) => {
           }
         ],
         [
-          { text: '📋 Tasks', callback_data: 'tasks' },
-          { text: '👥 Invite', callback_data: 'invite' }
+          { text: '👥 Invite Friends', callback_data: 'invite' },
+          { text: '📋 Tasks', callback_data: 'tasks' }
         ],
         [
           { text: '🏆 Leaderboard', callback_data: 'leaderboard' },
@@ -51,13 +59,11 @@ bot.onText(/\/start/, async (msg) => {
     await bot.sendMessage(chatId, message, {
       parse_mode: 'Markdown',
       reply_markup: keyboard
-    }).catch(err => {
-      console.log('Send message error:', err.message);
     });
 
-    console.log(`✅ /start command from ${firstName} (${chatId})`);
+    console.log(`✅ Welcome sent to ${firstName}`);
   } catch (error) {
-    console.log('Start command error:', error.message);
+    console.error('❌ Start error:', error.message);
   }
 });
 
@@ -77,15 +83,18 @@ bot.onText(/\/play/, async (msg) => {
       ]
     };
 
-    await bot.sendMessage(chatId, '🎮 Ready to play? Click below to start!', {
-      reply_markup: keyboard
-    }).catch(err => {
-      console.log('Send message error:', err.message);
-    });
+    await bot.sendMessage(
+      chatId, 
+      '🎮 *Ready to play?*\n\nClick below to start your adventure!',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      }
+    );
 
-    console.log(`✅ /play command from ${chatId}`);
+    console.log(`✅ /play sent to ${chatId}`);
   } catch (error) {
-    console.log('Play command error:', error.message);
+    console.error('❌ Play error:', error.message);
   }
 });
 
@@ -94,28 +103,91 @@ bot.onText(/\/help/, async (msg) => {
   const chatId = msg.chat.id;
   
   try {
-    const helpText = `🏛️ *Queen Makeda's Quest - Help*\n\n*Commands:*\n/start - Start the game\n/play - Open game\n/help - Show this help\n\n*How to Play:*\n1. Tap Queen Makeda to earn coins\n2. Complete tasks for rewards\n3. Invite friends to get bonuses\n4. Level up to unlock new features\n\n*Features:*\n🎮 Ethiopian Games (Gebeta)\n📅 Daily Check-in Rewards\n👥 Referral System\n🏆 Leaderboard\n⭐ 6 Levels to Master\n\nGood luck, Warrior! 🗡️`;
+    const helpText = `🏛️ *Queen Makeda's Quest - Help*\n\n` +
+      `*Commands:*\n` +
+      `/start - Start the game\n` +
+      `/play - Open game\n` +
+      `/invite - Get referral link\n` +
+      `/help - Show this help\n\n` +
+      `*How to Play:*\n` +
+      `1️⃣ Tap Queen Makeda to earn coins\n` +
+      `2️⃣ Play Gebeta game for rewards\n` +
+      `3️⃣ Complete daily tasks\n` +
+      `4️⃣ Invite friends to get bonuses\n` +
+      `5️⃣ Level up to unlock features\n\n` +
+      `*Features:*\n` +
+      `🎲 Ethiopian Games (Gebeta)\n` +
+      `📅 Daily Check-in Rewards\n` +
+      `👥 Referral System\n` +
+      `🏆 Global Leaderboard\n` +
+      `⭐ 6 Levels to Master\n\n` +
+      `Good luck on your journey! 🗡️`;
 
     await bot.sendMessage(chatId, helpText, {
       parse_mode: 'Markdown'
-    }).catch(err => {
-      console.log('Send message error:', err.message);
     });
 
-    console.log(`✅ /help command from ${chatId}`);
+    console.log(`✅ /help sent to ${chatId}`);
   } catch (error) {
-    console.log('Help command error:', error.message);
+    console.error('❌ Help error:', error.message);
+  }
+});
+
+// /invite command
+bot.onText(/\/invite/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  
+  try {
+    const referralCode = Buffer.from(userId.toString()).toString('base64');
+    const referralLink = `https://t.me/SabaQuest_bot?start=ref_${referralCode}`;
+
+    const message = `👥 *Invite Friends & Earn Rewards!*\n\n` +
+      `Share your personal link:\n` +
+      `${referralLink}\n\n` +
+      `*Your Rewards:*\n` +
+      `🎁 1 friend: 50 coins + 1 gem\n` +
+      `🎉 5 friends: 300 coins + 3 gems\n` +
+      `🏆 10 friends: 750 coins + 10 gems\n` +
+      `👑 25 friends: 2000 coins + 25 gems\n` +
+      `💎 50 friends: 5000 coins + 50 gems\n\n` +
+      `*Friend's Reward:*\n` +
+      `🎁 25 coins welcome bonus\n\n` +
+      `Start sharing now! 🚀`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: '✈️ Share on Telegram',
+            url: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('🏛️ Join me in Queen Makeda\'s Quest! Play games, earn rewards, and level up!')}`
+          }
+        ]
+      ]
+    };
+
+    await bot.sendMessage(chatId, message, {
+      parse_mode: 'Markdown',
+      reply_markup: keyboard
+    });
+
+    console.log(`✅ /invite sent to user ${userId}`);
+  } catch (error) {
+    console.error('❌ Invite error:', error.message);
   }
 });
 
 // Handle callback queries (button clicks)
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
+  const userId = query.from.id;
   const data = query.data;
 
+  console.log(`🔘 Callback: ${data} from user ${userId}`);
+
   try {
-    // Answer callback to remove loading state
-    await bot.answerCallbackQuery(query.id).catch(() => {});
+    // Answer callback immediately
+    await bot.answerCallbackQuery(query.id);
 
     if (data === 'tasks') {
       const keyboard = {
@@ -123,29 +195,51 @@ bot.on('callback_query', async (query) => {
           [
             {
               text: '📋 Open Tasks',
-              web_app: { url: `${FRONTEND_URL}/tasks` }
+              web_app: { url: `${FRONTEND_URL}` }
             }
           ]
         ]
       };
 
-      await bot.sendMessage(chatId, '📋 Complete tasks to earn coins and gems!', {
-        reply_markup: keyboard
-      }).catch(err => {
-        console.log('Send message error:', err.message);
-      });
+      await bot.sendMessage(
+        chatId,
+        '📋 *Complete Tasks & Earn Rewards!*\n\n' +
+        'Click below to see all available tasks.\n\n' +
+        'Tasks include:\n' +
+        '• Social media follows\n' +
+        '• Daily check-ins\n' +
+        '• Friend invitations\n' +
+        '• Game achievements',
+        {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        }
+      );
     } 
     else if (data === 'invite') {
-      const userId = query.from.id;
       const referralCode = Buffer.from(userId.toString()).toString('base64');
       const referralLink = `https://t.me/SabaQuest_bot?start=ref_${referralCode}`;
 
-      await bot.sendMessage(
-        chatId,
-        `👥 *Invite Friends!*\n\nShare your link and earn rewards when friends join:\n\n${referralLink}\n\n*Rewards:*\n🎁 1 friend: 50 coins + 1 gem\n🎉 5 friends: 300 coins + 3 gems\n🏆 10 friends: 750 coins + 10 gems`,
-        { parse_mode: 'Markdown' }
-      ).catch(err => {
-        console.log('Send message error:', err.message);
+      const message = `👥 *Your Referral Link:*\n\n${referralLink}\n\n` +
+        `*Rewards:*\n` +
+        `🎁 1 friend: 50🪙 + 1💎\n` +
+        `🎉 5 friends: 300🪙 + 3💎\n` +
+        `🏆 10 friends: 750🪙 + 10💎`;
+
+      const keyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: '✈️ Share Now',
+              url: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('Join me in Queen Makeda\'s Quest!')}`
+            }
+          ]
+        ]
+      };
+
+      await bot.sendMessage(chatId, message, {
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
       });
     }
     else if (data === 'leaderboard') {
@@ -153,61 +247,57 @@ bot.on('callback_query', async (query) => {
         inline_keyboard: [
           [
             {
-              text: '🏆 View Leaderboard',
-              web_app: { url: `${FRONTEND_URL}/leaderboard` }
+              text: '🏆 View Rankings',
+              web_app: { url: `${FRONTEND_URL}` }
             }
           ]
         ]
       };
 
-      await bot.sendMessage(chatId, '🏆 See who are the top warriors!', {
-        reply_markup: keyboard
-      }).catch(err => {
-        console.log('Send message error:', err.message);
-      });
+      await bot.sendMessage(
+        chatId,
+        '🏆 *Global Leaderboard*\n\n' +
+        'See who are the top warriors of Axum!\n\n' +
+        'Rankings based on:\n' +
+        '⭐ Level\n' +
+        '🪙 Coins\n' +
+        '✅ Tasks completed',
+        {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        }
+      );
     }
     else if (data === 'help') {
-      const helpText = `🏛️ *Queen Makeda's Quest*\n\n*How to Play:*\n1. Tap Queen Makeda to earn coins\n2. Complete tasks for rewards\n3. Invite friends to get bonuses\n4. Level up to unlock new features\n\nGood luck! 🗡️`;
+      const helpText = `🏛️ *Queen Makeda's Quest*\n\n` +
+        `*How to Play:*\n` +
+        `1️⃣ Tap Queen Makeda for coins\n` +
+        `2️⃣ Play Gebeta game\n` +
+        `3️⃣ Complete tasks\n` +
+        `4️⃣ Invite friends\n` +
+        `5️⃣ Level up!\n\n` +
+        `Good luck! 🗡️`;
 
       await bot.sendMessage(chatId, helpText, {
         parse_mode: 'Markdown'
-      }).catch(err => {
-        console.log('Send message error:', err.message);
       });
     }
 
-    console.log(`✅ Callback query: ${data} from ${chatId}`);
+    console.log(`✅ Callback handled: ${data}`);
   } catch (error) {
-    console.log('Callback query error:', error.message);
+    console.error('❌ Callback error:', error.message);
   }
 });
 
-// Handle web app data (if needed)
-bot.on('web_app_data', async (msg) => {
-  const chatId = msg.chat.id;
-  console.log('Web app data received:', msg.web_app_data.data);
-  
-  try {
-    await bot.sendMessage(chatId, 'Thanks for using the app!').catch(err => {
-      console.log('Send message error:', err.message);
-    });
-  } catch (error) {
-    console.log('Web app data error:', error.message);
-  }
-});
-
-// Error handling
-bot.on('error', (error) => {
-  // Silently ignore errors (Railway webhook issues)
-});
-
+// Error handlers
 bot.on('polling_error', (error) => {
-  // Silently ignore polling errors
+  console.log('⚠️ Polling error (ignored):', error.code);
 });
 
-console.log('✅ Bot commands registered:');
-console.log('   /start - Start the game');
-console.log('   /play - Open game');
-console.log('   /help - Show help');
+bot.on('error', (error) => {
+  console.log('⚠️ Bot error (ignored):', error.code);
+});
+
+console.log('✅ Bot ready! Commands: /start, /play, /invite, /help');
 
 module.exports = bot;
