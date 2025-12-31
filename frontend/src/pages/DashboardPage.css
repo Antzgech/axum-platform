@@ -19,6 +19,112 @@
   --radius-lg: 16px;
 }
 
+
+
+/* Add this to DashboardPage.css if bottom nav is missing */
+
+/* ========================================
+   BOTTOM NAVIGATION BAR
+   ======================================== */
+
+.bottom-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: space-around;
+  align-items: center;
+  padding: 12px 18px 20px 18px;
+  background: linear-gradient(180deg, rgba(45, 27, 78, 0.95), rgba(26, 15, 45, 0.98));
+  border-top: 2px solid rgba(212, 175, 55, 0.2);
+  z-index: 100;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.nav-btn {
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 70px;
+  transition: transform 0.2s ease;
+}
+
+.nav-btn:active {
+  transform: scale(0.95);
+}
+
+.nav-btn-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4A3070, #5A3D8A);
+  border: 3px solid #D4AF37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.4),
+    inset 0 2px 8px rgba(255, 255, 255, 0.06);
+  transition: all 0.3s ease;
+}
+
+.nav-btn:hover .nav-btn-circle {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(212, 175, 55, 0.3);
+  border-color: #FFD700;
+}
+
+.nav-icon {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.nav-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #D4AF37;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .bottom-nav-bar {
+    padding: 10px 12px 16px 12px;
+    gap: 4px;
+  }
+
+  .nav-btn {
+    min-width: 60px;
+  }
+
+  .nav-btn-circle {
+    width: 50px;
+    height: 50px;
+  }
+
+  .nav-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .nav-label {
+    font-size: 0.65rem;
+  }
+}
+
+
+
+
+
 /* Global reset & full-screen background */
 * { 
   box-sizing: border-box; 
