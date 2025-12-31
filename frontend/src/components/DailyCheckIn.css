@@ -1,4 +1,4 @@
-/* DailyCheckIn.css */
+/* COMPACT Daily Check-In - Centered like Makeda popup */
 
 .checkin-overlay {
   position: fixed;
@@ -6,8 +6,8 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,71 +18,85 @@
 
 .checkin-modal {
   background: linear-gradient(135deg, #2D1B3A 0%, #1a1a1a 100%);
-  border: 3px solid #D4AF37;
-  border-radius: 20px;
+  border: 2px solid #D4AF37;
+  border-radius: 16px;
   padding: 0;
-  width: 500px;
-  max-width: 95%;
-  max-height: 90vh;
-  overflow-y: auto;
+  width: 320px;
+  max-width: 90%;
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.9),
-    0 0 80px rgba(212, 175, 55, 0.4);
-  animation: scaleIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    0 15px 40px rgba(0, 0, 0, 0.9),
+    0 0 60px rgba(212, 175, 55, 0.4);
+  animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   position: relative;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .checkin-close {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 35px;
-  height: 35px;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: rgba(212, 175, 55, 0.2);
-  border: 2px solid rgba(212, 175, 55, 0.5);
+  border: 2px solid rgba(212, 175, 55, 0.4);
   color: #D4AF37;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   line-height: 1;
   z-index: 10;
 }
 
 .checkin-close:hover {
   background: rgba(212, 175, 55, 0.4);
-  transform: rotate(90deg) scale(1.1);
+  transform: rotate(90deg);
 }
 
 .checkin-header {
   text-align: center;
-  padding: 30px 20px 20px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(30, 95, 62, 0.15) 100%);
-  border-bottom: 2px solid rgba(212, 175, 55, 0.3);
-  border-radius: 20px 20px 0 0;
+  padding: 20px 20px 15px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(30, 95, 62, 0.1));
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 16px 16px 0 0;
 }
 
 .checkin-header h2 {
-  margin: 0 0 10px 0;
-  font-size: 1.8rem;
+  margin: 0 0 5px 0;
+  font-size: 1.3rem;
   font-weight: 900;
-  color: #F4E4B8;
+  color: #FFD700;
   font-family: 'Georgia', serif;
-  text-shadow: 0 2px 8px rgba(212, 175, 55, 0.6);
+  text-shadow: 0 2px 8px rgba(255, 215, 0, 0.6);
 }
 
 .checkin-subtitle {
   margin: 0;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
 }
 
 .checkin-streak {
-  padding: 20px;
+  padding: 15px;
   text-align: center;
   background: rgba(255, 255, 255, 0.03);
 }
@@ -91,12 +105,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .streak-icon {
-  font-size: 2.5rem;
+  font-size: 2rem;
   animation: flameFlicker 1.5s infinite;
 }
 
@@ -106,128 +120,127 @@
 }
 
 .streak-number {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 900;
   color: #FFD700;
   font-family: 'Georgia', serif;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
 }
 
 .streak-label {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #F4E4B8;
   font-weight: 700;
 }
 
 .total-checkins {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.6);
-  margin-top: 5px;
+  margin-top: 3px;
 }
 
 .checkin-rewards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 10px;
-  padding: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 15px;
 }
 
 .reward-day {
   background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(212, 175, 55, 0.3);
-  border-radius: 12px;
-  padding: 15px 10px;
+  border: 2px solid rgba(212, 175, 55, 0.2);
+  border-radius: 10px;
+  padding: 8px 4px;
   text-align: center;
   transition: all 0.3s ease;
   position: relative;
 }
 
 .reward-day.today {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(255, 215, 0, 0.2) 100%);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(255, 215, 0, 0.2));
   border-color: #FFD700;
-  border-width: 3px;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+  border-width: 2px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
   animation: todayPulse 2s infinite;
 }
 
 @keyframes todayPulse {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
   }
   50% {
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
   }
 }
 
 .reward-day.claimed {
   opacity: 0.6;
-  background: rgba(0, 255, 0, 0.1);
+  background: rgba(0, 255, 0, 0.08);
   border-color: rgba(0, 255, 0, 0.3);
 }
 
 .reward-day.locked {
   opacity: 0.4;
-  filter: grayscale(100%);
 }
 
 .day-number {
   font-weight: 700;
   color: #D4AF37;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
 }
 
 .day-rewards {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
 }
 
 .reward-item {
-  font-size: 0.95rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #F4E4B8;
 }
 
 .claimed-badge {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  font-size: 1.2rem;
+  top: 3px;
+  right: 3px;
+  font-size: 1rem;
 }
 
 .today-badge {
   position: absolute;
-  top: -10px;
+  top: -8px;
   left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(135deg, #FFD700, #FFA500);
   color: #000;
-  padding: 3px 10px;
-  border-radius: 10px;
-  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.6rem;
   font-weight: 900;
-  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.6);
+  box-shadow: 0 2px 6px rgba(255, 215, 0, 0.6);
 }
 
 .checkin-claim-btn {
-  margin: 20px;
-  width: calc(100% - 40px);
-  padding: 15px;
+  margin: 15px;
+  width: calc(100% - 30px);
+  padding: 12px;
   background: linear-gradient(135deg, #FFD700, #FFA500);
   color: #000;
   border: none;
-  border-radius: 15px;
-  font-size: 1.1rem;
+  border-radius: 12px;
+  font-size: 1rem;
   font-weight: 900;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
 }
 
 .checkin-claim-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+  box-shadow: 0 6px 16px rgba(255, 215, 0, 0.6);
 }
 
 .checkin-claim-btn:disabled {
@@ -237,57 +250,59 @@
 
 .checkin-claimed-message {
   text-align: center;
-  padding: 20px;
-  margin: 20px;
+  padding: 15px;
+  margin: 15px;
   background: rgba(0, 255, 0, 0.1);
   border: 2px solid rgba(0, 255, 0, 0.3);
-  border-radius: 12px;
+  border-radius: 10px;
   color: #90EE90;
   font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .checkin-footer {
   text-align: center;
-  padding: 15px 20px 20px;
-  color: rgba(255, 255, 255, 0.6);
+  padding: 10px 15px 15px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
 }
 
 .checkin-loading {
   text-align: center;
-  padding: 50px;
-  font-size: 1.2rem;
+  padding: 40px;
+  font-size: 1rem;
   color: #D4AF37;
 }
 
-/* Mobile responsive */
+/* Mobile */
 @media (max-width: 480px) {
   .checkin-modal {
-    width: 95%;
+    width: 300px;
   }
 
   .checkin-header h2 {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
   }
 
   .streak-number {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 
   .checkin-rewards {
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-    gap: 8px;
-    padding: 15px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    padding: 12px;
   }
 
   .reward-day {
-    padding: 12px 8px;
+    padding: 6px 3px;
   }
 
   .day-number {
-    font-size: 0.85rem;
+    font-size: 0.7rem;
   }
 
   .reward-item {
-    font-size: 0.85rem;
+    font-size: 0.7rem;
   }
 }
