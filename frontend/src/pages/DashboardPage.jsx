@@ -58,7 +58,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
   
  // Daily Check-In
-  const [showCheckin, setShowCheckin] = useState(true);
+  const [showCheckin, setShowCheckin] = useState(false);
 
   
   const API_URL = 'https://axum-backend-production.up.railway.app';
