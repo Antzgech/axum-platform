@@ -19,86 +19,6 @@ if (bot) {
   console.log("⚠️  Telegram Bot NOT loaded - check TELEGRAM_BOT_TOKEN");
 }
 
-
-// Add these endpoints to your server.js
-
-// ==========================================
-// LEADERBOARD ENDPOINT (add after other endpoints)
-// ==========================================
-
-app.get("/api/leaderboard", authenticateToken, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        telegram_id,
-        username,
-        first_name,
-        current_level,
-        coins,
-        completed_tasks
-      FROM users
-      ORDER BY current_level DESC, coins DESC
-      LIMIT 100
-    `);
-
-    const leaderboard = result.rows.map(user => ({
-      ...user,
-      completed_tasks: user.completed_tasks || []
-    }));
-
-    res.json({ leaderboard });
-  } catch (error) {
-    console.error("Leaderboard error:", error);
-    res.status(500).json({ error: "Failed to fetch leaderboard" });
-  }
-});
-
-// ==========================================
-// REFERRAL REWARD ON LOGIN (update auth endpoint)
-// ==========================================
-
-// In your /api/auth/telegram endpoint, ADD THIS after user creation/update:
-
-// Check if user was referred
-if (telegram_id && !user.referred_by) {
-  const referralCode = telegram_id; // Extract from initData if available
-  
-  // If user came from referral link, give both users rewards
-  if (referralCode) {
-    try {
-      const decoded = atob(referralCode);
-      const referrerId = parseInt(decoded);
-      
-      if (referrerId && referrerId !== telegram_id) {
-        // Give referrer 50 coins + 1 gem
-        await pool.query(`
-          UPDATE users 
-          SET coins = coins + 50, 
-              gems = gems + 1,
-              invited_friends = invited_friends + 1
-          WHERE telegram_id = $1
-        `, [referrerId]);
-
-        // Give new user 25 coins welcome bonus
-        await pool.query(`
-          UPDATE users 
-          SET coins = coins + 25,
-              referred_by = $1
-          WHERE telegram_id = $2
-        `, [referrerId, telegram_id]);
-
-        console.log(`✅ REFERRAL: ${referrerId} got reward for inviting ${telegram_id}`);
-      }
-    } catch (err) {
-      console.log('Referral decode error:', err.message);
-    }
-  }
-}
-
-
-
-
-
 // ---------------------------
 // CORS + JSON
 // ---------------------------
@@ -110,10 +30,9 @@ app.use(cors({
     process.env.FRONTEND_URL,
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-        "https://web.telegram.org",  
+    "https://web.telegram.org",  
     "https://telegram.org",         
     "https://t.me"                 
-
   ],
   credentials: true
 }));
@@ -132,7 +51,270 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
+// ---------------------------
+// Auth middleware (JWT)
+// ---------------------------
+const JWT_SECRET = process.env.JWT_SECRET || "Saba1212";
+
+const authenticateToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "No token" });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid token" });
+    req.user = user;
+    next();
+  });
+};
+
+// Legacy alias
+const auth = authenticateToken;
+
+// ---------------------------
+// DAILY CHECK-IN REWARDS
+// ---------------------------
+const DAILY_REWARDS = {
+  1: { coins: 10, gems: 0, bonus: "First day!" },
+  2: { coins: 20, gems: 0, bonus: "Keep going!" },
+  3: { coins: 30, gems: 1, bonus: "3 day streak!" },
+  4: { coins: 40, gems: 1, bonus: "Almost there!" },
+  5: { coins: 50, gems: 2, bonus: "5 day streak!" },
+  6: { coins: 60, gems: 2, bonus: "One more!" },
+  7: { coins: 100, gems: 5, bonus: "🎉 Week Complete!" },
+};
+
+// ---------------------------
+// TASKS - 20 TOTAL
+// ---------------------------
+const tasks = new Map();
+[
+  {
+    id: "1",
+    category: "social",
+    type: "youtube",
+    title: "Subscribe to Meten Official YouTube",
+    description: "Subscribe and turn on notifications",
+    action: "Subscribe",
+    reward: { coins: 50, gems: 0 },
+    url: "https://www.youtube.com/@metenofficial",
+    icon: "▶️",
+  },
+  {
+    id: "2",
+    category: "social",
+    type: "telegram",
+    title: "Join Sabawians Telegram Group",
+    description: "Join our community and say hello",
+    action: "Join",
+    reward: { coins: 30, gems: 0 },
+    url: "https://t.me/+IoT_cwfs6EBjMTQ0",
+    icon: "✈️",
+  },
+  {
+    id: "3",
+    category: "social",
+    type: "facebook",
+    title: "Follow on Facebook",
+    description: "Like our page and stay updated",
+    action: "Follow",
+    reward: { coins: 40, gems: 0 },
+    url: "https://facebook.com/profile.php?id=61578048881192",
+    icon: "👍",
+  },
+  {
+    id: "4",
+    category: "social",
+    type: "tiktok",
+    title: "Follow on TikTok",
+    description: "Follow and watch our videos",
+    action: "Follow",
+    reward: { coins: 40, gems: 0 },
+    url: "https://tiktok.com/@metenofficials",
+    icon: "🎵",
+  },
+  {
+    id: "5",
+    category: "social",
+    type: "instagram",
+    title: "Follow on Instagram",
+    description: "Follow us for daily updates",
+    action: "Follow",
+    reward: { coins: 40, gems: 0 },
+    url: "https://instagram.com/metenofficial",
+    icon: "📸",
+  },
+  {
+    id: "6",
+    category: "social",
+    type: "twitter",
+    title: "Follow on Twitter/X",
+    description: "Follow and retweet our pinned post",
+    action: "Follow",
+    reward: { coins: 50, gems: 0 },
+    url: "https://twitter.com/yourhandle",
+    icon: "🐦",
+  },
+  {
+    id: "7",
+    category: "social",
+    type: "youtube",
+    title: "Watch Latest Video",
+    description: "Watch our latest video (3+ minutes)",
+    action: "Watch",
+    reward: { coins: 30, gems: 0 },
+    url: "https://www.youtube.com/@metenofficial/videos",
+    icon: "📺",
+  },
+  {
+    id: "8",
+    category: "social",
+    type: "telegram",
+    title: "Join Announcement Channel",
+    description: "Get exclusive updates and news",
+    action: "Join",
+    reward: { coins: 25, gems: 0 },
+    url: "https://t.me/yourchannel",
+    icon: "📢",
+  },
+  {
+    id: "9",
+    category: "social",
+    type: "share",
+    title: "Share to 3 Friends",
+    description: "Share the game with 3 Telegram friends",
+    action: "Share",
+    reward: { coins: 100, gems: 1 },
+    url: null,
+    icon: "🎁",
+  },
+  {
+    id: "10",
+    category: "social",
+    type: "instagram",
+    title: "Share Instagram Story",
+    description: "Share our post on your story",
+    action: "Share",
+    reward: { coins: 75, gems: 1 },
+    url: "https://instagram.com/metenofficial",
+    icon: "📱",
+  },
+  {
+    id: "11",
+    category: "daily",
+    type: "engagement",
+    title: "Play 5 Times",
+    description: "Play the game 5 times",
+    action: "Play",
+    reward: { coins: 150, gems: 2 },
+    url: null,
+    icon: "🎮",
+  },
+  {
+    id: "12",
+    category: "daily",
+    type: "engagement",
+    title: "Reach Level 2",
+    description: "Level up to Level 2",
+    action: "Level Up",
+    reward: { coins: 200, gems: 3 },
+    url: null,
+    icon: "⭐",
+  },
+  {
+    id: "13",
+    category: "daily",
+    type: "engagement",
+    title: "Collect 500 Coins",
+    description: "Earn a total of 500 coins",
+    action: "Collect",
+    reward: { coins: 100, gems: 1 },
+    url: null,
+    icon: "💰",
+  },
+  {
+    id: "14",
+    category: "daily",
+    type: "engagement",
+    title: "Login 3 Days Straight",
+    description: "Login for 3 consecutive days",
+    action: "Login",
+    reward: { coins: 250, gems: 3 },
+    url: null,
+    icon: "📅",
+  },
+  {
+    id: "15",
+    category: "social",
+    type: "invite",
+    title: "Invite 1 Friend",
+    description: "Invite your first friend",
+    action: "Invite",
+    reward: { coins: 50, gems: 1 },
+    url: null,
+    icon: "👤",
+  },
+  {
+    id: "16",
+    category: "social",
+    type: "invite",
+    title: "Invite 5 Friends",
+    description: "Grow your network",
+    action: "Invite",
+    reward: { coins: 300, gems: 3 },
+    url: null,
+    icon: "👥",
+  },
+  {
+    id: "17",
+    category: "social",
+    type: "invite",
+    title: "Invite 10 Friends",
+    description: "Build your empire",
+    action: "Invite",
+    reward: { coins: 750, gems: 10 },
+    url: null,
+    icon: "👨‍👩‍👧‍👦",
+  },
+  {
+    id: "18",
+    category: "daily",
+    type: "engagement",
+    title: "Tap Queen 50 Times",
+    description: "Show your dedication",
+    action: "Tap",
+    reward: { coins: 200, gems: 2 },
+    url: null,
+    icon: "👑",
+  },
+  {
+    id: "19",
+    category: "daily",
+    type: "engagement",
+    title: "Earn 50 Gems",
+    description: "Collect precious gems",
+    action: "Collect",
+    reward: { coins: 300, gems: 5 },
+    url: null,
+    icon: "💎",
+  },
+  {
+    id: "20",
+    category: "special",
+    type: "special",
+    title: "Join Premium Club",
+    description: "Unlock exclusive benefits",
+    action: "Join",
+    reward: { coins: 1000, gems: 10 },
+    url: null,
+    icon: "⚜️",
+  }
+].forEach((t) => tasks.set(t.id, t));
+
+console.log(`✅ Loaded ${tasks.size} tasks`);
+
+// ---------------------------
 // Init DB with all columns
+// ---------------------------
 (async () => {
   try {
     const result = await pool.query("SELECT NOW()");
@@ -200,224 +382,6 @@ const pool = new Pool({
     console.error("❌ Database error:", error.message);
   }
 })();
-
-// ---------------------------
-// TASKS - 20 TOTAL
-// ---------------------------
-const tasks = new Map();
-[
-  {
-    id: "1",
-    type: "youtube",
-    title: "Subscribe to Meten Official YouTube",
-    description: "Subscribe and turn on notifications",
-    points: 50,
-    url: "https://www.youtube.com/@metenofficial",
-    icon: "▶️",
-  },
-  {
-    id: "2",
-    type: "telegram",
-    title: "Join Sabawians Telegram Group",
-    description: "Join our community and say hello",
-    points: 30,
-    url: "https://t.me/+IoT_cwfs6EBjMTQ0",
-    icon: "✈️",
-  },
-  {
-    id: "3",
-    type: "facebook",
-    title: "Follow on Facebook",
-    description: "Like our page and stay updated",
-    points: 40,
-    url: "https://facebook.com/profile.php?id=61578048881192",
-    icon: "👍",
-  },
-  {
-    id: "4",
-    type: "tiktok",
-    title: "Follow on TikTok",
-    description: "Follow and watch our videos",
-    points: 40,
-    url: "https://tiktok.com/@metenofficials",
-    icon: "🎵",
-  },
-  {
-    id: "5",
-    type: "instagram",
-    title: "Follow on Instagram",
-    description: "Follow us for daily updates",
-    points: 40,
-    url: "https://instagram.com/metenofficial",
-    icon: "📸",
-  },
-  {
-    id: "6",
-    type: "twitter",
-    title: "Follow on Twitter/X",
-    description: "Follow and retweet our pinned post",
-    points: 50,
-    url: "https://twitter.com/yourhandle",
-    icon: "🐦",
-  },
-  {
-    id: "7",
-    type: "youtube",
-    title: "Watch Latest Video",
-    description: "Watch our latest video (3+ minutes)",
-    points: 30,
-    url: "https://www.youtube.com/@metenofficial/videos",
-    icon: "📺",
-  },
-  {
-    id: "8",
-    type: "telegram",
-    title: "Join Announcement Channel",
-    description: "Get exclusive updates and news",
-    points: 25,
-    url: "https://t.me/yourchannel",
-    icon: "📢",
-  },
-  {
-    id: "9",
-    type: "share",
-    title: "Share to 3 Friends",
-    description: "Share the game with 3 Telegram friends",
-    points: 100,
-    url: null,
-    icon: "🎁",
-  },
-  {
-    id: "10",
-    type: "instagram",
-    title: "Share Instagram Story",
-    description: "Share our post on your story",
-    points: 75,
-    url: "https://instagram.com/metenofficial",
-    icon: "📱",
-  },
-  {
-    id: "11",
-    type: "engagement",
-    title: "Play 5 Times",
-    description: "Play the game 5 times",
-    points: 150,
-    url: null,
-    icon: "🎮",
-  },
-  {
-    id: "12",
-    type: "engagement",
-    title: "Reach Level 2",
-    description: "Level up to Level 2",
-    points: 200,
-    url: null,
-    icon: "⭐",
-  },
-  {
-    id: "13",
-    type: "engagement",
-    title: "Collect 500 Coins",
-    description: "Earn a total of 500 coins",
-    points: 100,
-    url: null,
-    icon: "💰",
-  },
-  {
-    id: "14",
-    type: "engagement",
-    title: "Login 3 Days Straight",
-    description: "Login for 3 consecutive days",
-    points: 250,
-    url: null,
-    icon: "📅",
-  },
-  {
-    id: "15",
-    type: "invite",
-    title: "Invite 1 Friend",
-    description: "Invite your first friend",
-    points: 50,
-    url: null,
-    icon: "👤",
-  },
-  {
-    id: "16",
-    type: "invite",
-    title: "Invite 5 Friends",
-    description: "Grow your network",
-    points: 300,
-    url: null,
-    icon: "👥",
-  },
-  {
-    id: "17",
-    type: "invite",
-    title: "Invite 10 Friends",
-    description: "Build your empire",
-    points: 750,
-    url: null,
-    icon: "👨‍👩‍👧‍👦",
-  },
-  {
-    id: "18",
-    type: "engagement",
-    title: "Tap Queen 50 Times",
-    description: "Show your dedication",
-    points: 200,
-    url: null,
-    icon: "👑",
-  },
-  {
-    id: "19",
-    type: "engagement",
-    title: "Earn 50 Gems",
-    description: "Collect precious gems",
-    points: 300,
-    url: null,
-    icon: "💎",
-  },
-  {
-    id: "20",
-    type: "special",
-    title: "Join Premium Club",
-    description: "Unlock exclusive benefits",
-    points: 1000,
-    url: null,
-    icon: "⚜️",
-  }
-].forEach((t) => tasks.set(t.id, t));
-
-console.log(`✅ Loaded ${tasks.size} tasks`);
-
-// ---------------------------
-// Auth middleware (JWT)
-// ---------------------------
-const JWT_SECRET = process.env.JWT_SECRET || "Saba1212";
-
-const auth = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "No token" });
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: "Invalid token" });
-    req.user = user;
-    next();
-  });
-};
-
-// ---------------------------
-// DAILY CHECK-IN REWARDS
-// ---------------------------
-const DAILY_REWARDS = {
-  1: { coins: 10, gems: 0, bonus: "First day!" },
-  2: { coins: 20, gems: 0, bonus: "Keep going!" },
-  3: { coins: 30, gems: 1, bonus: "3 day streak!" },
-  4: { coins: 40, gems: 1, bonus: "Almost there!" },
-  5: { coins: 50, gems: 2, bonus: "5 day streak!" },
-  6: { coins: 60, gems: 2, bonus: "One more!" },
-  7: { coins: 100, gems: 5, bonus: "🎉 Week Complete!" },
-};
 
 // ---------------------------
 // Health
@@ -573,6 +537,36 @@ app.get("/api/stats", async (req, res) => {
 });
 
 // ---------------------------
+// LEADERBOARD ENDPOINT
+// ---------------------------
+app.get("/api/leaderboard", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        telegram_id,
+        username,
+        first_name,
+        current_level,
+        coins,
+        completed_tasks
+      FROM users
+      ORDER BY current_level DESC, coins DESC
+      LIMIT 100
+    `);
+
+    const leaderboard = result.rows.map(user => ({
+      ...user,
+      completed_tasks: user.completed_tasks || []
+    }));
+
+    res.json({ leaderboard });
+  } catch (error) {
+    console.error("Leaderboard error:", error);
+    res.status(500).json({ error: "Failed to fetch leaderboard" });
+  }
+});
+
+// ---------------------------
 // Tasks
 // ---------------------------
 app.get("/api/tasks", auth, async (req, res) => {
@@ -618,28 +612,24 @@ app.post("/api/tasks/:id/complete", auth, async (req, res) => {
     }
 
     const newCompleted = [...completed, taskId];
-    const newPoints = u.points + task.points;
-    const levelScores = u.level_scores || {
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-      6: 0,
-    };
-    levelScores[u.current_level] =
-      (levelScores[u.current_level] || 0) + task.points;
+    const newCoins = u.coins + task.reward.coins;
+    const newGems = u.gems + task.reward.gems;
 
     await pool.query(
-      "UPDATE users SET completed_tasks = $1, points = $2, level_scores = $3 WHERE telegram_id = $4",
-      [newCompleted, newPoints, JSON.stringify(levelScores), req.user.telegramId]
+      "UPDATE users SET completed_tasks = $1, coins = $2, gems = $3 WHERE telegram_id = $4",
+      [newCompleted, newCoins, newGems, req.user.telegramId]
     );
 
     console.log(
-      `✅ TASK COMPLETED: ${u.username} - ${task.title} (+${task.points} points)`
+      `✅ TASK COMPLETED: ${u.username} - ${task.title} (+${task.reward.coins} coins, +${task.reward.gems} gems)`
     );
 
-    res.json({ success: true, points: task.points, totalPoints: newPoints });
+    res.json({ 
+      success: true, 
+      reward: task.reward,
+      totalCoins: newCoins,
+      totalGems: newGems
+    });
   } catch (error) {
     console.error("Task error:", error.message);
     res.status(500).json({ error: "Server error" });
@@ -870,12 +860,3 @@ app.listen(PORT, () => {
   Test: /api/health | /api/stats
   `);
 });
-
-
-
-
-
-
-
-
-
