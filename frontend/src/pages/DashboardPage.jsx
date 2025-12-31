@@ -194,7 +194,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         startY,
         endX,
         endY,
-        delay: i * 150,
+        delay: i * 80,
         coinNumber: i + 1
       });
     }
@@ -300,7 +300,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
       for (let i = 0; i < nextReward; i++) {
         setTimeout(() => {
           giveOneCoin();
-        }, 800 + (i * 150));
+        }, 800 + (i * 80));
       }
 
       const newTapCount = tapCount + 1;
