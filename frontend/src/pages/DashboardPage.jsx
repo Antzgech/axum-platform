@@ -18,12 +18,12 @@ import iconEarnCoins from '../assets/icon-earn-coins.png';
 
 // Level system configuration
 const LEVEL_REQUIREMENTS = {
-  1: { name: "Novice Warrior", coinsNeeded: 1000, tasksNeeded: 3, friendsNeeded: 1, reward: { coins: 100, gems: 5 } },
-  2: { name: "Skilled Fighter", coinsNeeded: 5000, tasksNeeded: 8, friendsNeeded: 3, reward: { coins: 500, gems: 10 } },
-  3: { name: "Elite Guard", coinsNeeded: 15000, tasksNeeded: 15, friendsNeeded: 10, reward: { coins: 1500, gems: 25 } },
-  4: { name: "Royal Commander", coinsNeeded: 50000, tasksNeeded: 25, friendsNeeded: 25, reward: { coins: 5000, gems: 50 } },
-  5: { name: "Legendary Hero", coinsNeeded: 150000, tasksNeeded: 40, friendsNeeded: 50, reward: { coins: 15000, gems: 100 } },
-  6: { name: "Queen's Champion", coinsNeeded: 500000, tasksNeeded: 60, friendsNeeded: 100, reward: { coins: 50000, gems: 250 } }
+  1: { name: "Novice Warrior", coinsNeeded: 100, tasksNeeded: 3, friendsNeeded: 1, reward: { coins: 100, gems: 5 } },
+  2: { name: "Skilled Fighter", coinsNeeded: 500, tasksNeeded: 5, friendsNeeded: 3, reward: { coins: 300, gems: 10 } },
+  3: { name: "Elite Guard", coinsNeeded: 1500, tasksNeeded: 7, friendsNeeded: 5, reward: { coins: 500, gems: 25 } },
+  4: { name: "Royal Commander", coinsNeeded: 5000, tasksNeeded: 10, friendsNeeded: 8, reward: { coins: 1000, gems: 50 } },
+  5: { name: "Legendary Hero", coinsNeeded: 15000, tasksNeeded: 16, friendsNeeded: 11, reward: { coins: 1500, gems: 100 } },
+  6: { name: "Queen's Champion", coinsNeeded: 50000, tasksNeeded: 21, friendsNeeded: 15, reward: { coins: 5000, gems: 250 } }
 };
 
 const STORAGE_KEYS = {
