@@ -19,6 +19,86 @@ if (bot) {
   console.log("⚠️  Telegram Bot NOT loaded - check TELEGRAM_BOT_TOKEN");
 }
 
+
+// Add these endpoints to your server.js
+
+// ==========================================
+// LEADERBOARD ENDPOINT (add after other endpoints)
+// ==========================================
+
+app.get("/api/leaderboard", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        telegram_id,
+        username,
+        first_name,
+        current_level,
+        coins,
+        completed_tasks
+      FROM users
+      ORDER BY current_level DESC, coins DESC
+      LIMIT 100
+    `);
+
+    const leaderboard = result.rows.map(user => ({
+      ...user,
+      completed_tasks: user.completed_tasks || []
+    }));
+
+    res.json({ leaderboard });
+  } catch (error) {
+    console.error("Leaderboard error:", error);
+    res.status(500).json({ error: "Failed to fetch leaderboard" });
+  }
+});
+
+// ==========================================
+// REFERRAL REWARD ON LOGIN (update auth endpoint)
+// ==========================================
+
+// In your /api/auth/telegram endpoint, ADD THIS after user creation/update:
+
+// Check if user was referred
+if (telegram_id && !user.referred_by) {
+  const referralCode = telegram_id; // Extract from initData if available
+  
+  // If user came from referral link, give both users rewards
+  if (referralCode) {
+    try {
+      const decoded = atob(referralCode);
+      const referrerId = parseInt(decoded);
+      
+      if (referrerId && referrerId !== telegram_id) {
+        // Give referrer 50 coins + 1 gem
+        await pool.query(`
+          UPDATE users 
+          SET coins = coins + 50, 
+              gems = gems + 1,
+              invited_friends = invited_friends + 1
+          WHERE telegram_id = $1
+        `, [referrerId]);
+
+        // Give new user 25 coins welcome bonus
+        await pool.query(`
+          UPDATE users 
+          SET coins = coins + 25,
+              referred_by = $1
+          WHERE telegram_id = $2
+        `, [referrerId, telegram_id]);
+
+        console.log(`✅ REFERRAL: ${referrerId} got reward for inviting ${telegram_id}`);
+      }
+    } catch (err) {
+      console.log('Referral decode error:', err.message);
+    }
+  }
+}
+
+
+
+
+
 // ---------------------------
 // CORS + JSON
 // ---------------------------
