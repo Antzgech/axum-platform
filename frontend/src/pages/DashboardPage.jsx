@@ -4,6 +4,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 import DailyCheckIn from '../components/DailyCheckIn';
+import LevelProgress from '../components/LevelProgress';
 
 // Assets
 import queenMakeda from '../assets/queen-makeda.png';
@@ -24,13 +25,6 @@ const LEVEL_REQUIREMENTS = {
   5: { name: "Legendary Hero", coinsNeeded: 150000, tasksNeeded: 40, friendsNeeded: 50, reward: { coins: 15000, gems: 100 } },
   6: { name: "Queen's Champion", coinsNeeded: 500000, tasksNeeded: 60, friendsNeeded: 100, reward: { coins: 50000, gems: 250 } }
 };
-
-// Shows current level, click to see progress
-<button onClick={() => setShowLevelProgress(true)}>
-  ⭐ Level {user?.current_level || 1}
-</button>
-
-
 
 const STORAGE_KEYS = {
   LAST_RESET: 'makeda_last_reset',
@@ -56,6 +50,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const [cooldownProgress, setCooldownProgress] = useState(0);
   const [canClaimReward, setCanClaimReward] = useState(true);
   const [showCheckin, setShowCheckin] = useState(false);
+  const [showLevelProgress, setShowLevelProgress] = useState(false);
 
   const cooldownIntervalRef = useRef(null);
   const progressTimerRef = useRef(null);
@@ -138,7 +133,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         const cooldownMs = savedNextCooldown * 60 * 1000;
         const timePassed = Date.now() - lastTapTime;
         
-        // Only continue countdown if still within cooldown period
         if (timePassed < cooldownMs) {
           const remainingSec = Math.ceil((cooldownMs - timePassed) / 1000);
           const totalSec = savedNextCooldown * 60;
@@ -149,7 +143,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           setCanClaimReward(false);
           startCooldownTimer(savedNextCooldown, remainingSec);
         } else {
-          // Cooldown finished - ready to tap
           setCanClaimReward(true);
           setCooldownProgress(0);
           setCooldownRemaining(0);
@@ -304,7 +297,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     if (canClaimReward) {
       createFlyingCoins(nextReward);
 
-      // Give coins one by one with animation
       for (let i = 0; i < nextReward; i++) {
         setTimeout(() => {
           giveOneCoin();
@@ -381,9 +373,18 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         </div>
 
         <div className="top-right">
+          <button 
+            className="level-btn"
+            onClick={() => setShowLevelProgress(true)}
+            title="View Level Progress"
+          >
+            ⭐ Lv.{currentLevel}
+          </button>
+          
           <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Daily Check-In" title="Daily Check-In">
             <span style={{fontSize: '1.2rem'}}>📅</span>
           </button>
+          
           <span className="axum-logo-emoji" role="img">⚜️</span>
         </div>
       </header>
@@ -499,7 +500,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           </div>
         </Link>
 
-        <Link to="/dashboard" className="nav-btn">
+        <Link to="/invite" className="nav-btn">
           <div className="nav-btn-circle">
             <img src={iconFriends} alt="Friends" className="nav-icon" />
           </div>
@@ -552,6 +553,13 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         <DailyCheckIn 
           onClose={() => setShowCheckin(false)}
           onClaim={handleCheckinClaim}
+        />
+      )}
+
+      {showLevelProgress && (
+        <LevelProgress 
+          user={user}
+          onClose={() => setShowLevelProgress(false)}
         />
       )}
     </div>
