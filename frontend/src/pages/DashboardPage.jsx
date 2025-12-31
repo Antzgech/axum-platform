@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 import DailyCheckIn from '../components/DailyCheckIn';
 
-
 // Assets
 import queenMakeda from '../assets/queen-makeda.png';
 import iconCoin from '../assets/icon-coin.png';
@@ -49,6 +48,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [cooldownProgress, setCooldownProgress] = useState(0);
   const [canClaimReward, setCanClaimReward] = useState(true);
+  const [showCheckin, setShowCheckin] = useState(false);
 
   const cooldownIntervalRef = useRef(null);
   const progressTimerRef = useRef(null);
@@ -56,21 +56,15 @@ export default function DashboardPage({ user = {}, fetchUser }) {
   const coinBoxRef = useRef(null);
   const makedaRef = useRef(null);
 
-  
- // Daily Check-In
-  const [showCheckin, setShowCheckin] = useState(false);
-
-  
   const API_URL = 'https://axum-backend-production.up.railway.app';
   const avatarSrc = user.photo_url || queenMakeda;
 
-// Check if user needs to check in today
+  // Check if user needs to check in today
   useEffect(() => {
     const checkDailyCheckin = () => {
       const lastCheckin = localStorage.getItem('last_checkin_date');
       const today = new Date().toDateString();
       
-      // If different day or never checked in, show modal after 2 seconds
       if (lastCheckin !== today) {
         setTimeout(() => {
           setShowCheckin(true);
@@ -80,7 +74,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     
     checkDailyCheckin();
   }, []);
-  
 
   useEffect(() => {
     if (user.coins !== undefined) setCoins(user.coins);
@@ -138,6 +131,7 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         const cooldownMs = savedNextCooldown * 60 * 1000;
         const timePassed = Date.now() - lastTapTime;
         
+        // Only continue countdown if still within cooldown period
         if (timePassed < cooldownMs) {
           const remainingSec = Math.ceil((cooldownMs - timePassed) / 1000);
           const totalSec = savedNextCooldown * 60;
@@ -146,48 +140,37 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           setCooldownRemaining(remainingSec);
           setCooldownProgress(progress);
           setCanClaimReward(false);
-          startCooldownTimer(savedNextCooldown);
+          startCooldownTimer(savedNextCooldown, remainingSec);
         } else {
+          // Cooldown finished - ready to tap
           setCanClaimReward(true);
           setCooldownProgress(0);
+          setCooldownRemaining(0);
         }
       }
     }
   };
 
-
-
-
-
-  
-
-
-
-
-
-
-
-
-  
-
-  const startCooldownTimer = (cooldownMinutes) => {
+  const startCooldownTimer = (cooldownMinutes, startFromSeconds = null) => {
     if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
 
     const totalSeconds = cooldownMinutes * 60;
+    let currentRemaining = startFromSeconds !== null ? startFromSeconds : totalSeconds;
 
     cooldownIntervalRef.current = setInterval(() => {
-      setCooldownRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(cooldownIntervalRef.current);
-          setCanClaimReward(true);
-          setCooldownProgress(0);
-          return 0;
-        }
-        const newRemaining = prev - 1;
-        const progress = ((totalSeconds - newRemaining) / totalSeconds) * 100;
-        setCooldownProgress(progress);
-        return newRemaining;
-      });
+      currentRemaining--;
+      
+      if (currentRemaining <= 0) {
+        clearInterval(cooldownIntervalRef.current);
+        setCanClaimReward(true);
+        setCooldownProgress(0);
+        setCooldownRemaining(0);
+        return;
+      }
+
+      const progress = ((totalSeconds - currentRemaining) / totalSeconds) * 100;
+      setCooldownProgress(progress);
+      setCooldownRemaining(currentRemaining);
     }, 1000);
   };
 
@@ -211,7 +194,8 @@ export default function DashboardPage({ user = {}, fetchUser }) {
         startY,
         endX,
         endY,
-        delay: i * 150
+        delay: i * 150,
+        coinNumber: i + 1
       });
     }
 
@@ -263,65 +247,35 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     };
   };
 
+  const handleLanguageToggle = () => {
+    setShowCheckin(true);
+  };
 
-
-
-
-  
-
-  
-  
-
- const handleLanguageToggle = () => {
-  setShowCheckin(true);   // open the modal
-};
-
-
-
- // Handle daily check-in claim
   const handleCheckinClaim = (data) => {
     console.log('✅ Daily check-in claimed!', data);
     
-    // Save today's date so modal doesn't show again
     localStorage.setItem('last_checkin_date', new Date().toDateString());
     
-    // Update coins/gems in UI
     if (data.rewards) {
       setCoins(prev => prev + data.rewards.coins);
       setGems(prev => prev + data.rewards.gems);
     }
     
-    // Refresh user data from server
     if (typeof fetchUser === "function") {
       fetchUser();
     }
     
-    // Close modal after 2 seconds
     setTimeout(() => {
       setShowCheckin(false);
     }, 2000);
   };
 
-
-  
-
-
-
-
-
-  
-
-
-  
   const handleNameClick = () => {
     setShowUserInfo(true);
-    setShowCheckin(true);
     
-    // Auto-hide after 3 seconds
     if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
     userInfoTimerRef.current = setTimeout(() => {
       setShowUserInfo(false);
-      setShowCheckin(false);
     }, 3000);
   };
 
@@ -335,7 +289,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     setProgressData(progress);
     setShowProgress(true);
 
-    // Auto-hide popup after 3 seconds
     if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
     progressTimerRef.current = setTimeout(() => {
       setShowProgress(false);
@@ -344,9 +297,12 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     if (canClaimReward) {
       createFlyingCoins(nextReward);
 
-      setTimeout(() => {
-        giveCoinsToUser(nextReward);
-      }, 800);
+      // Give coins one by one with animation
+      for (let i = 0; i < nextReward; i++) {
+        setTimeout(() => {
+          giveOneCoin();
+        }, 800 + (i * 150));
+      }
 
       const newTapCount = tapCount + 1;
       const newNextReward = nextReward * 2;
@@ -369,34 +325,30 @@ export default function DashboardPage({ user = {}, fetchUser }) {
     }
   };
 
-  const giveCoinsToUser = async (amount) => {
+  const giveOneCoin = async () => {
     try {
       const token = localStorage.getItem("axum_token");
       if (!token) return;
 
-      for (let i = 0; i < amount; i++) {
-        const res = await fetch(`${API_URL}/api/user/add-coin`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          }
-        });
+      const res = await fetch(`${API_URL}/api/user/add-coin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (i === amount - 1) {
-            setCoins(data.coins);
-            setGems(data.gems);
-          }
+      if (res.ok) {
+        const data = await res.json();
+        setCoins(data.coins);
+        setGems(data.gems);
+
+        if (typeof fetchUser === "function") {
+          fetchUser();
         }
       }
-
-      if (typeof fetchUser === "function") {
-        fetchUser();
-      }
     } catch (err) {
-      console.error("Error giving coins:", err);
+      console.error("Error giving coin:", err);
     }
   };
 
@@ -421,26 +373,9 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           </div>
         </div>
 
-
-        
-   {/* Check-In Button (optional - can be removed if you want auto-popup only) */}
-          <button
-            className="checkin-mini-btn"
-            onClick={() => setShowCheckin(true)}
-            title="Daily Check-In"
-          >
-            📅
-          </button>
-
-
-        
-          
-          <span className="axum-logo-emoji" role="img">⚜️</span>
-        </div>
-     
         <div className="top-right">
-          <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Toggle language" title={language === 'en' ? 'አማርኛ' : 'English'}>
-            <img src={iconGlobe} alt="Language" className="lang-icon" />
+          <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Daily Check-In" title="Daily Check-In">
+            <span style={{fontSize: '1.2rem'}}>📅</span>
           </button>
           <span className="axum-logo-emoji" role="img">⚜️</span>
         </div>
@@ -460,7 +395,6 @@ export default function DashboardPage({ user = {}, fetchUser }) {
 
       <main className="queen-main-section">
         <div className="queen-oval-frame" ref={makedaRef}>
-          {/* Cooldown progress ring */}
           <svg className="cooldown-progress-ring" viewBox="0 0 100 100">
             <circle
               className="progress-ring-bg"
@@ -497,10 +431,12 @@ export default function DashboardPage({ user = {}, fetchUser }) {
               top: `${coin.startY}px`,
               '--end-x': `${coin.endX}px`,
               '--end-y': `${coin.endY}px`,
+              '--start-x': `${coin.startX}px`,
+              '--start-y': `${coin.startY}px`,
               animationDelay: `${coin.delay}ms`
             }}
           >
-            +1 🪙
+            <img src={iconCoin} alt="coin" style={{width: '24px', height: '24px'}} />
           </div>
         ))}
 
@@ -603,6 +539,13 @@ export default function DashboardPage({ user = {}, fetchUser }) {
             </div>
           </div>
         </div>
+      )}
+
+      {showCheckin && (
+        <DailyCheckIn 
+          onClose={() => setShowCheckin(false)}
+          onClaim={handleCheckinClaim}
+        />
       )}
     </div>
   );
