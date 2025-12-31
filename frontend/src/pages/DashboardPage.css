@@ -1,559 +1,761 @@
-// src/pages/DashboardPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { useLanguage } from '../i18n/LanguageContext';
-import { Link } from 'react-router-dom';
-import './DashboardPage.css';
-import DailyCheckIn from '../components/DailyCheckIn';
-
-// Assets
-import queenMakeda from '../assets/queen-makeda.png';
-import iconCoin from '../assets/icon-coin.png';
-import iconGem from '../assets/icon-gem.png';
-import iconGlobe from '../assets/icon-globe.png';
-import iconStore from '../assets/icon-store.png';
-import iconBoosts from '../assets/icon-boosts.png';
-import iconFriends from '../assets/icon-friends.png';
-import iconEarnCoins from '../assets/icon-earn-coins.png';
-
-// Level system configuration
-const LEVEL_REQUIREMENTS = {
-  1: { name: "Novice Warrior", coinsNeeded: 1000, tasksNeeded: 3, friendsNeeded: 1, reward: { coins: 100, gems: 5 } },
-  2: { name: "Skilled Fighter", coinsNeeded: 5000, tasksNeeded: 8, friendsNeeded: 3, reward: { coins: 500, gems: 10 } },
-  3: { name: "Elite Guard", coinsNeeded: 15000, tasksNeeded: 15, friendsNeeded: 10, reward: { coins: 1500, gems: 25 } },
-  4: { name: "Royal Commander", coinsNeeded: 50000, tasksNeeded: 25, friendsNeeded: 25, reward: { coins: 5000, gems: 50 } },
-  5: { name: "Legendary Hero", coinsNeeded: 150000, tasksNeeded: 40, friendsNeeded: 50, reward: { coins: 15000, gems: 100 } },
-  6: { name: "Queen's Champion", coinsNeeded: 500000, tasksNeeded: 60, friendsNeeded: 100, reward: { coins: 50000, gems: 250 } }
-};
-
-// Shows current level, click to see progress
-<button onClick={() => setShowLevelProgress(true)}>
-  ⭐ Level {user?.current_level || 1}
-</button>
-
-
-
-const STORAGE_KEYS = {
-  LAST_RESET: 'makeda_last_reset',
-  TAP_COUNT: 'makeda_tap_count',
-  LAST_TAP: 'makeda_last_tap',
-  NEXT_REWARD: 'makeda_next_reward',
-  NEXT_COOLDOWN: 'makeda_next_cooldown'
-};
-
-export default function DashboardPage({ user = {}, fetchUser }) {
-  const { language, changeLanguage } = useLanguage();
-
-  const [coins, setCoins] = useState(user.coins || 0);
-  const [gems, setGems] = useState(user.gems || 0);
-  const [showUserInfo, setShowUserInfo] = useState(false);
-  const [showProgress, setShowProgress] = useState(false);
-  const [progressData, setProgressData] = useState(null);
-  const [flyingCoins, setFlyingCoins] = useState([]);
-  const [nextReward, setNextReward] = useState(2);
-  const [nextCooldown, setNextCooldown] = useState(2);
-  const [tapCount, setTapCount] = useState(0);
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
-  const [cooldownProgress, setCooldownProgress] = useState(0);
-  const [canClaimReward, setCanClaimReward] = useState(true);
-  const [showCheckin, setShowCheckin] = useState(false);
-
-  const cooldownIntervalRef = useRef(null);
-  const progressTimerRef = useRef(null);
-  const userInfoTimerRef = useRef(null);
-  const coinBoxRef = useRef(null);
-  const makedaRef = useRef(null);
-
-  const API_URL = 'https://axum-backend-production.up.railway.app';
-  const avatarSrc = user.photo_url || queenMakeda;
-
-  // Check if user needs to check in today
-  useEffect(() => {
-    const checkDailyCheckin = () => {
-      const lastCheckin = localStorage.getItem('last_checkin_date');
-      const today = new Date().toDateString();
-      
-      if (lastCheckin !== today) {
-        setTimeout(() => {
-          setShowCheckin(true);
-        }, 2000);
-      }
-    };
-    
-    checkDailyCheckin();
-  }, []);
-
-  useEffect(() => {
-    if (user.coins !== undefined) setCoins(user.coins);
-    if (user.gems !== undefined) setGems(user.gems);
-  }, [user]);
-
-  useEffect(() => {
-    initializeDailySystem();
-    return () => {
-      if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
-      if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-      if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
-    };
-  }, []);
-
-  const checkAndResetDaily = () => {
-    const lastReset = localStorage.getItem(STORAGE_KEYS.LAST_RESET);
-    const now = new Date();
-    const today = now.toDateString();
-
-    if (!lastReset || lastReset !== today) {
-      localStorage.setItem(STORAGE_KEYS.LAST_RESET, today);
-      localStorage.setItem(STORAGE_KEYS.TAP_COUNT, '0');
-      localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, '2');
-      localStorage.setItem(STORAGE_KEYS.NEXT_COOLDOWN, '2');
-      localStorage.removeItem(STORAGE_KEYS.LAST_TAP);
-      
-      setTapCount(0);
-      setNextReward(2);
-      setNextCooldown(2);
-      setCooldownRemaining(0);
-      setCooldownProgress(0);
-      setCanClaimReward(true);
-      
-      return true;
-    }
-    return false;
-  };
-
-  const initializeDailySystem = () => {
-    const isNewDay = checkAndResetDaily();
-    
-    if (!isNewDay) {
-      const savedTapCount = parseInt(localStorage.getItem(STORAGE_KEYS.TAP_COUNT) || '0');
-      const savedNextReward = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_REWARD) || '2');
-      const savedNextCooldown = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_COOLDOWN) || '2');
-      const savedLastTap = localStorage.getItem(STORAGE_KEYS.LAST_TAP);
-
-      setTapCount(savedTapCount);
-      setNextReward(savedNextReward);
-      setNextCooldown(savedNextCooldown);
-
-      if (savedLastTap) {
-        const lastTapTime = parseInt(savedLastTap);
-        const cooldownMs = savedNextCooldown * 60 * 1000;
-        const timePassed = Date.now() - lastTapTime;
-        
-        // Only continue countdown if still within cooldown period
-        if (timePassed < cooldownMs) {
-          const remainingSec = Math.ceil((cooldownMs - timePassed) / 1000);
-          const totalSec = savedNextCooldown * 60;
-          const progress = ((totalSec - remainingSec) / totalSec) * 100;
-          
-          setCooldownRemaining(remainingSec);
-          setCooldownProgress(progress);
-          setCanClaimReward(false);
-          startCooldownTimer(savedNextCooldown, remainingSec);
-        } else {
-          // Cooldown finished - ready to tap
-          setCanClaimReward(true);
-          setCooldownProgress(0);
-          setCooldownRemaining(0);
-        }
-      }
-    }
-  };
-
-  const startCooldownTimer = (cooldownMinutes, startFromSeconds = null) => {
-    if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
-
-    const totalSeconds = cooldownMinutes * 60;
-    let currentRemaining = startFromSeconds !== null ? startFromSeconds : totalSeconds;
-
-    cooldownIntervalRef.current = setInterval(() => {
-      currentRemaining--;
-      
-      if (currentRemaining <= 0) {
-        clearInterval(cooldownIntervalRef.current);
-        setCanClaimReward(true);
-        setCooldownProgress(0);
-        setCooldownRemaining(0);
-        return;
-      }
-
-      const progress = ((totalSeconds - currentRemaining) / totalSeconds) * 100;
-      setCooldownProgress(progress);
-      setCooldownRemaining(currentRemaining);
-    }, 1000);
-  };
-
-  const createFlyingCoins = (amount) => {
-    const makedaRect = makedaRef.current?.getBoundingClientRect();
-    const coinBoxRect = coinBoxRef.current?.getBoundingClientRect();
-
-    if (!makedaRect || !coinBoxRect) return;
-
-    const startX = makedaRect.left + makedaRect.width / 2;
-    const startY = makedaRect.top + makedaRect.height / 2;
-    const endX = coinBoxRect.left + coinBoxRect.width / 2;
-    const endY = coinBoxRect.top + coinBoxRect.height / 2;
-
-    const newCoins = [];
-    for (let i = 0; i < amount; i++) {
-      const id = Date.now() + Math.random();
-      newCoins.push({
-        id,
-        startX,
-        startY,
-        endX,
-        endY,
-        delay: i * 150,
-        coinNumber: i + 1
-      });
-    }
-
-    setFlyingCoins(prev => [...prev, ...newCoins]);
-
-    setTimeout(() => {
-      setFlyingCoins(prev => prev.filter(coin => !newCoins.find(c => c.id === coin.id)));
-    }, 1500 + (amount * 150));
-  };
-
-  const calculateProgress = () => {
-    const currentLevel = user.current_level || 1;
-    const levelReq = LEVEL_REQUIREMENTS[currentLevel];
-    
-    if (!levelReq) {
-      return { level: currentLevel, name: "Max Level", isMaxLevel: true };
-    }
-
-    const completedTasks = user.completed_tasks?.length || 0;
-    const invitedFriends = user.invited_friends || 0;
-    const currentCoins = coins;
-
-    const coinsRemaining = Math.max(0, levelReq.coinsNeeded - currentCoins);
-    const tasksRemaining = Math.max(0, levelReq.tasksNeeded - completedTasks);
-    const friendsRemaining = Math.max(0, levelReq.friendsNeeded - invitedFriends);
-
-    const coinsProgress = Math.min(100, (currentCoins / levelReq.coinsNeeded) * 100);
-    const tasksProgress = Math.min(100, (completedTasks / levelReq.tasksNeeded) * 100);
-    const friendsProgress = Math.min(100, (invitedFriends / levelReq.friendsNeeded) * 100);
-    const overallProgress = (coinsProgress + tasksProgress + friendsProgress) / 3;
-
-    return {
-      level: currentLevel,
-      name: levelReq.name,
-      coinsNeeded: levelReq.coinsNeeded,
-      tasksNeeded: levelReq.tasksNeeded,
-      friendsNeeded: levelReq.friendsNeeded,
-      currentCoins,
-      completedTasks,
-      invitedFriends,
-      coinsRemaining,
-      tasksRemaining,
-      friendsRemaining,
-      coinsProgress,
-      tasksProgress,
-      friendsProgress,
-      overallProgress,
-      isMaxLevel: false
-    };
-  };
-
-  const handleLanguageToggle = () => {
-    setShowCheckin(true);
-  };
-
-  const handleCheckinClaim = (data) => {
-    console.log('✅ Daily check-in claimed!', data);
-    
-    localStorage.setItem('last_checkin_date', new Date().toDateString());
-    
-    if (data.rewards) {
-      setCoins(prev => prev + data.rewards.coins);
-      setGems(prev => prev + data.rewards.gems);
-    }
-    
-    if (typeof fetchUser === "function") {
-      fetchUser();
-    }
-    
-    setTimeout(() => {
-      setShowCheckin(false);
-    }, 2000);
-  };
-
-  const handleNameClick = () => {
-    setShowUserInfo(true);
-    
-    if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
-    userInfoTimerRef.current = setTimeout(() => {
-      setShowUserInfo(false);
-    }, 3000);
-  };
-
-  const closeUserInfo = () => {
-    setShowUserInfo(false);
-    if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
-  };
-
-  const handleQueenTap = async () => {
-    const progress = calculateProgress();
-    setProgressData(progress);
-    setShowProgress(true);
-
-    if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-    progressTimerRef.current = setTimeout(() => {
-      setShowProgress(false);
-    }, 3000);
-
-    if (canClaimReward) {
-      createFlyingCoins(nextReward);
-
-      // Give coins one by one with animation
-      for (let i = 0; i < nextReward; i++) {
-        setTimeout(() => {
-          giveOneCoin();
-        }, 800 + (i * 150));
-      }
-
-      const newTapCount = tapCount + 1;
-      const newNextReward = nextReward * 2;
-      const newNextCooldown = nextCooldown * 2;
-
-      setTapCount(newTapCount);
-      setNextReward(newNextReward);
-      setNextCooldown(newNextCooldown);
-
-      localStorage.setItem(STORAGE_KEYS.TAP_COUNT, newTapCount.toString());
-      localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, newNextReward.toString());
-      localStorage.setItem(STORAGE_KEYS.NEXT_COOLDOWN, newNextCooldown.toString());
-      localStorage.setItem(STORAGE_KEYS.LAST_TAP, Date.now().toString());
-
-      const cooldownSec = newNextCooldown * 60;
-      setCooldownRemaining(cooldownSec);
-      setCooldownProgress(0);
-      setCanClaimReward(false);
-      startCooldownTimer(newNextCooldown);
-    }
-  };
-
-  const giveOneCoin = async () => {
-    try {
-      const token = localStorage.getItem("axum_token");
-      if (!token) return;
-
-      const res = await fetch(`${API_URL}/api/user/add-coin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setCoins(data.coins);
-        setGems(data.gems);
-
-        if (typeof fetchUser === "function") {
-          fetchUser();
-        }
-      }
-    } catch (err) {
-      console.error("Error giving coin:", err);
-    }
-  };
-
-  const closeProgress = () => {
-    setShowProgress(false);
-    if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-  };
-
-  const completedTasksCount = user?.completed_tasks?.length || 0;
-  const invitedFriends = user?.invited_friends || 0;
-  const currentLevel = user?.current_level || 1;
-
-  return (
-    <div className="saba-dashboard full-screen">
-      <header className="top-block" role="banner">
-        <div className="top-left">
-          <div className="avatar-circle">
-            <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
-          </div>
-          <div className="player-name-box" onClick={handleNameClick} style={{cursor: 'pointer'}} title="Click to view stats">
-            <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
-          </div>
-        </div>
-
-        <div className="top-right">
-          <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Daily Check-In" title="Daily Check-In">
-            <span style={{fontSize: '1.2rem'}}>📅</span>
-          </button>
-          <span className="axum-logo-emoji" role="img">⚜️</span>
-        </div>
-      </header>
-
-      <div className="currency-row logo-style">
-        <div className="currency-item logo-box" ref={coinBoxRef}>
-          <img src={iconCoin} alt="Coins" className="currency-icon" />
-          <div className="currency-value">{coins.toLocaleString()}</div>
-        </div>
-
-        <div className="currency-item logo-box">
-          <img src={iconGem} alt="Gems" className="currency-icon" />
-          <div className="currency-value">{gems}</div>
-        </div>
-      </div>
-
-      <main className="queen-main-section">
-        <div className="queen-oval-frame" ref={makedaRef}>
-          <svg className="cooldown-progress-ring" viewBox="0 0 100 100">
-            <circle
-              className="progress-ring-bg"
-              cx="50"
-              cy="50"
-              r="48"
-            />
-            <circle
-              className="progress-ring-fill"
-              cx="50"
-              cy="50"
-              r="48"
-              style={{
-                strokeDashoffset: 302 - (302 * cooldownProgress) / 100
-              }}
-            />
-          </svg>
-
-          <img
-            src={queenMakeda}
-            alt="Queen Makeda"
-            className="queen-main-img floating"
-            onClick={handleQueenTap}
-            role="button"
-          />
-        </div>
-
-        {flyingCoins.map((coin) => (
-          <div
-            key={coin.id}
-            className="flying-coin"
-            style={{
-              left: `${coin.startX}px`,
-              top: `${coin.startY}px`,
-              '--end-x': `${coin.endX}px`,
-              '--end-y': `${coin.endY}px`,
-              '--start-x': `${coin.startX}px`,
-              '--start-y': `${coin.startY}px`,
-              animationDelay: `${coin.delay}ms`
-            }}
-          >
-            <img src={iconCoin} alt="coin" style={{width: '24px', height: '24px'}} />
-          </div>
-        ))}
-
-        {showProgress && progressData && (
-          <aside className="progress-popover-compact" role="status">
-            <button className="close-hint-btn" onClick={closeProgress}>×</button>
-            
-            <div className="progress-header-compact">
-              <h4>Level {progressData.level}: {progressData.name}</h4>
-            </div>
-
-            {!progressData.isMaxLevel && (
-              <div className="progress-content-compact">
-                <div className="req-compact">
-                  <span className="req-icon-small">🪙</span>
-                  <span className="req-text">{progressData.currentCoins.toLocaleString()} / {progressData.coinsNeeded.toLocaleString()}</span>
-                  {progressData.coinsRemaining > 0 && (
-                    <span className="req-remain-small">{progressData.coinsRemaining.toLocaleString()} left</span>
-                  )}
-                </div>
-
-                <div className="req-compact">
-                  <span className="req-icon-small">✅</span>
-                  <span className="req-text">{progressData.completedTasks} / {progressData.tasksNeeded}</span>
-                  {progressData.tasksRemaining > 0 && (
-                    <span className="req-remain-small">{progressData.tasksRemaining} left</span>
-                  )}
-                </div>
-
-                <div className="req-compact">
-                  <span className="req-icon-small">👥</span>
-                  <span className="req-text">{progressData.invitedFriends} / {progressData.friendsNeeded}</span>
-                  {progressData.friendsRemaining > 0 && (
-                    <span className="req-remain-small">{progressData.friendsRemaining} left</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </aside>
-        )}
-      </main>
-
-      <nav className="bottom-nav-bar">
-        <Link to="/rewards" className="nav-btn">
-          <div className="nav-btn-circle">
-            <img src={iconStore} alt="Store" className="nav-icon" />
-          </div>
-        </Link>
-
-        <Link to="/game" className="nav-btn">
-          <div className="nav-btn-circle">
-            <img src={iconBoosts} alt="Boosts" className="nav-icon" />
-          </div>
-        </Link>
-
-        <Link to="/dashboard" className="nav-btn">
-          <div className="nav-btn-circle">
-            <img src={iconFriends} alt="Friends" className="nav-icon" />
-          </div>
-        </Link>
-
-        <Link to="/tasks" className="nav-btn">
-          <div className="nav-btn-circle">
-            <img src={iconEarnCoins} alt="Earn Coins" className="nav-icon" />
-          </div>
-        </Link>
-      </nav>
-
-      {showUserInfo && (
-        <div className="user-info-popup-overlay" onClick={closeUserInfo}>
-          <div className="user-info-popup-compact" onClick={(e) => e.stopPropagation()}>
-            <button className="close-popup" onClick={closeUserInfo}>×</button>
-            
-            <div className="popup-header-compact">
-              <div className="popup-avatar-small">
-                {user?.photo_url ? (
-                  <img src={user.photo_url} alt={user.username} />
-                ) : (
-                  <div className="popup-avatar-placeholder-small">
-                    {user?.first_name?.[0]?.toUpperCase() || '👤'}
-                  </div>
-                )}
-              </div>
-              <h4>{user?.first_name || 'Player'}</h4>
-            </div>
-
-            <div className="popup-content-compact">
-              <div className="stat-compact">
-                <span>🪙 {coins.toLocaleString()}</span>
-                <span>💎 {gems}</span>
-                <span>⭐ Lv.{currentLevel}</span>
-              </div>
-              <div className="stat-compact">
-                <span>✅ {completedTasksCount} tasks</span>
-                <span>👥 {invitedFriends} friends</span>
-              </div>
-              <div className="stat-compact">
-                <span>🎁 {tapCount} taps today</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCheckin && (
-        <DailyCheckIn 
-          onClose={() => setShowCheckin(false)}
-          onClaim={handleCheckinClaim}
-        />
-      )}
-    </div>
-  );
+/* ========================================
+   DASHBOARD PAGE - COMPLETE CSS
+   Ethiopian Royal Theme with Flying Coins
+   ======================================== */
+
+/* Root variables */
+:root {
+  --bg-main-1: #8B6F47;
+  --bg-main-2: #4A3622;
+  --logo-bg-start: #F4E4B8;
+  --logo-bg-end: #D4AF37;
+  --accent-purple: #4A3070;
+  --gold: #D4AF37;
+  --gold-primary: #D4AF37;
+  --gold-shine: #D4AF37;
+  --glass: rgba(255,255,255,0.06);
+  --white: #ffffff;
+  --shadow-strong: rgba(0,0,0,0.55);
+  --radius-lg: 16px;
+}
+
+/* Global reset & full-screen background */
+* { 
+  box-sizing: border-box; 
+  -webkit-font-smoothing: antialiased; 
+  -moz-osx-font-smoothing: grayscale; 
+}
+
+html, body, #root { 
+  height: 100%; 
+  margin: 0; 
+  padding: 0; 
+  background: linear-gradient(180deg, var(--bg-main-1), var(--bg-main-2)); 
+  font-family: Arial, sans-serif; 
+  color: var(--white); 
+}
+
+/* ========================================
+   FULL SCREEN CONTAINER
+   ======================================== */
+
+.saba-dashboard.full-screen {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ========================================
+   TOP HEADER
+   ======================================== */
+
+.top-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 16px 8px 16px;
+  background: linear-gradient(180deg, #6B4E9B, #5A3D8A);
+  border-bottom: 0;
+}
+
+.top-left { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  min-width: 0; 
+}
+
+.top-right { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+
+/* Avatar */
+.avatar-circle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, var(--accent-purple), #8B6E9B);
+  border: 3px solid rgba(212, 175, 55, 0.95);
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+  flex-shrink: 0;
+}
+
+.avatar-img { 
+  width: 100%; 
+  height: 100%; 
+  border-radius: 50%; 
+  object-fit: cover; 
+}
+
+/* Player name */
+.player-name-box {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.06);
+  min-width: 0;
+}
+
+.player-name { 
+  font-family: Georgia, serif; 
+  font-weight: 700; 
+  font-size: 1rem; 
+  text-transform: uppercase; 
+  letter-spacing: 0.06em; 
+  color: var(--white); 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+
+/* Language toggle + emoji */
+.lang-toggle-btn { 
+  width: 40px; 
+  height: 40px; 
+  border-radius: 50%; 
+  background: rgba(255, 255, 255, 0.12); 
+  border: 1px solid rgba(212, 175, 55, 0.12); 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+  cursor: pointer; 
+}
+
+.lang-icon { 
+  width: 20px; 
+  height: 20px; 
+}
+
+.axum-logo-emoji { 
+  font-size: 1.6rem; 
+  color: var(--gold); 
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.45); 
+}
+
+
+
+/* ========================================
+   DAILY CHECK-IN BUTTON (new style)
+   ======================================== */
+
+.checkin-mini-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  animation: checkinPulse 2s ease-in-out infinite;
+}
+
+.checkin-mini-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(212, 175, 55, 0.3);
+  transform: scale(1.1);
+}
+
+@keyframes checkinPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .checkin-mini-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+}
+
+
+/* ========================================
+   CURRENCY ROW
+   ======================================== */
+
+.currency-row { 
+  display: flex; 
+  justify-content: center; 
+  gap: 14px; 
+  padding: 10px 16px 6px 16px; 
+}
+
+.logo-box {
+  display: flex; 
+  align-items: center; 
+  gap: 10px;
+  background: linear-gradient(180deg, var(--logo-bg-start), var(--logo-bg-end));
+  color: #2b1b3a;
+  padding: 10px 14px;
+  border-radius: 14px;
+  min-width: 120px;
+  justify-content: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.currency-icon { 
+  width: 24px; 
+  height: 24px; 
+}
+
+.currency-value { 
+  font-weight: 800; 
+  font-size: 1rem; 
+}
+
+/* ========================================
+   QUEEN MAKEDA SECTION WITH TIMER
+   ======================================== */
+
+.queen-main-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  position: relative;
+  flex: 1 1 auto;
+}
+
+/* Decorative oval frame with progress ring */
+.queen-oval-frame {
+  width: 100%;
+  max-width: 720px;
+  aspect-ratio: 3 / 4;
+  background: radial-gradient(ellipse at center, #4A3070 0%, #2D1B4E 100%);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  border: 0;
+  box-shadow: 
+    0 0 40px rgba(139, 110, 155, 0.45), 
+    inset 0 0 40px rgba(0, 0, 0, 0.35);
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  overflow: visible; 
+  position: relative; 
+  padding: 6px;
+}
+
+/* Cooldown Progress Ring (SVG) */
+.cooldown-progress-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.progress-ring-bg {
+  fill: none;
+  stroke: rgba(212, 175, 55, 0.15);
+  stroke-width: 2;
+}
+
+.progress-ring-fill {
+  fill: none;
+  stroke: #D4AF37;
+  stroke-width: 3;
+  stroke-dasharray: 302;
+  stroke-dashoffset: 302;
+  transition: stroke-dashoffset 1s linear;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.8));
+  animation: progressGlow 2s ease-in-out infinite;
+}
+
+@keyframes progressGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(212, 175, 55, 1));
+  }
+}
+
+/* Makeda image */
+.queen-main-img {
+  width: 120%;
+  max-width: 1200px;
+  height: auto;
+  object-fit: contain;
+  transform-origin: center bottom;
+  pointer-events: auto;
+  position: relative;
+  top: 6px;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.65));
+  cursor: pointer;
+  z-index: 10;
+}
+
+/* Floating animation */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.floating { 
+  animation: floatY 4.5s ease-in-out infinite; 
+}
+
+/* ========================================
+   FLYING COIN ANIMATION
+   ======================================== */
+
+.flying-coin {
+  position: fixed;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #FFD700;
+  text-shadow: 
+    0 0 10px rgba(255, 215, 0, 0.8),
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 9999;
+  animation: flyToTarget 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  opacity: 0;
+}
+
+@keyframes flyToTarget {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(0, -20px) scale(1.2);
+  }
+  90% {
+    opacity: 1;
+    transform: translate(calc(var(--end-x) - var(--start-x, 0px)), calc(var(--end-y) - var(--start-y, 0px))) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--end-x) - var(--start-x, 0px)), calc(var(--end-y) - var(--start-y, 0px))) scale(0);
+  }
+}
+
+/* ========================================
+   COMPACT PROGRESS POPUP (Auto-hide 3s)
+   ======================================== */
+
+.progress-popover-compact {
+  position: absolute;
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(30, 28, 36, 0.95) 0%, rgba(18, 16, 22, 0.95) 100%);
+  backdrop-filter: blur(15px);
+  border: 2px solid rgba(212, 175, 55, 0.4);
+  border-radius: 16px;
+  padding: 0;
+  width: 280px;
+  max-width: 85%;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(212, 175, 55, 0.3);
+  z-index: 50;
+  animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.close-hint-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.2);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: #D4AF37;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+  z-index: 10;
+}
+
+.close-hint-btn:hover {
+  background: rgba(212, 175, 55, 0.4);
+  transform: rotate(90deg);
+}
+
+.progress-header-compact {
+  padding: 12px 35px 10px 12px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(30, 95, 62, 0.1) 100%);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 16px 16px 0 0;
+}
+
+.progress-header-compact h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #D4AF37;
+  text-align: center;
+  font-family: 'Georgia', serif;
+  text-shadow: 0 1px 4px rgba(212, 175, 55, 0.4);
+}
+
+.progress-content-compact {
+  padding: 12px;
+}
+
+.req-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.req-compact:last-child {
+  margin-bottom: 0;
+}
+
+.req-compact:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(212, 175, 55, 0.2);
+}
+
+.req-icon-small {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.req-text {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #D4AF37;
+}
+
+.req-remain-small {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+/* ========================================
+   COMPACT USER INFO POPUP (Auto-hide 3s)
+   ======================================== */
+
+.user-info-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.user-info-popup-compact {
+  background: linear-gradient(135deg, #2D1B3A 0%, #1a1a1a 100%);
+  border: 2px solid #D4AF37;
+  border-radius: 16px;
+  padding: 0;
+  width: 280px;
+  max-width: 90%;
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.8),
+    0 0 60px rgba(212, 175, 55, 0.3);
+  animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  position: relative;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.close-popup {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.2);
+  border: 2px solid rgba(212, 175, 55, 0.4);
+  color: #D4AF37;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+  z-index: 10;
+}
+
+.close-popup:hover {
+  background: rgba(212, 175, 55, 0.4);
+  transform: rotate(90deg);
+}
+
+.popup-header-compact {
+  text-align: center;
+  padding: 16px 36px 12px 16px;
+  background: rgba(212, 175, 55, 0.08);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 16px 16px 0 0;
+}
+
+.popup-avatar-small {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  border: 3px solid #D4AF37;
+  overflow: hidden;
+  box-shadow: 0 3px 15px rgba(212, 175, 55, 0.4);
+}
+
+.popup-avatar-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.popup-avatar-placeholder-small {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #D4AF37 0%, #C9A332 100%);
+  color: #1a1a1a;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.popup-header-compact h4 {
+  font-size: 1.1rem;
+  color: #D4AF37;
+  margin: 0;
+  font-weight: 900;
+  font-family: 'Georgia', serif;
+}
+
+.popup-content-compact {
+  padding: 14px;
+}
+
+.stat-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  justify-content: center;
+}
+
+.stat-compact:last-child {
+  margin-bottom: 0;
+}
+
+.stat-compact span {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #D4AF37;
+  white-space: nowrap;
+}
+
+/* ========================================
+   BOTTOM NAVIGATION
+   ======================================== */
+
+.bottom-nav-bar {
+  display: flex; 
+  gap: 18px; 
+  justify-content: space-around; 
+  align-items: center;
+  padding: 14px 18px; 
+  background: linear-gradient(180deg, rgba(45, 27, 78, 0.85), rgba(26, 15, 45, 0.95));
+  border-top: 0;
+}
+
+.nav-btn { 
+  text-decoration: none; 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+
+.nav-btn-circle {
+  width: 72px; 
+  height: 72px; 
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple), #5A3D8A);
+  border: 4px solid var(--gold);
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.45), 
+    inset 0 2px 8px rgba(255, 255, 255, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.nav-btn:hover .nav-btn-circle { 
+  transform: translateY(-6px); 
+  box-shadow: 
+    0 12px 28px rgba(0, 0, 0, 0.55), 
+    0 0 20px rgba(212, 175, 55, 0.18); 
+  border-color: #F4E4B8; 
+}
+
+.nav-icon { 
+  width: 40px; 
+  height: 40px; 
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45)); 
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 480px) {
+  .avatar-circle { 
+    width: 60px; 
+    height: 60px; 
+  }
+  
+  .player-name { 
+    font-size: 0.95rem; 
+  }
+  
+  .logo-box { 
+    min-width: 96px; 
+    padding: 8px 10px; 
+  }
+  
+  .queen-oval-frame { 
+    max-width: 420px; 
+  }
+  
+  .queen-main-img { 
+    width: 140%; 
+    top: 8px; 
+  }
+  
+  .nav-btn-circle { 
+    width: 60px; 
+    height: 60px; 
+  }
+  
+  .nav-icon { 
+    width: 32px; 
+    height: 32px; 
+  }
+  
+  .progress-popover-compact {
+    width: 260px;
+    bottom: 18%;
+  }
+
+  .progress-header-compact h4 {
+    font-size: 0.9rem;
+  }
+
+  .req-compact {
+    padding: 6px 8px;
+  }
+
+  .req-icon-small {
+    font-size: 1.1rem;
+  }
+
+  .req-text {
+    font-size: 0.85rem;
+  }
+
+  .user-info-popup-compact {
+    width: 260px;
+  }
+
+  .stat-compact span {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+
+  .flying-coin {
+    font-size: 1.3rem;
+  }
+
+  .progress-ring-fill {
+    stroke-width: 2.5;
+  }
+}
+
+@media (max-width: 420px) {
+  .progress-popover-compact {
+    width: 250px;
+    bottom: 20%;
+  }
 }
