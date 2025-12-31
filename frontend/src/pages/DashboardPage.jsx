@@ -1,374 +1,187 @@
-// src/pages/DashboardPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { useLanguage } from '../i18n/LanguageContext';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './DashboardPage.css';
-import DailyCheckIn from '../components/DailyCheckIn';
-import LevelProgress from '../components/LevelProgress';
+import OnboardingPage from './OnboardingPage';
 
-// Assets
+// Import images
+import iconStore from '../assets/icons/store.svg';
+import iconBoosts from '../assets/icons/boosts.svg';
+import iconFriends from '../assets/icons/friends.svg';
+import iconEarnCoins from '../assets/icons/earn-coins.svg';
 import queenMakeda from '../assets/queen-makeda.png';
-import iconCoin from '../assets/icon-coin.png';
-import iconGem from '../assets/icon-gem.png';
-import iconGlobe from '../assets/icon-globe.png';
-import iconStore from '../assets/icon-store.png';
-import iconBoosts from '../assets/icon-boosts.png';
-import iconFriends from '../assets/icon-friends.png';
-import iconEarnCoins from '../assets/icon-earn-coins.png';
+import coin from '../assets/coin.png';
 
-// Level system configuration
+const API_URL = 'https://axum-backend-production.up.railway.app';
+
 const LEVEL_REQUIREMENTS = {
-  1: { name: "Novice Warrior", coinsNeeded: 100, tasksNeeded: 3, friendsNeeded: 1, reward: { coins: 100, gems: 5 } },
-  2: { name: "Skilled Fighter", coinsNeeded: 500, tasksNeeded: 5, friendsNeeded: 3, reward: { coins: 300, gems: 10 } },
-  3: { name: "Elite Guard", coinsNeeded: 1500, tasksNeeded: 7, friendsNeeded: 5, reward: { coins: 500, gems: 25 } },
-  4: { name: "Royal Commander", coinsNeeded: 5000, tasksNeeded: 10, friendsNeeded: 8, reward: { coins: 1000, gems: 50 } },
-  5: { name: "Legendary Hero", coinsNeeded: 15000, tasksNeeded: 16, friendsNeeded: 11, reward: { coins: 1500, gems: 100 } },
-  6: { name: "Queen's Champion", coinsNeeded: 50000, tasksNeeded: 21, friendsNeeded: 15, reward: { coins: 5000, gems: 250 } }
+  1: { 
+    name: "Novice Warrior", 
+    coinsNeeded: 100,
+    tasksNeeded: 3,
+    friendsNeeded: 1,
+    reward: { coins: 100, gems: 5 } 
+  },
+  2: { 
+    name: "Skilled Fighter", 
+    coinsNeeded: 1000,
+    tasksNeeded: 8,
+    friendsNeeded: 3,
+    reward: { coins: 500, gems: 10 } 
+  },
+  3: { 
+    name: "Elite Guard", 
+    coinsNeeded: 5000,
+    tasksNeeded: 15,
+    friendsNeeded: 10,
+    reward: { coins: 1500, gems: 25 } 
+  },
+  4: { 
+    name: "Royal Commander", 
+    coinsNeeded: 15000,
+    tasksNeeded: 25,
+    friendsNeeded: 25,
+    reward: { coins: 5000, gems: 50 } 
+  },
+  5: { 
+    name: "Legendary Hero", 
+    coinsNeeded: 50000,
+    tasksNeeded: 40,
+    friendsNeeded: 50,
+    reward: { coins: 15000, gems: 100 } 
+  },
+  6: { 
+    name: "Queen's Champion", 
+    coinsNeeded: 150000,
+    tasksNeeded: 60,
+    friendsNeeded: 100,
+    reward: { coins: 50000, gems: 250 } 
+  }
 };
 
-const STORAGE_KEYS = {
-  LAST_RESET: 'makeda_last_reset',
-  TAP_COUNT: 'makeda_tap_count',
-  LAST_TAP: 'makeda_last_tap',
-  NEXT_REWARD: 'makeda_next_reward',
-  NEXT_COOLDOWN: 'makeda_next_cooldown'
-};
-
-export default function DashboardPage({ user = {}, fetchUser }) {
-  const { language, changeLanguage } = useLanguage();
-
-  const [coins, setCoins] = useState(user.coins || 0);
-  const [gems, setGems] = useState(user.gems || 0);
-  const [showUserInfo, setShowUserInfo] = useState(false);
-  const [showProgress, setShowProgress] = useState(false);
-  const [progressData, setProgressData] = useState(null);
+export default function DashboardPage({ user, fetchUser }) {
+  const [coins, setCoins] = useState(user?.coins || 0);
+  const [gems, setGems] = useState(user?.gems || 0);
   const [flyingCoins, setFlyingCoins] = useState([]);
-  const [nextReward, setNextReward] = useState(2);
-  const [nextCooldown, setNextCooldown] = useState(2);
-  const [tapCount, setTapCount] = useState(0);
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
-  const [cooldownProgress, setCooldownProgress] = useState(0);
-  const [canClaimReward, setCanClaimReward] = useState(true);
-  const [showCheckin, setShowCheckin] = useState(false);
+  const [showUserInfo, setShowUserInfo] = useState(false);
   const [showLevelProgress, setShowLevelProgress] = useState(false);
-
-  const cooldownIntervalRef = useRef(null);
-  const progressTimerRef = useRef(null);
-  const userInfoTimerRef = useRef(null);
-  const coinBoxRef = useRef(null);
-  const makedaRef = useRef(null);
-
-  const API_URL = 'https://axum-backend-production.up.railway.app';
-  const avatarSrc = user.photo_url || queenMakeda;
-
-  // Check if user needs to check in today
-  useEffect(() => {
-    const checkDailyCheckin = () => {
-      const lastCheckin = localStorage.getItem('last_checkin_date');
-      const today = new Date().toDateString();
-      
-      if (lastCheckin !== today) {
-        setTimeout(() => {
-          setShowCheckin(true);
-        }, 2000);
-      }
-    };
-    
-    checkDailyCheckin();
-  }, []);
+  const [showCheckin, setShowCheckin] = useState(false);
+  const [showStory, setShowStory] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState(user?.current_level || 1);
 
   useEffect(() => {
-    if (user.coins !== undefined) setCoins(user.coins);
-    if (user.gems !== undefined) setGems(user.gems);
+    if (user) {
+      setCoins(user.coins || 0);
+      setGems(user.gems || 0);
+      setCurrentLevel(user.current_level || 1);
+    }
   }, [user]);
 
-  useEffect(() => {
-    initializeDailySystem();
-    return () => {
-      if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
-      if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-      if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
+  const handleTap = async (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Add flying coin animation
+    const newCoin = {
+      id: Date.now() + Math.random(),
+      x,
+      y
     };
-  }, []);
+    setFlyingCoins(prev => [...prev, newCoin]);
 
-  const checkAndResetDaily = () => {
-    const lastReset = localStorage.getItem(STORAGE_KEYS.LAST_RESET);
-    const now = new Date();
-    const today = now.toDateString();
-
-    if (!lastReset || lastReset !== today) {
-      localStorage.setItem(STORAGE_KEYS.LAST_RESET, today);
-      localStorage.setItem(STORAGE_KEYS.TAP_COUNT, '0');
-      localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, '2');
-      localStorage.setItem(STORAGE_KEYS.NEXT_COOLDOWN, '2');
-      localStorage.removeItem(STORAGE_KEYS.LAST_TAP);
-      
-      setTapCount(0);
-      setNextReward(2);
-      setNextCooldown(2);
-      setCooldownRemaining(0);
-      setCooldownProgress(0);
-      setCanClaimReward(true);
-      
-      return true;
-    }
-    return false;
-  };
-
-  const initializeDailySystem = () => {
-    const isNewDay = checkAndResetDaily();
-    
-    if (!isNewDay) {
-      const savedTapCount = parseInt(localStorage.getItem(STORAGE_KEYS.TAP_COUNT) || '0');
-      const savedNextReward = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_REWARD) || '2');
-      const savedNextCooldown = parseInt(localStorage.getItem(STORAGE_KEYS.NEXT_COOLDOWN) || '2');
-      const savedLastTap = localStorage.getItem(STORAGE_KEYS.LAST_TAP);
-
-      setTapCount(savedTapCount);
-      setNextReward(savedNextReward);
-      setNextCooldown(savedNextCooldown);
-
-      if (savedLastTap) {
-        const lastTapTime = parseInt(savedLastTap);
-        const cooldownMs = savedNextCooldown * 60 * 1000;
-        const timePassed = Date.now() - lastTapTime;
-        
-        if (timePassed < cooldownMs) {
-          const remainingSec = Math.ceil((cooldownMs - timePassed) / 1000);
-          const totalSec = savedNextCooldown * 60;
-          const progress = ((totalSec - remainingSec) / totalSec) * 100;
-          
-          setCooldownRemaining(remainingSec);
-          setCooldownProgress(progress);
-          setCanClaimReward(false);
-          startCooldownTimer(savedNextCooldown, remainingSec);
-        } else {
-          setCanClaimReward(true);
-          setCooldownProgress(0);
-          setCooldownRemaining(0);
-        }
-      }
-    }
-  };
-
-  const startCooldownTimer = (cooldownMinutes, startFromSeconds = null) => {
-    if (cooldownIntervalRef.current) clearInterval(cooldownIntervalRef.current);
-
-    const totalSeconds = cooldownMinutes * 60;
-    let currentRemaining = startFromSeconds !== null ? startFromSeconds : totalSeconds;
-
-    cooldownIntervalRef.current = setInterval(() => {
-      currentRemaining--;
-      
-      if (currentRemaining <= 0) {
-        clearInterval(cooldownIntervalRef.current);
-        setCanClaimReward(true);
-        setCooldownProgress(0);
-        setCooldownRemaining(0);
-        return;
-      }
-
-      const progress = ((totalSeconds - currentRemaining) / totalSeconds) * 100;
-      setCooldownProgress(progress);
-      setCooldownRemaining(currentRemaining);
+    // Remove coin after animation
+    setTimeout(() => {
+      setFlyingCoins(prev => prev.filter(c => c.id !== newCoin.id));
     }, 1000);
-  };
 
-  const createFlyingCoins = (amount) => {
-    const makedaRect = makedaRef.current?.getBoundingClientRect();
-    const coinBoxRect = coinBoxRef.current?.getBoundingClientRect();
+    // Update coins locally
+    setCoins(prev => prev + 1);
 
-    if (!makedaRect || !coinBoxRect) return;
-
-    const startX = makedaRect.left + makedaRect.width / 2;
-    const startY = makedaRect.top + makedaRect.height / 2;
-    const endX = coinBoxRect.left + coinBoxRect.width / 2;
-    const endY = coinBoxRect.top + coinBoxRect.height / 2;
-
-    const newCoins = [];
-    for (let i = 0; i < amount; i++) {
-      const id = Date.now() + Math.random();
-      newCoins.push({
-        id,
-        startX,
-        startY,
-        endX,
-        endY,
-        delay: i * 80,
-        coinNumber: i + 1
+    // Send to backend
+    try {
+      const token = localStorage.getItem('axum_token');
+      const response = await fetch(`${API_URL}/api/user/add-coin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCoins(data.coins);
+        setGems(data.gems);
+      }
+    } catch (error) {
+      console.error('Error adding coin:', error);
     }
-
-    setFlyingCoins(prev => [...prev, ...newCoins]);
-
-    setTimeout(() => {
-      setFlyingCoins(prev => prev.filter(coin => !newCoins.find(c => c.id === coin.id)));
-    }, 1500 + (amount * 150));
   };
 
-  const calculateProgress = () => {
-    const currentLevel = user.current_level || 1;
-    const levelReq = LEVEL_REQUIREMENTS[currentLevel];
-    
-    if (!levelReq) {
-      return { level: currentLevel, name: "Max Level", isMaxLevel: true };
-    }
-
-    const completedTasks = user.completed_tasks?.length || 0;
-    const invitedFriends = user.invited_friends || 0;
-    const currentCoins = coins;
-
-    const coinsRemaining = Math.max(0, levelReq.coinsNeeded - currentCoins);
-    const tasksRemaining = Math.max(0, levelReq.tasksNeeded - completedTasks);
-    const friendsRemaining = Math.max(0, levelReq.friendsNeeded - invitedFriends);
-
-    const coinsProgress = Math.min(100, (currentCoins / levelReq.coinsNeeded) * 100);
-    const tasksProgress = Math.min(100, (completedTasks / levelReq.tasksNeeded) * 100);
-    const friendsProgress = Math.min(100, (invitedFriends / levelReq.friendsNeeded) * 100);
-    const overallProgress = (coinsProgress + tasksProgress + friendsProgress) / 3;
-
-    return {
-      level: currentLevel,
-      name: levelReq.name,
-      coinsNeeded: levelReq.coinsNeeded,
-      tasksNeeded: levelReq.tasksNeeded,
-      friendsNeeded: levelReq.friendsNeeded,
-      currentCoins,
-      completedTasks,
-      invitedFriends,
-      coinsRemaining,
-      tasksRemaining,
-      friendsRemaining,
-      coinsProgress,
-      tasksProgress,
-      friendsProgress,
-      overallProgress,
-      isMaxLevel: false
-    };
-  };
-
-  const handleLanguageToggle = () => {
-    setShowCheckin(true);
-  };
-
-  const handleCheckinClaim = (data) => {
-    console.log('✅ Daily check-in claimed!', data);
-    
-    localStorage.setItem('last_checkin_date', new Date().toDateString());
-    
-    if (data.rewards) {
-      setCoins(prev => prev + data.rewards.coins);
-      setGems(prev => prev + data.rewards.gems);
-    }
-    
-    if (typeof fetchUser === "function") {
-      fetchUser();
-    }
-    
-    setTimeout(() => {
-      setShowCheckin(false);
-    }, 2000);
-  };
-
-  const handleNameClick = () => {
+  const openUserInfo = () => {
     setShowUserInfo(true);
-    
-    if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
-    userInfoTimerRef.current = setTimeout(() => {
-      setShowUserInfo(false);
-    }, 3000);
   };
 
   const closeUserInfo = () => {
     setShowUserInfo(false);
-    if (userInfoTimerRef.current) clearTimeout(userInfoTimerRef.current);
   };
 
-  const handleQueenTap = async () => {
-    const progress = calculateProgress();
-    setProgressData(progress);
-    setShowProgress(true);
-
-    if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-    progressTimerRef.current = setTimeout(() => {
-      setShowProgress(false);
-    }, 3000);
-
-    if (canClaimReward) {
-      createFlyingCoins(nextReward);
-
-      for (let i = 0; i < nextReward; i++) {
-        setTimeout(() => {
-          giveOneCoin();
-        }, 800 + (i * 80));
-      }
-
-      const newTapCount = tapCount + 1;
-      const newNextReward = nextReward * 2;
-      const newNextCooldown = nextCooldown * 2;
-
-      setTapCount(newTapCount);
-      setNextReward(newNextReward);
-      setNextCooldown(newNextCooldown);
-
-      localStorage.setItem(STORAGE_KEYS.TAP_COUNT, newTapCount.toString());
-      localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, newNextReward.toString());
-      localStorage.setItem(STORAGE_KEYS.NEXT_COOLDOWN, newNextCooldown.toString());
-      localStorage.setItem(STORAGE_KEYS.LAST_TAP, Date.now().toString());
-
-      const cooldownSec = newNextCooldown * 60;
-      setCooldownRemaining(cooldownSec);
-      setCooldownProgress(0);
-      setCanClaimReward(false);
-      startCooldownTimer(newNextCooldown);
-    }
+  const closeLevelProgress = () => {
+    setShowLevelProgress(false);
   };
 
-  const giveOneCoin = async () => {
-    try {
-      const token = localStorage.getItem("axum_token");
-      if (!token) return;
-
-      const res = await fetch(`${API_URL}/api/user/add-coin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setCoins(data.coins);
-        setGems(data.gems);
-
-        if (typeof fetchUser === "function") {
-          fetchUser();
-        }
-      }
-    } catch (err) {
-      console.error("Error giving coin:", err);
-    }
+  const closeCheckin = () => {
+    setShowCheckin(false);
   };
 
-  const closeProgress = () => {
-    setShowProgress(false);
-    if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-  };
+  const getLevelProgress = () => {
+    const requirements = LEVEL_REQUIREMENTS[currentLevel];
+    if (!requirements) return null;
 
-  const completedTasksCount = user?.completed_tasks?.length || 0;
-  const invitedFriends = user?.invited_friends || 0;
-  const currentLevel = user?.current_level || 1;
+    const completedTasks = user?.completed_tasks?.length || 0;
+    const invitedFriends = user?.invited_friends || 0;
+
+    const coinsProgress = Math.min((coins / requirements.coinsNeeded) * 100, 100);
+    const tasksProgress = Math.min((completedTasks / requirements.tasksNeeded) * 100, 100);
+    const friendsProgress = Math.min((invitedFriends / requirements.friendsNeeded) * 100, 100);
+
+    const canLevelUp = 
+      coins >= requirements.coinsNeeded &&
+      completedTasks >= requirements.tasksNeeded &&
+      invitedFriends >= requirements.friendsNeeded;
+
+    return {
+      coinsProgress,
+      tasksProgress,
+      friendsProgress,
+      canLevelUp,
+      requirements,
+      completedTasks,
+      invitedFriends
+    };
+  };
 
   return (
-    <div className="saba-dashboard full-screen">
-      <header className="top-block" role="banner">
+    <div className="dashboard-page">
+      {/* Header */}
+      <header className="top-block">
         <div className="top-left">
-          <div className="avatar-circle">
-            <img src={avatarSrc} alt={user.username || 'PLAYER'} className="avatar-img" />
+          <div 
+            className="avatar-circle" 
+            onClick={openUserInfo}
+            style={{ cursor: 'pointer' }}
+          >
+            {user?.photo_url ? (
+              <img src={user.photo_url} alt="Avatar" className="avatar-img" />
+            ) : (
+              <div className="avatar-placeholder">
+                {user?.first_name?.[0]?.toUpperCase() || 'U'}
+              </div>
+            )}
           </div>
-          <div className="player-name-box" onClick={handleNameClick} style={{cursor: 'pointer'}} title="Click to view stats">
-            <span className="player-name">{user.username || user.first_name || 'PLAYER NAME'}</span>
+          
+          <div className="player-name-box">
+            <div className="player-name">{user?.username || user?.first_name || 'Warrior'}</div>
           </div>
         </div>
 
@@ -376,191 +189,227 @@ export default function DashboardPage({ user = {}, fetchUser }) {
           <button 
             className="level-btn"
             onClick={() => setShowLevelProgress(true)}
-            title="View Level Progress"
           >
             ⭐ Lv.{currentLevel}
           </button>
-          
-          <button className="lang-toggle-btn" onClick={handleLanguageToggle} aria-label="Daily Check-In" title="Daily Check-In">
-            <span style={{fontSize: '1.2rem'}}>📅</span>
+
+          <button 
+            className="checkin-mini-btn"
+            onClick={() => setShowCheckin(true)}
+            title="Daily Check-in"
+          >
+            📅
           </button>
-          
-          <span className="axum-logo-emoji" role="img">⚜️</span>
+
+          <button 
+            className="axum-logo-btn" 
+            onClick={() => setShowStory(true)}
+            title="View Story"
+          >
+            <span className="axum-logo-emoji">⚜️</span>
+          </button>
         </div>
       </header>
 
-      <div className="currency-row logo-style">
-        <div className="currency-item logo-box" ref={coinBoxRef}>
-          <img src={iconCoin} alt="Coins" className="currency-icon" />
-          <div className="currency-value">{coins.toLocaleString()}</div>
+      {/* Coins & Gems Display */}
+      <div className="currency-display">
+        <div className="currency-item">
+          <img src={coin} alt="Coin" className="currency-icon" />
+          <span className="currency-value">{coins.toLocaleString()}</span>
         </div>
-
-        <div className="currency-item logo-box">
-          <img src={iconGem} alt="Gems" className="currency-icon" />
-          <div className="currency-value">{gems}</div>
+        <div className="currency-item">
+          <span className="gem-icon">💎</span>
+          <span className="currency-value">{gems.toLocaleString()}</span>
         </div>
       </div>
 
-      <main className="queen-main-section">
-        <div className="queen-oval-frame" ref={makedaRef}>
-          <svg className="cooldown-progress-ring" viewBox="0 0 100 100">
-            <circle
-              className="progress-ring-bg"
-              cx="50"
-              cy="50"
-              r="48"
-            />
-            <circle
-              className="progress-ring-fill"
-              cx="50"
-              cy="50"
-              r="48"
-              style={{
-                strokeDashoffset: 302 - (302 * cooldownProgress) / 100
-              }}
-            />
-          </svg>
-
-          <img
-            src={queenMakeda}
-            alt="Queen Makeda"
-            className="queen-main-img floating"
-            onClick={handleQueenTap}
-            role="button"
+      {/* Queen Makeda Tap Area */}
+      <div className="tap-area">
+        <div className="makeda-container" onClick={handleTap}>
+          <img 
+            src={queenMakeda} 
+            alt="Queen Makeda" 
+            className="makeda-image"
           />
-        </div>
-
-        {flyingCoins.map((coin) => (
-          <div
-            key={coin.id}
-            className="flying-coin"
-            style={{
-              left: `${coin.startX}px`,
-              top: `${coin.startY}px`,
-              '--end-x': `${coin.endX}px`,
-              '--end-y': `${coin.endY}px`,
-              '--start-x': `${coin.startX}px`,
-              '--start-y': `${coin.startY}px`,
-              animationDelay: `${coin.delay}ms`
-            }}
-          >
-            <img src={iconCoin} alt="coin" style={{width: '24px', height: '24px'}} />
-          </div>
-        ))}
-
-        {showProgress && progressData && (
-          <aside className="progress-popover-compact" role="status">
-            <button className="close-hint-btn" onClick={closeProgress}>×</button>
-            
-            <div className="progress-header-compact">
-              <h4>Level {progressData.level}: {progressData.name}</h4>
+          
+          {/* Flying coins */}
+          {flyingCoins.map(flyingCoin => (
+            <div
+              key={flyingCoin.id}
+              className="flying-coin"
+              style={{
+                left: `${flyingCoin.x}px`,
+                top: `${flyingCoin.y}px`
+              }}
+            >
+              <img src={coin} alt="coin" />
             </div>
+          ))}
+        </div>
+        
+        <p className="tap-instruction">👆 Tap Queen Makeda to earn coins!</p>
+      </div>
 
-            {!progressData.isMaxLevel && (
-              <div className="progress-content-compact">
-                <div className="req-compact">
-                  <span className="req-icon-small">🪙</span>
-                  <span className="req-text">{progressData.currentCoins.toLocaleString()} / {progressData.coinsNeeded.toLocaleString()}</span>
-                  {progressData.coinsRemaining > 0 && (
-                    <span className="req-remain-small">{progressData.coinsRemaining.toLocaleString()} left</span>
-                  )}
-                </div>
-
-                <div className="req-compact">
-                  <span className="req-icon-small">✅</span>
-                  <span className="req-text">{progressData.completedTasks} / {progressData.tasksNeeded}</span>
-                  {progressData.tasksRemaining > 0 && (
-                    <span className="req-remain-small">{progressData.tasksRemaining} left</span>
-                  )}
-                </div>
-
-                <div className="req-compact">
-                  <span className="req-icon-small">👥</span>
-                  <span className="req-text">{progressData.invitedFriends} / {progressData.friendsNeeded}</span>
-                  {progressData.friendsRemaining > 0 && (
-                    <span className="req-remain-small">{progressData.friendsRemaining} left</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </aside>
-        )}
-      </main>
-
+      {/* Bottom Navigation */}
       <nav className="bottom-nav-bar">
         <Link to="/rewards" className="nav-btn">
           <div className="nav-btn-circle">
             <img src={iconStore} alt="Store" className="nav-icon" />
           </div>
+          <span className="nav-label">Store</span>
         </Link>
 
         <Link to="/game" className="nav-btn">
           <div className="nav-btn-circle">
-            <img src={iconBoosts} alt="Boosts" className="nav-icon" />
+            <img src={iconBoosts} alt="Game" className="nav-icon" />
           </div>
+          <span className="nav-label">Game</span>
         </Link>
 
         <Link to="/invite" className="nav-btn">
           <div className="nav-btn-circle">
-            <img src={iconFriends} alt="Friends" className="nav-icon" />
+            <img src={iconFriends} alt="Invite" className="nav-icon" />
           </div>
+          <span className="nav-label">Invite</span>
         </Link>
 
         <Link to="/tasks" className="nav-btn">
           <div className="nav-btn-circle">
-            <img src={iconEarnCoins} alt="Earn Coins" className="nav-icon" />
+            <img src={iconEarnCoins} alt="Tasks" className="nav-icon" />
           </div>
+          <span className="nav-label">Tasks</span>
         </Link>
       </nav>
 
+      {/* User Info Modal */}
       {showUserInfo && (
-        <div className="user-info-popup-overlay" onClick={closeUserInfo}>
-          <div className="user-info-popup-compact" onClick={(e) => e.stopPropagation()}>
-            <button className="close-popup" onClick={closeUserInfo}>×</button>
+        <div className="modal-overlay" onClick={closeUserInfo}>
+          <div className="modal-content user-info-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeUserInfo}>×</button>
             
-            <div className="popup-header-compact">
-              <div className="popup-avatar-small">
-                {user?.photo_url ? (
-                  <img src={user.photo_url} alt={user.username} />
-                ) : (
-                  <div className="popup-avatar-placeholder-small">
-                    {user?.first_name?.[0]?.toUpperCase() || '👤'}
-                  </div>
-                )}
-              </div>
-              <h4>{user?.first_name || 'Player'}</h4>
+            <div className="user-info-header">
+              {user?.photo_url ? (
+                <img src={user.photo_url} alt="Avatar" className="user-info-avatar" />
+              ) : (
+                <div className="user-info-avatar-placeholder">
+                  {user?.first_name?.[0]?.toUpperCase() || 'U'}
+                </div>
+              )}
+              <h2>{user?.first_name} {user?.last_name}</h2>
+              <p className="user-info-username">@{user?.username}</p>
             </div>
 
-            <div className="popup-content-compact">
-              <div className="stat-compact">
-                <span>🪙 {coins.toLocaleString()}</span>
-                <span>💎 {gems}</span>
-                <span>⭐ Lv.{currentLevel}</span>
+            <div className="user-info-stats">
+              <div className="stat-item">
+                <span className="stat-label">Level</span>
+                <span className="stat-value">⭐ {currentLevel}</span>
               </div>
-              <div className="stat-compact">
-                <span>✅ {completedTasksCount} tasks</span>
-                <span>👥 {invitedFriends} friends</span>
+              <div className="stat-item">
+                <span className="stat-label">Coins</span>
+                <span className="stat-value">🪙 {coins.toLocaleString()}</span>
               </div>
-              <div className="stat-compact">
-                <span>🎁 {tapCount} taps today</span>
+              <div className="stat-item">
+                <span className="stat-label">Gems</span>
+                <span className="stat-value">💎 {gems.toLocaleString()}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Tasks</span>
+                <span className="stat-value">✅ {user?.completed_tasks?.length || 0}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Friends</span>
+                <span className="stat-value">👥 {user?.invited_friends || 0}</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Level Progress Modal */}
+      {showLevelProgress && (() => {
+        const progress = getLevelProgress();
+        if (!progress) return null;
+
+        return (
+          <div className="modal-overlay" onClick={closeLevelProgress}>
+            <div className="modal-content level-progress-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={closeLevelProgress}>×</button>
+              
+              <h2>⭐ Level {currentLevel}</h2>
+              <h3>{progress.requirements.name}</h3>
+
+              <div className="progress-section">
+                <div className="progress-item">
+                  <div className="progress-label">
+                    <span>🪙 Coins</span>
+                    <span>{coins.toLocaleString()} / {progress.requirements.coinsNeeded.toLocaleString()}</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill" 
+                      style={{ width: `${progress.coinsProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="progress-item">
+                  <div className="progress-label">
+                    <span>✅ Tasks</span>
+                    <span>{progress.completedTasks} / {progress.requirements.tasksNeeded}</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill" 
+                      style={{ width: `${progress.tasksProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="progress-item">
+                  <div className="progress-label">
+                    <span>👥 Friends</span>
+                    <span>{progress.invitedFriends} / {progress.requirements.friendsNeeded}</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill" 
+                      style={{ width: `${progress.friendsProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              {progress.canLevelUp && (
+                <div className="level-up-ready">
+                  <h3>🎉 Ready to Level Up!</h3>
+                  <p>Reward: {progress.requirements.reward.coins}🪙 + {progress.requirements.reward.gems}💎</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Daily Check-in Modal */}
       {showCheckin && (
-        <DailyCheckIn 
-          onClose={() => setShowCheckin(false)}
-          onClaim={handleCheckinClaim}
-        />
+        <div className="modal-overlay" onClick={closeCheckin}>
+          <div className="modal-content checkin-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeCheckin}>×</button>
+            <h2>📅 Daily Check-in</h2>
+            <p>Check in daily to earn rewards!</p>
+            <button className="claim-btn" onClick={closeCheckin}>Claim Reward</button>
+          </div>
+        </div>
       )}
 
-      {showLevelProgress && (
-        <LevelProgress 
-          user={user}
-          onClose={() => setShowLevelProgress(false)}
-        />
+      {/* Story Modal */}
+      {showStory && (
+        <div className="story-overlay" onClick={() => setShowStory(false)}>
+          <div className="story-content" onClick={(e) => e.stopPropagation()}>
+            <button className="close-story" onClick={() => setShowStory(false)}>×</button>
+            <OnboardingPage onComplete={() => setShowStory(false)} isModal={true} />
+          </div>
+        </div>
       )}
     </div>
   );
