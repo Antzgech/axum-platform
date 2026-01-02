@@ -54,7 +54,13 @@ const pool = new Pool({
 // ---------------------------
 // Auth middleware (JWT)
 // ---------------------------
-const JWT_SECRET = process.env.JWT_SECRET || "Saba1212";
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error('❌ JWT_SECRET not found in environment variables!');
+  console.error('⚠️  Using a secure JWT_SECRET is critical for production!');
+  process.exit(1);
+}
 
 const authenticateToken = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
