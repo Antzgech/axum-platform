@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap');
-
+/*Antz work*/
 :root {
   /* Ethiopian Color Palette */
   --gold-primary: #D4AF37;
@@ -69,7 +69,7 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
-
+  
 .app-container {
   position: relative;
   z-index: 1;
