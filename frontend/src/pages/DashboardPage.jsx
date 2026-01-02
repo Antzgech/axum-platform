@@ -178,7 +178,7 @@ export default function DashboardPage({ user, fetchUser }) {
             onClick={() => setShowCheckin(true)}
             title="Daily Check-in"
           >
-            📅
+            🎁
           </button>
 
           <button 
