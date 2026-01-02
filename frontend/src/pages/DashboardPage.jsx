@@ -3,9 +3,6 @@ import { Link } from 'react-router-dom';
 import './DashboardPage.css';
 import OnboardingPage from './OnboardingPage';
 import DailyCheckIn from '../components/DailyCheckIn';
-import LevelProgress from '../components/LevelProgress';
-
-// NO IMAGE IMPORTS - Using emojis and public folder images instead
 
 const API_URL = 'https://axum-backend-production.up.railway.app';
 
@@ -63,6 +60,8 @@ export default function DashboardPage({ user, fetchUser }) {
   const [showCheckin, setShowCheckin] = useState(false);
   const [showStory, setShowStory] = useState(false);
   const [currentLevel, setCurrentLevel] = useState(user?.current_level || 1);
+  const [tapCount, setTapCount] = useState(0);
+  const [showBonus, setShowBonus] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -77,6 +76,7 @@ export default function DashboardPage({ user, fetchUser }) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Create flying coin animation
     const newCoin = {
       id: Date.now() + Math.random(),
       x,
@@ -88,8 +88,18 @@ export default function DashboardPage({ user, fetchUser }) {
       setFlyingCoins(prev => prev.filter(c => c.id !== newCoin.id));
     }, 1000);
 
+    // Update local coin count
     setCoins(prev => prev + 1);
+    setTapCount(prev => prev + 1);
 
+    // Bonus every 10 taps
+    if ((tapCount + 1) % 10 === 0) {
+      setShowBonus(true);
+      setCoins(prev => prev + 9); // Extra 10 coins total for 10 taps
+      setTimeout(() => setShowBonus(false), 2000);
+    }
+
+    // Send to backend
     try {
       const token = localStorage.getItem('axum_token');
       const response = await fetch(`${API_URL}/api/user/add-coin`, {
@@ -109,11 +119,6 @@ export default function DashboardPage({ user, fetchUser }) {
       console.error('Error adding coin:', error);
     }
   };
-
-  const openUserInfo = () => setShowUserInfo(true);
-  const closeUserInfo = () => setShowUserInfo(false);
-  const closeLevelProgress = () => setShowLevelProgress(false);
-  const closeCheckin = () => setShowCheckin(false);
 
   const getLevelProgress = () => {
     const requirements = LEVEL_REQUIREMENTS[currentLevel];
@@ -142,14 +147,43 @@ export default function DashboardPage({ user, fetchUser }) {
     };
   };
 
+  const handleLevelUp = async () => {
+    const progress = getLevelProgress();
+    if (!progress || !progress.canLevelUp) return;
+
+    try {
+      const token = localStorage.getItem('axum_token');
+      const response = await fetch(`${API_URL}/api/user/level-up`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentLevel(data.current_level);
+        setCoins(data.coins);
+        setGems(data.gems);
+        fetchUser();
+        alert(`🎉 Leveled up to ${LEVEL_REQUIREMENTS[data.current_level]?.name}!`);
+      }
+    } catch (error) {
+      console.error('Level up error:', error);
+    }
+  };
+
   return (
     <div className="dashboard-page">
+      {/* Animated background pattern */}
+      <div className="bg-pattern"></div>
+
       <header className="top-block">
         <div className="top-left">
           <div 
             className="avatar-circle" 
-            onClick={openUserInfo}
-            style={{ cursor: 'pointer' }}
+            onClick={() => setShowUserInfo(true)}
           >
             {user?.photo_url ? (
               <img src={user.photo_url} alt="Avatar" className="avatar-img" />
@@ -160,8 +194,9 @@ export default function DashboardPage({ user, fetchUser }) {
             )}
           </div>
           
-          <div className="player-name-box">
+          <div className="player-info">
             <div className="player-name">{user?.username || user?.first_name || 'Warrior'}</div>
+            <div className="player-title">{LEVEL_REQUIREMENTS[currentLevel]?.name}</div>
           </div>
         </div>
 
@@ -192,12 +227,12 @@ export default function DashboardPage({ user, fetchUser }) {
       </header>
 
       <div className="currency-display">
-        <div className="currency-item">
-          <span style={{ fontSize: '32px' }}>🪙</span>
+        <div className="currency-item pulse-glow">
+          <span className="currency-icon">🪙</span>
           <span className="currency-value">{coins.toLocaleString()}</span>
         </div>
-        <div className="currency-item">
-          <span className="gem-icon">💎</span>
+        <div className="currency-item pulse-glow">
+          <span className="currency-icon">💎</span>
           <span className="currency-value">{gems.toLocaleString()}</span>
         </div>
       </div>
@@ -219,48 +254,58 @@ export default function DashboardPage({ user, fetchUser }) {
                 top: `${flyingCoin.y}px`
               }}
             >
-              <span style={{ fontSize: '40px' }}>🪙</span>
+              <span className="coin-emoji">🪙</span>
             </div>
           ))}
         </div>
         
-        <p className="tap-instruction">👆 Tap Queen Makeda to earn coins!</p>
+        <p className="tap-instruction">
+          <span className="tap-icon">👆</span>
+          Tap Queen Makeda to earn coins!
+        </p>
+
+        {showBonus && (
+          <div className="bonus-popup">
+            🎉 BONUS! +10 Coins!
+          </div>
+        )}
       </div>
 
       <nav className="bottom-nav-bar">
         <Link to="/rewards" className="nav-btn">
           <div className="nav-btn-circle">
-            <span style={{ fontSize: '24px' }}>🏪</span>
+            <span className="nav-icon">🏪</span>
           </div>
           <span className="nav-label">Store</span>
         </Link>
 
         <Link to="/game" className="nav-btn">
           <div className="nav-btn-circle">
-            <span style={{ fontSize: '24px' }}>🎮</span>
+            <span className="nav-icon">🎮</span>
           </div>
           <span className="nav-label">Game</span>
         </Link>
 
         <Link to="/invite" className="nav-btn">
           <div className="nav-btn-circle">
-            <span style={{ fontSize: '24px' }}>👥</span>
+            <span className="nav-icon">👥</span>
           </div>
           <span className="nav-label">Invite</span>
         </Link>
 
         <Link to="/tasks" className="nav-btn">
           <div className="nav-btn-circle">
-            <span style={{ fontSize: '24px' }}>📋</span>
+            <span className="nav-icon">📋</span>
           </div>
           <span className="nav-label">Tasks</span>
         </Link>
       </nav>
 
+      {/* User Info Modal */}
       {showUserInfo && (
-        <div className="modal-overlay" onClick={closeUserInfo}>
+        <div className="modal-overlay" onClick={() => setShowUserInfo(false)}>
           <div className="modal-content user-info-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeUserInfo}>×</button>
+            <button className="modal-close" onClick={() => setShowUserInfo(false)}>×</button>
             
             <div className="user-info-header">
               {user?.photo_url ? (
@@ -272,42 +317,66 @@ export default function DashboardPage({ user, fetchUser }) {
               )}
               <h2>{user?.first_name} {user?.last_name}</h2>
               <p className="user-info-username">@{user?.username}</p>
+              <p className="user-info-title">{LEVEL_REQUIREMENTS[currentLevel]?.name}</p>
             </div>
 
             <div className="user-info-stats">
               <div className="stat-item">
-                <span className="stat-label">Level</span>
-                <span className="stat-value">⭐ {currentLevel}</span>
+                <span className="stat-icon">⭐</span>
+                <div className="stat-text">
+                  <span className="stat-label">Level</span>
+                  <span className="stat-value">{currentLevel}</span>
+                </div>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Coins</span>
-                <span className="stat-value">🪙 {coins.toLocaleString()}</span>
+                <span className="stat-icon">🪙</span>
+                <div className="stat-text">
+                  <span className="stat-label">Coins</span>
+                  <span className="stat-value">{coins.toLocaleString()}</span>
+                </div>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Gems</span>
-                <span className="stat-value">💎 {gems.toLocaleString()}</span>
+                <span className="stat-icon">💎</span>
+                <div className="stat-text">
+                  <span className="stat-label">Gems</span>
+                  <span className="stat-value">{gems.toLocaleString()}</span>
+                </div>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Tasks</span>
-                <span className="stat-value">✅ {user?.completed_tasks?.length || 0}</span>
+                <span className="stat-icon">✅</span>
+                <div className="stat-text">
+                  <span className="stat-label">Tasks</span>
+                  <span className="stat-value">{user?.completed_tasks?.length || 0}</span>
+                </div>
               </div>
               <div className="stat-item">
-                <span className="stat-label">Friends</span>
-                <span className="stat-value">👥 {user?.invited_friends || 0}</span>
+                <span className="stat-icon">👥</span>
+                <div className="stat-text">
+                  <span className="stat-label">Friends</span>
+                  <span className="stat-value">{user?.invited_friends || 0}</span>
+                </div>
+              </div>
+              <div className="stat-item">
+                <span className="stat-icon">🎮</span>
+                <div className="stat-text">
+                  <span className="stat-label">Games</span>
+                  <span className="stat-value">{user?.games_played || 0}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Level Progress Modal */}
       {showLevelProgress && (() => {
         const progress = getLevelProgress();
         if (!progress) return null;
 
         return (
-          <div className="modal-overlay" onClick={closeLevelProgress}>
+          <div className="modal-overlay" onClick={() => setShowLevelProgress(false)}>
             <div className="modal-content level-progress-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-close" onClick={closeLevelProgress}>×</button>
+              <button className="modal-close" onClick={() => setShowLevelProgress(false)}>×</button>
               
               <h2>⭐ Level {currentLevel}</h2>
               <h3>{progress.requirements.name}</h3>
@@ -357,6 +426,16 @@ export default function DashboardPage({ user, fetchUser }) {
                 <div className="level-up-ready">
                   <h3>🎉 Ready to Level Up!</h3>
                   <p>Reward: {progress.requirements.reward.coins}🪙 + {progress.requirements.reward.gems}💎</p>
+                  <button className="level-up-btn" onClick={handleLevelUp}>
+                    Level Up Now!
+                  </button>
+                </div>
+              )}
+
+              {currentLevel < 6 && !progress.canLevelUp && (
+                <div className="next-level-info">
+                  <p>Complete all requirements to reach Level {currentLevel + 1}</p>
+                  <p className="next-level-name">{LEVEL_REQUIREMENTS[currentLevel + 1]?.name}</p>
                 </div>
               )}
             </div>
@@ -364,17 +443,16 @@ export default function DashboardPage({ user, fetchUser }) {
         );
       })()}
 
+      {/* Daily Check-in Modal */}
       {showCheckin && (
-        <div className="modal-overlay" onClick={closeCheckin}>
-          <div className="modal-content checkin-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeCheckin}>×</button>
-            <h2>🎁 Daily Check-in</h2>
-            <p>Check in daily to earn rewards!</p>
-            <button className="claim-btn" onClick={closeCheckin}>Claim Reward</button>
-          </div>
-        </div>
+        <DailyCheckIn 
+          user={user} 
+          onClose={() => setShowCheckin(false)}
+          onClaimSuccess={fetchUser}
+        />
       )}
 
+      {/* Story Modal */}
       {showStory && (
         <div className="story-overlay" onClick={() => setShowStory(false)}>
           <div className="story-content" onClick={(e) => e.stopPropagation()}>
