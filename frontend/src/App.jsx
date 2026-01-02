@@ -115,7 +115,7 @@ function App() {
               isAuthenticated ? (
                 <DashboardPage user={user} fetchUser={fetchUser} />
               ) : (
-                <Navigate to="/auth" />
+                <Navigate to="/auth" replace />
               )
             } 
           />
@@ -127,7 +127,7 @@ function App() {
               isAuthenticated ? (
                 <TasksPage user={user} />
               ) : (
-                <Navigate to="/auth" />
+                <Navigate to="/auth" replace />
               )
             } 
           />
@@ -139,7 +139,7 @@ function App() {
               isAuthenticated ? (
                 <InviteFriendsPage user={user} />
               ) : (
-                <Navigate to="/auth" />
+                <Navigate to="/auth" replace />
               )
             } 
           />
@@ -151,7 +151,7 @@ function App() {
               isAuthenticated ? (
                 <GamePage user={user} />
               ) : (
-                <Navigate to="/auth" />
+                <Navigate to="/auth" replace />
               )
             } 
           />
@@ -163,7 +163,7 @@ function App() {
               isAuthenticated ? (
                 <LeaderboardPage user={user} />
               ) : (
-                <Navigate to="/auth" />
+                <Navigate to="/auth" replace />
               )
             } 
           />
@@ -175,7 +175,7 @@ function App() {
               isAuthenticated ? (
                 <RewardsPage user={user} />
               ) : (
-                <Navigate to="/auth" />
+                <Navigate to="/auth" replace />
               )
             } 
           />
@@ -206,7 +206,7 @@ function App() {
           />
 
           {/* Catch all - redirect to home */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>
