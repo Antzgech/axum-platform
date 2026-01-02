@@ -368,7 +368,7 @@ export default function DashboardPage({ user, fetchUser }) {
         <div className="modal-overlay" onClick={closeCheckin}>
           <div className="modal-content checkin-modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={closeCheckin}>×</button>
-            <h2>📅 Daily Check-in</h2>
+            <h2>🎁 Daily Check-in</h2>
             <p>Check in daily to earn rewards!</p>
             <button className="claim-btn" onClick={closeCheckin}>Claim Reward</button>
           </div>
