@@ -19,7 +19,7 @@ export default function TasksPage({ user }) {
       const response = await fetch(`${API_URL}/api/tasks`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-
+      
       if (response.ok) {
         const data = await response.json();
         setTasks(data.tasks || []);
@@ -33,13 +33,14 @@ export default function TasksPage({ user }) {
 
   const completeTask = async (taskId) => {
     setCompleting(taskId);
+    
     try {
       const token = localStorage.getItem('axum_token');
       const response = await fetch(`${API_URL}/api/tasks/${taskId}/complete`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-
+      
       if (response.ok) {
         const data = await response.json();
         alert(`✅ Task completed! +${data.reward.coins} coins`);
