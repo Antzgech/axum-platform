@@ -3,7 +3,20 @@ require('dotenv').config();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://axum-frontend-production.up.railway.app';
+const DATABASE_URL = process.env.DATABASE_URL;
 
+// ---------------------------------------------
+// 🚫 DISABLE BOT LOCALLY (DATABASE_URL = none)
+// ---------------------------------------------
+if (DATABASE_URL === "none") {
+  console.log("🟡 Local mode: Telegram bot disabled (Railway only)");
+  module.exports = null;
+  return;
+}
+
+// ---------------------------------------------
+// ✅ PRODUCTION MODE — BOT RUNS ON RAILWAY
+// ---------------------------------------------
 if (!BOT_TOKEN) {
   console.error('❌ TELEGRAM_BOT_TOKEN not found!');
   process.exit(1);
@@ -24,7 +37,7 @@ bot.onText(/\/start(.*)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const firstName = msg.from.first_name || 'Warrior';
   const startParam = match[1].trim();
-  
+
   console.log(`📱 /start from ${firstName} (${chatId})`, startParam ? `with param: ${startParam}` : '');
 
   try {
@@ -70,7 +83,7 @@ bot.onText(/\/start(.*)/, async (msg, match) => {
 // /play command
 bot.onText(/\/play/, async (msg) => {
   const chatId = msg.chat.id;
-  
+
   try {
     const keyboard = {
       inline_keyboard: [
@@ -84,7 +97,7 @@ bot.onText(/\/play/, async (msg) => {
     };
 
     await bot.sendMessage(
-      chatId, 
+      chatId,
       '🎮 *Ready to play?*\n\nClick below to start your adventure!',
       {
         parse_mode: 'Markdown',
@@ -101,7 +114,7 @@ bot.onText(/\/play/, async (msg) => {
 // /help command
 bot.onText(/\/help/, async (msg) => {
   const chatId = msg.chat.id;
-  
+
   try {
     const helpText = `🏛️ *Queen Makeda's Quest - Help*\n\n` +
       `*Commands:*\n` +
@@ -115,12 +128,6 @@ bot.onText(/\/help/, async (msg) => {
       `3️⃣ Complete daily tasks\n` +
       `4️⃣ Invite friends to get bonuses\n` +
       `5️⃣ Level up to unlock features\n\n` +
-      `*Features:*\n` +
-      `🎲 Ethiopian Games (Gebeta)\n` +
-      `📅 Daily Check-in Rewards\n` +
-      `👥 Referral System\n` +
-      `🏆 Global Leaderboard\n` +
-      `⭐ 6 Levels to Master\n\n` +
       `Good luck on your journey! 🗡️`;
 
     await bot.sendMessage(chatId, helpText, {
@@ -137,7 +144,7 @@ bot.onText(/\/help/, async (msg) => {
 bot.onText(/\/invite/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  
+
   try {
     const referralCode = Buffer.from(userId.toString()).toString('base64');
     const referralLink = `https://t.me/SabaQuest_bot?start=ref_${referralCode}`;
@@ -177,7 +184,7 @@ bot.onText(/\/invite/, async (msg) => {
   }
 });
 
-// Handle callback queries (button clicks)
+// Callback queries
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const userId = query.from.id;
@@ -186,118 +193,29 @@ bot.on('callback_query', async (query) => {
   console.log(`🔘 Callback: ${data} from user ${userId}`);
 
   try {
-    // Answer callback immediately
     await bot.answerCallbackQuery(query.id);
 
     if (data === 'tasks') {
-      const keyboard = {
-        inline_keyboard: [
-          [
-            {
-              text: '📋 Open Tasks',
-              web_app: { url: `${FRONTEND_URL}` }
-            }
-          ]
-        ]
-      };
-
-      await bot.sendMessage(
-        chatId,
-        '📋 *Complete Tasks & Earn Rewards!*\n\n' +
-        'Click below to see all available tasks.\n\n' +
-        'Tasks include:\n' +
-        '• Social media follows\n' +
-        '• Daily check-ins\n' +
-        '• Friend invitations\n' +
-        '• Game achievements',
-        {
-          parse_mode: 'Markdown',
-          reply_markup: keyboard
+      await bot.sendMessage(chatId, '📋 Opening tasks...', {
+        reply_markup: {
+          inline_keyboard: [[{ text: '📋 Open Tasks', web_app: { url: FRONTEND_URL } }]]
         }
-      );
-    } 
-    else if (data === 'invite') {
-      const referralCode = Buffer.from(userId.toString()).toString('base64');
-      const referralLink = `https://t.me/SabaQuest_bot?start=ref_${referralCode}`;
-
-      const message = `👥 *Your Referral Link:*\n\n${referralLink}\n\n` +
-        `*Rewards:*\n` +
-        `🎁 1 friend: 50🪙 + 1💎\n` +
-        `🎉 5 friends: 300🪙 + 3💎\n` +
-        `🏆 10 friends: 750🪙 + 10💎`;
-
-      const keyboard = {
-        inline_keyboard: [
-          [
-            {
-              text: '✈️ Share Now',
-              url: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('Join me in Queen Makeda\'s Quest!')}`
-            }
-          ]
-        ]
-      };
-
-      await bot.sendMessage(chatId, message, {
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
       });
     }
-    else if (data === 'leaderboard') {
-      const keyboard = {
-        inline_keyboard: [
-          [
-            {
-              text: '🏆 View Rankings',
-              web_app: { url: `${FRONTEND_URL}` }
-            }
-          ]
-        ]
-      };
 
-      await bot.sendMessage(
-        chatId,
-        '🏆 *Global Leaderboard*\n\n' +
-        'See who are the top warriors of Axum!\n\n' +
-        'Rankings based on:\n' +
-        '⭐ Level\n' +
-        '🪙 Coins\n' +
-        '✅ Tasks completed',
-        {
-          parse_mode: 'Markdown',
-          reply_markup: keyboard
+    if (data === 'leaderboard') {
+      await bot.sendMessage(chatId, '🏆 Opening leaderboard...', {
+        reply_markup: {
+          inline_keyboard: [[{ text: '🏆 View Rankings', web_app: { url: FRONTEND_URL } }]]
         }
-      );
+      });
     }
-    else if (data === 'help') {
-      const helpText = `🏛️ *Queen Makeda's Quest*\n\n` +
-        `*How to Play:*\n` +
-        `1️⃣ Tap Queen Makeda for coins\n` +
-        `2️⃣ Play Gebeta game\n` +
-        `3️⃣ Complete tasks\n` +
-        `4️⃣ Invite friends\n` +
-        `5️⃣ Level up!\n\n` +
-        `Good luck! 🗡️`;
 
-      await bot.sendMessage(chatId, helpText, {
+    if (data === 'help') {
+      await bot.sendMessage(chatId, 'ℹ️ Help menu coming up...', {
         parse_mode: 'Markdown'
       });
     }
 
-    console.log(`✅ Callback handled: ${data}`);
-  } catch (error) {
-    console.error('❌ Callback error:', error.message);
-  }
-});
-
-// Error handlers
-bot.on('polling_error', (error) => {
-  console.log('⚠️ Polling error (ignored):', error.code);
-});
-
-bot.on('error', (error) => {
-  console.log('⚠️ Bot error (ignored):', error.code);
-});
-
-console.log('✅ Bot ready! Commands: /start, /play, /invite, /help');
-
-module.exports = bot;
+    if (data === 'invite') {
+      const referralCode = Buffer.from(userId.toString()).to
