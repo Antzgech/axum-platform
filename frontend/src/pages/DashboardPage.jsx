@@ -31,11 +31,11 @@ export default function DashboardPage({ user, fetchUser }) {
   const [showLevelProgress, setShowLevelProgress] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [showStory, setShowStory] = useState(false);
+
   const [currentLevel, setCurrentLevel] = useState(user?.current_level || 1);
   const [tapCount, setTapCount] = useState(0);
   const [showBonus, setShowBonus] = useState(false);
 
-  // Cooldown + reward system
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [cooldownProgress, setCooldownProgress] = useState(0);
   const [canClaimReward, setCanClaimReward] = useState(true);
@@ -45,7 +45,7 @@ export default function DashboardPage({ user, fetchUser }) {
   const cooldownIntervalRef = useRef(null);
   const makedaRef = useRef(null);
 
-  // Sync with user data from backend
+  // Sync with backend user
   useEffect(() => {
     if (user) {
       if (user.coins !== undefined) setCoins(user.coins);
@@ -75,8 +75,7 @@ export default function DashboardPage({ user, fetchUser }) {
 
   const checkAndResetDaily = () => {
     const lastReset = localStorage.getItem(STORAGE_KEYS.LAST_RESET);
-    const now = new Date();
-    const today = now.toDateString();
+    const today = new Date().toDateString();
 
     if (!lastReset || lastReset !== today) {
       localStorage.setItem(STORAGE_KEYS.LAST_RESET, today);
@@ -147,7 +146,7 @@ export default function DashboardPage({ user, fetchUser }) {
       if (currentRemaining <= 0) {
         clearInterval(cooldownIntervalRef.current);
         setCanClaimReward(true);
-        setCooldownProgress(100); // stay full when ready
+        setCooldownProgress(100);
         setCooldownRemaining(0);
         return;
       }
@@ -164,7 +163,7 @@ export default function DashboardPage({ user, fetchUser }) {
     const baseY = e.clientY - rect.top;
 
     const newCoins = [];
-    const count = Math.min(amount, 20); // cap for performance
+    const count = Math.min(amount, 20);
 
     for (let i = 0; i < count; i++) {
       const id = Date.now() + Math.random();
@@ -254,7 +253,7 @@ export default function DashboardPage({ user, fetchUser }) {
 
     createFlyingCoins(e, reward);
 
-    // Optional simple bonus visual every 10 taps
+    // Optional bonus every 10 taps
     if ((tapCount + 1) % 10 === 0) {
       setShowBonus(true);
       setTimeout(() => setShowBonus(false), 1500);
@@ -315,8 +314,12 @@ export default function DashboardPage({ user, fetchUser }) {
           </div>
 
           <div className="player-info">
-            <div className="player-name">{user?.username || user?.first_name || 'Warrior'}</div>
-            <div className="player-title">{LEVEL_REQUIREMENTS[currentLevel]?.name}</div>
+            <div className="player-name">
+              {user?.username || user?.first_name || 'Warrior'}
+            </div>
+            <div className="player-title">
+              {LEVEL_REQUIREMENTS[currentLevel]?.name}
+            </div>
           </div>
         </div>
 
@@ -335,16 +338,15 @@ export default function DashboardPage({ user, fetchUser }) {
           >
             🎁
           </button>
+
+          {/* Story button that opens the onboarding modal */}
           <button
             className="story-btn"
             onClick={() => setShowStory(true)}
-            title="Story-in"
+            title="Story"
           >
-            🎁
+            ⚜️
           </button>
-
-
-
         </div>
       </header>
 
@@ -478,6 +480,7 @@ export default function DashboardPage({ user, fetchUser }) {
                   <span className="stat-value">{currentLevel}</span>
                 </div>
               </div>
+
               <div className="stat-item">
                 <span className="stat-icon">🪙</span>
                 <div className="stat-text">
@@ -485,6 +488,7 @@ export default function DashboardPage({ user, fetchUser }) {
                   <span className="stat-value">{coins.toLocaleString()}</span>
                 </div>
               </div>
+
               <div className="stat-item">
                 <span className="stat-icon">💎</span>
                 <div className="stat-text">
@@ -492,6 +496,7 @@ export default function DashboardPage({ user, fetchUser }) {
                   <span className="stat-value">{gems.toLocaleString()}</span>
                 </div>
               </div>
+
               <div className="stat-item">
                 <span className="stat-icon">✅</span>
                 <div className="stat-text">
@@ -499,6 +504,7 @@ export default function DashboardPage({ user, fetchUser }) {
                   <span className="stat-value">{user?.completed_tasks?.length || 0}</span>
                 </div>
               </div>
+
               <div className="stat-item">
                 <span className="stat-icon">👥</span>
                 <div className="stat-text">
@@ -506,6 +512,7 @@ export default function DashboardPage({ user, fetchUser }) {
                   <span className="stat-value">{user?.invited_friends || 0}</span>
                 </div>
               </div>
+
               <div className="stat-item">
                 <span className="stat-icon">🎮</span>
                 <div className="stat-text">
@@ -602,14 +609,14 @@ export default function DashboardPage({ user, fetchUser }) {
         />
       )}
 
-      {/* Story Modal */}
+      {/* Story / Onboarding Modal */}
       {showStory && (
         <div className="story-overlay" onClick={() => setShowStory(false)}>
           <div className="story-content" onClick={(e) => e.stopPropagation()}>
             <button className="close-story" onClick={() => setShowStory(false)}>×</button>
-            <OnboardingPage onComplete={() => setShowStory(false)} 
-              isModal={true} 
-              forceShow={true} // ⭐ add this
+            <OnboardingPage
+              onComplete={() => setShowStory(false)}
+              isModal={true}
             />
           </div>
         </div>
