@@ -341,7 +341,7 @@ export default function DashboardPage({ user, fetchUser }) {
             onClick={() => setShowStory(true)}
             title="View Story"
           >
-            <span className="axum-logo-emoji">⚜️</span>
+            ⚜️
           </button>
         </div>
       </header>
