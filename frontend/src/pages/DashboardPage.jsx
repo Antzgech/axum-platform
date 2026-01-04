@@ -336,13 +336,13 @@ export default function DashboardPage({ user, fetchUser }) {
             🎁
           </button>
 
-          <button
-            className="axum-logo-btn"
-            onClick={() => setShowStory(true)}
-            title="View Story"
-          >
-            ⚜️
-          </button>
+<button
+  className="axum-logo-btn"
+  onClick={() => setShowStory(true)}
+>
+  <span className="axum-logo-emoji">⚜️</span>
+</button>
+
         </div>
       </header>
 
