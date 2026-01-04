@@ -5,7 +5,7 @@ import './OnboardingPage.css';
 
 
 
-function OnboardingPage({ onComplete }) {
+function OnboardingPage({ onComplete, isModal = false  }) {
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
 
@@ -60,10 +60,15 @@ function OnboardingPage({ onComplete }) {
     }
   };
 
-  const handleComplete = () => {
-    onComplete();
+ const handleComplete = () => {
+  onComplete();
+
+  // If this is the first-time onboarding (not modal), go to dashboard
+  if (!isModal) {
     navigate('/dashboard');
-  };
+  }
+};
+
 
   const currentStory = storySteps[currentStep];
 
