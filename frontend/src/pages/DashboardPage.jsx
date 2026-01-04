@@ -71,17 +71,60 @@ export default function DashboardPage({ user, fetchUser }) {
     }
   }, [user]);
 
-  const handleTap = async (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+const handleTap = async () => {
+  if (!canClaimReward) return; // cooldown active
 
-    // Create flying coin animation
-    const newCoin = {
-      id: Date.now() + Math.random(),
-      x,
-      y
-    };
+  const reward = nextReward;          // old system reward
+  const cooldown = nextCooldown;      // old system cooldown (minutes)
+
+  // Save last tap time
+  localStorage.setItem(STORAGE_KEYS.LAST_TAP, Date.now().toString());
+
+  // Update local UI
+  setCoins(prev => prev + reward);
+  setTapCount(prev => prev + 1);
+
+  // Flying coins animation
+  createFlyingCoins(reward);
+
+  // Start cooldown
+  setCanClaimReward(false);
+  setCooldownRemaining(cooldown * 60);
+  startCooldownTimer(cooldown);
+
+  // Update next reward + next cooldown
+  const newReward = reward * 2;
+  const newCooldown = cooldown + 1;
+
+  setNextReward(newReward);
+  setNextCooldown(newCooldown);
+
+  localStorage.setItem(STORAGE_KEYS.NEXT_REWARD, newReward.toString());
+  localStorage.setItem(STORAGE_KEYS.NEXT_COOLDOWN, newCooldown.toString());
+  localStorage.setItem(STORAGE_KEYS.TAP_COUNT, (tapCount + 1).toString());
+
+  // Send to backend
+  try {
+    const token = localStorage.getItem('axum_token');
+    const response = await fetch(`${API_URL}/api/user/add-coin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ amount: reward })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setCoins(data.coins);
+      setGems(data.gems);
+    }
+  } catch (err) {
+    console.error("Tap error:", err);
+  }
+};
+
     setFlyingCoins(prev => [...prev, newCoin]);
 
     setTimeout(() => {
