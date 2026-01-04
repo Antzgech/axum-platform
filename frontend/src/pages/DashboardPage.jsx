@@ -335,6 +335,13 @@ export default function DashboardPage({ user, fetchUser }) {
           >
             🎁
           </button>
+          <button
+            className="checkin-mini-btn"
+            onClick={() => setShowCheckin(true)}
+            title="Daily Check-in"
+          >
+            🎁
+          </button>
 
 <button
   className="story-btn"
