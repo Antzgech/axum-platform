@@ -605,7 +605,10 @@ export default function DashboardPage({ user, fetchUser }) {
         <div className="story-overlay" onClick={() => setShowStory(false)}>
           <div className="story-content" onClick={(e) => e.stopPropagation()}>
             <button className="close-story" onClick={() => setShowStory(false)}>×</button>
-            <OnboardingPage onComplete={() => setShowStory(false)} isModal={true} />
+            <OnboardingPage onComplete={() => setShowStory(false)} 
+              isModal={true} 
+              forceShow={true} // ⭐ add this
+            />
           </div>
         </div>
       )}
