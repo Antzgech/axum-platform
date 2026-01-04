@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './OnboardingPage.css';
+<div className="story-content" onClick={(e) => e.stopPropagation()}>
+  <button className="close-story" onClick={() => setShowStory(false)}>×</button>
+
+  <h1 style={{color: 'white'}}>TEST CONTENT</h1>
+
+  <OnboardingPage
+    onComplete={() => setShowStory(false)}
+    isModal={true}
+  />
+</div>
 
 function OnboardingPage({ onComplete, isModal = false }) {
   const [currentStep, setCurrentStep] = useState(0);
