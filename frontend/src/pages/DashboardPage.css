@@ -581,3 +581,27 @@
   background: rgba(255,255,255,.1);
   border-radius: 10px;
   overflow: hidden
+}
+/* FORCE ⚜️ ICON TO BE TAP-READY */
+.axum-logo-btn {
+  position: relative !important;
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.axum-logo-emoji {
+  pointer-events: none !important;
+}
+
+.top-right {
+  position: relative !important;
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+}
+
+.top-block {
+  position: relative !important;
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+}
