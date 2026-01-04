@@ -333,20 +333,25 @@ export default function DashboardPage({ user, fetchUser }) {
 
           <button
             className="checkin-mini-btn"
-            onClick={() => setShowCheckin(true)}
+            onClick={() => setShowCheckin(true);setShowStory(true)}
             title="Daily Check-in"
           >
             🎁
           </button>
 
           {/* Story button that opens the onboarding modal */}
-          <button
-            className="story-btn"
-            onClick={() => setShowStory(true)}
-            title="Story"
-          >
-            ⚜️
-          </button>
+<button
+  className="story-btn"
+  onClick={() => {
+    console.log('STORY BUTTON CLICKED');
+    alert('story button clicked');
+    setShowStory(true);
+  }}
+  title="Story"
+>
+  ⚜️
+</button>
+
         </div>
       </header>
 
