@@ -332,12 +332,16 @@ export default function DashboardPage({ user, fetchUser }) {
           </button>
 
           <button
-            className="checkin-mini-btn"
-            onClick={() => setShowCheckin(true);setShowStory(true)}
-            title="Daily Check-in"
-          >
-            🎁
-          </button>
+  className="checkin-mini-btn"
+  onClick={() => {
+    setShowCheckin(true);
+    setShowStory(true);
+  }}
+  title="Daily Check-in"
+>
+  🎁
+</button>
+
 
           {/* Story button that opens the onboarding modal */}
 <button
