@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './OnboardingPage.css';
 
-
-
-
-function OnboardingPage({ onComplete, isModal = false  }) {
+function OnboardingPage({ onComplete, isModal = false }) {
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
 
@@ -60,15 +57,14 @@ function OnboardingPage({ onComplete, isModal = false  }) {
     }
   };
 
- const handleComplete = () => {
-  onComplete();
+  const handleComplete = () => {
+    onComplete();
 
-  // If this is the first-time onboarding (not modal), go to dashboard
-  if (!isModal) {
-    navigate('/dashboard');
-  }
-};
-
+    // Only redirect if this is NOT a modal
+    if (!isModal) {
+      navigate('/dashboard');
+    }
+  };
 
   const currentStory = storySteps[currentStep];
 
