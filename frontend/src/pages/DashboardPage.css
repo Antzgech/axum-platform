@@ -582,39 +582,33 @@
   border-radius: 10px;
   overflow: hidden
 }
-/* FORCE ⚜️ ICON TO BE TAP-READY */
-.axum-logo-btn {
-  position: relative !important;
-  z-index: 99999 !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
+/* STORY BUTTON — guaranteed clickable */
+.story-btn {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.15);
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  z-index: 99999;
+  pointer-events: auto;
+  transition: 0.3s ease;
 }
 
-.axum-logo-emoji {
-  pointer-events: none !important;
+.story-btn:hover {
+  background: rgba(212, 175, 55, 0.25);
+  border-color: var(--gold);
+  transform: scale(1.1) rotate(10deg);
 }
 
-.top-right {
-  position: relative !important;
-  z-index: 99999 !important;
-  pointer-events: auto !important;
+.story-icon {
+  font-size: 1.8rem;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(212, 175, 55, 0.6));
 }
 
-.top-block {
-  position: relative !important;
-  z-index: 99999 !important;
-  pointer-events: auto !important;
-}
-/* FIX: Make header buttons clickable */
-.top-block,
-.top-right,
-.axum-logo-btn {
-  position: relative !important;
-  z-index: 99999 !important;
-  pointer-events: auto !important;
-}
-
-.axum-logo-emoji {
-  pointer-events: none !important;
-}
 
