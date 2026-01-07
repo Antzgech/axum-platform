@@ -1,22 +1,25 @@
-FROM node:18-alpine
+# ---------- Build Stage ----------
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
 # Install dependencies
-RUN npm ci --only=production
+COPY package*.json ./
+RUN npm install
 
-# Copy source code
+# Copy source
 COPY . .
 
+# Build the React app
+RUN npm run build
+
+# ---------- Production Stage ----------
+FROM nginx:alpine
+
+# Copy build output to Nginx
+COPY --from=build /app/build /usr/share/nginx/html
+
 # Expose port
-EXPOSE 5000
+EXPOSE 80
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Start application
-CMD ["node", "server.js"]
+CMD ["nginx", "-g", "daemon off;"]
