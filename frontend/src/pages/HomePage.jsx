@@ -1,4 +1,4 @@
-// src/pages/HomePage.jsx – CLEAN & FIXED FOR TELEGRAM AUTH
+// src/pages/HomePage.jsx – CLEAN & PRODUCTION READY
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./HomePage.css";
@@ -10,40 +10,30 @@ export default function HomePage({ setUser }) {
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
-
-    if (!tg) {
-      console.log("Telegram WebApp not detected");
-      return;
-    }
+    if (!tg) return;
 
     tg.ready();
     tg.expand();
 
     const user = tg.initDataUnsafe?.user;
-
     if (user) {
-      console.log("Telegram user detected:", user);
       handleTelegramLogin(tg);
-    } else {
-      console.log("No Telegram user data available");
     }
   }, []);
 
   const handleTelegramLogin = async (tg) => {
     try {
-      const user = tg.initDataUnsafe?.user;
+      const u = tg.initDataUnsafe.user;
 
       const payload = {
-        id: user.id,
-        first_name: user.first_name || "User",
-        last_name: user.last_name || "",
-        username: user.username || user.first_name || "User",
-        photo_url: user.photo_url || "",
+        id: u.id,
+        first_name: u.first_name || "User",
+        last_name: u.last_name || "",
+        username: u.username || u.first_name || "User",
+        photo_url: u.photo_url || "",
         auth_date: tg.initDataUnsafe.auth_date,
         hash: tg.initDataUnsafe.hash,
       };
-
-      console.log("Sending Telegram login payload:", payload);
 
       const response = await fetch(`${API_URL}/api/auth/telegram`, {
         method: "POST",
@@ -52,26 +42,17 @@ export default function HomePage({ setUser }) {
       });
 
       if (!response.ok) {
-        console.error("Login failed:", response.status);
         alert("Login failed. Please try again.");
         return;
       }
 
       const data = await response.json();
-      console.log("✅ Login successful:", data);
-
       localStorage.setItem("axum_token", data.token);
       setUser(data.user);
 
       const onboardingComplete = localStorage.getItem("axum_onboarding_complete");
-
-      if (!onboardingComplete) {
-        navigate("/onboarding");
-      } else {
-        navigate("/dashboard");
-      }
+      navigate(onboardingComplete ? "/dashboard" : "/onboarding");
     } catch (err) {
-      console.error("Login error:", err);
       alert("Connection error. Please try again.");
     }
   };
