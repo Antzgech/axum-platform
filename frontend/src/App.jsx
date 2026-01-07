@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 
 // Pages
-import DashboardPage from './pages/DashboardPage';
+import DashboardPage from './pages/DashboardPage.jsx';
 import TasksPage from './pages/TasksPage';
 import InviteFriendsPage from './pages/InviteFriendsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
@@ -11,74 +11,25 @@ import GamePage from './pages/GamePage';
 import RewardsPage from './pages/RewardsPage';
 import LoadingPage from './pages/LoadingPage';
 
-const API_URL = 'https://axum-backend-production.up.railway.app';
+const API_URL = process.env.REACT_APP_API_URL;
+console.log("API URL:", API_URL);
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
 
+  // Full-screen fix for all devices
   useEffect(() => {
-    initializeTelegramAuth();
+    const handleResize = () => {
+      document.body.style.height = `${window.innerHeight}px`;
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const initializeTelegramAuth = async () => {
-    try {
-      // Check if we're in Telegram WebApp
-      if (window.Telegram?.WebApp) {
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-
-        // Get user data from Telegram
-        const initData = tg.initDataUnsafe;
-        
-        if (initData?.user) {
-          const telegramUser = initData.user;
-          
-          // Authenticate with backend
-          const response = await fetch(`${API_URL}/api/auth/telegram`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              id: telegramUser.id,
-              first_name: telegramUser.first_name,
-              last_name: telegramUser.last_name || '',
-              username: telegramUser.username || telegramUser.first_name,
-              photo_url: telegramUser.photo_url || '',
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            
-            // Save token
-            localStorage.setItem('axum_token', data.token);
-            
-            // Set user data
-            setUser(data.user);
-            setIsAuthenticated(true);
-          } else {
-            console.error('Authentication failed');
-          }
-        }
-      } else {
-        // Development mode - check for existing token
-        const token = localStorage.getItem('axum_token');
-        if (token) {
-          await fetchUser(token);
-        }
-      }
-    } catch (error) {
-      console.error('Initialization error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchUser = async (token) => {
+  const fetchUser = useCallback(async (token) => {
     try {
       const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
@@ -98,7 +49,88 @@ function App() {
       console.error('Fetch user error:', error);
       setIsAuthenticated(false);
     }
-  };
+  }, []);
+
+  const initializeTelegramAuth = useCallback(async () => {
+    try {
+      const isLocal = window.location.hostname === "localhost";
+
+      // Local demo mode
+      if (isLocal) {
+        const demoUser = {
+          id: 999999,
+          first_name: "Demo",
+          last_name: "User",
+          username: "demo_user",
+          photo_url: "",
+          auth_date: Date.now(),
+          hash: "demo",
+        };
+
+        const response = await fetch(`${API_URL}/api/auth/telegram`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(demoUser),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          localStorage.setItem('axum_token', data.token);
+          setUser(data.user);
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Real Telegram mode
+      if (window.Telegram?.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const initData = tg.initDataUnsafe;
+
+        if (initData?.user) {
+          const telegramUser = initData.user;
+
+          const response = await fetch(`${API_URL}/api/auth/telegram`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: telegramUser.id,
+              first_name: telegramUser.first_name,
+              last_name: telegramUser.last_name || '',
+              username: telegramUser.username || telegramUser.first_name,
+              photo_url: telegramUser.photo_url || '',
+              auth_date: initData.auth_date,
+              hash: initData.hash,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem('axum_token', data.token);
+            setUser(data.user);
+            setIsAuthenticated(true);
+          }
+        }
+      } else {
+        const token = localStorage.getItem('axum_token');
+        if (token) {
+          await fetchUser(token);
+        }
+      }
+    } catch (error) {
+      console.error('Initialization error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchUser]);
+
+  useEffect(() => {
+    initializeTelegramAuth();
+  }, [initializeTelegramAuth]);
 
   if (isLoading) {
     return <LoadingPage />;
@@ -108,7 +140,7 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          {/* Dashboard - Main page */}
+
           <Route 
             path="/" 
             element={
@@ -120,67 +152,12 @@ function App() {
             } 
           />
 
-          {/* Tasks Page */}
-          <Route 
-            path="/tasks" 
-            element={
-              isAuthenticated ? (
-                <TasksPage user={user} />
-              ) : (
-                <Navigate to="/auth" replace />
-              )
-            } 
-          />
+          <Route path="/tasks" element={isAuthenticated ? <TasksPage user={user} /> : <Navigate to="/auth" replace />} />
+          <Route path="/invite" element={isAuthenticated ? <InviteFriendsPage user={user} /> : <Navigate to="/auth" replace />} />
+          <Route path="/game" element={isAuthenticated ? <GamePage user={user} /> : <Navigate to="/auth" replace />} />
+          <Route path="/leaderboard" element={isAuthenticated ? <LeaderboardPage user={user} /> : <Navigate to="/auth" replace />} />
+          <Route path="/rewards" element={isAuthenticated ? <RewardsPage user={user} /> : <Navigate to="/auth" replace />} />
 
-          {/* Invite Friends Page */}
-          <Route 
-            path="/invite" 
-            element={
-              isAuthenticated ? (
-                <InviteFriendsPage user={user} />
-              ) : (
-                <Navigate to="/auth" replace />
-              )
-            } 
-          />
-
-          {/* Game Page */}
-          <Route 
-            path="/game" 
-            element={
-              isAuthenticated ? (
-                <GamePage user={user} />
-              ) : (
-                <Navigate to="/auth" replace />
-              )
-            } 
-          />
-
-          {/* Leaderboard Page */}
-          <Route 
-            path="/leaderboard" 
-            element={
-              isAuthenticated ? (
-                <LeaderboardPage user={user} />
-              ) : (
-                <Navigate to="/auth" replace />
-              )
-            } 
-          />
-
-          {/* Rewards/Store Page */}
-          <Route 
-            path="/rewards" 
-            element={
-              isAuthenticated ? (
-                <RewardsPage user={user} />
-              ) : (
-                <Navigate to="/auth" replace />
-              )
-            } 
-          />
-
-          {/* Auth fallback */}
           <Route 
             path="/auth" 
             element={
@@ -205,8 +182,8 @@ function App() {
             } 
           />
 
-          {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
+
         </Routes>
       </div>
     </Router>

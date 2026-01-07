@@ -147,6 +147,18 @@ p {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+html, body, #root, .App {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.full-screen {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
 
 /* Button Styles */
 .btn {

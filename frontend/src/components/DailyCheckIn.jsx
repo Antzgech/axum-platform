@@ -1,44 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import './DailyCheckIn.css';
 
-const API_URL = 'https://axum-backend-production.up.railway.app';
+const API_URL = process.env.REACT_APP_API_URL;
 
 const DAILY_REWARDS = {
-  1: { coins: 10, gems: 0, bonus: "Welcome back!" },
-  2: { coins: 20, gems: 0, bonus: "Day 2!" },
-  3: { coins: 30, gems: 1, bonus: "3 day streak!" },
-  4: { coins: 40, gems: 1, bonus: "Keep it up!" },
-  5: { coins: 50, gems: 2, bonus: "5 days strong!" },
-  6: { coins: 60, gems: 2, bonus: "Almost there!" },
-  7: { coins: 100, gems: 5, bonus: "🎉 Week Complete!" }
+  1: { coins: 10, gems: 0 },
+  2: { coins: 20, gems: 0 },
+  3: { coins: 30, gems: 1 },
+  4: { coins: 40, gems: 1 },
+  5: { coins: 50, gems: 2 },
+  6: { coins: 60, gems: 2 },
+  7: { coins: 100, gems: 5 }
 };
 
-export default function DailyCheckIn({ user, onClose, onClaimSuccess }) {
-  const [checkinStatus, setCheckinStatus] = useState(null);
+export default function DailyCheckIn({ onClose, onClaim }) {
+  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("daily");
   const [claiming, setClaiming] = useState(false);
-  const [showReward, setShowReward] = useState(false);
-  const [claimedReward, setClaimedReward] = useState(null);
 
   useEffect(() => {
-    fetchCheckinStatus();
+    fetchStatus();
   }, []);
 
-  const fetchCheckinStatus = async () => {
+  const fetchStatus = async () => {
     try {
-      const token = localStorage.getItem('axum_token');
-      const response = await fetch(`${API_URL}/api/checkin/status`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const token = localStorage.getItem("axum_token");
+      const res = await fetch(`${API_URL}/api/checkin/status`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setCheckinStatus(data);
+      if (res.ok) {
+        const data = await res.json();
+        setStatus(data);
       }
-    } catch (error) {
-      console.error('Failed to fetch check-in status:', error);
+    } catch (err) {
+      console.error("Check-in status error:", err);
     } finally {
       setLoading(false);
     }
@@ -46,157 +43,105 @@ export default function DailyCheckIn({ user, onClose, onClaimSuccess }) {
 
   const claimReward = async () => {
     setClaiming(true);
-
     try {
-      const token = localStorage.getItem('axum_token');
-      const response = await fetch(`${API_URL}/api/checkin/claim`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const token = localStorage.getItem("axum_token");
+      const res = await fetch(`${API_URL}/api/checkin/claim`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setClaimedReward(data.rewards);
-        setShowReward(true);
-        
-        setTimeout(() => {
-          onClaimSuccess?.();
-          onClose();
-        }, 3000);
+      if (res.ok) {
+        const data = await res.json();
+        onClaim?.(); // refresh user
+        onClose();   // close modal
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to claim reward');
+        const error = await res.json();
+        alert(error.error || "Failed to claim reward");
       }
-    } catch (error) {
-      console.error('Failed to claim reward:', error);
-      alert('Failed to claim reward. Please try again.');
+    } catch (err) {
+      console.error("Claim error:", err);
     } finally {
       setClaiming(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content checkin-modal" onClick={(e) => e.stopPropagation()}>
-          <button className="modal-close" onClick={onClose}>×</button>
-          <div className="loading">Loading...</div>
-        </div>
-      </div>
-    );
-  }
+  if (loading || !status) return null;
 
-  if (showReward && claimedReward) {
-    return (
-      <div className="modal-overlay">
-        <div className="modal-content checkin-modal reward-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="reward-celebration">
-            <h2>🎉 Reward Claimed!</h2>
-            <div className="reward-items">
-              <div className="reward-item">
-                <span className="reward-icon">🪙</span>
-                <span className="reward-amount">+{claimedReward.coins}</span>
-              </div>
-              {claimedReward.gems > 0 && (
-                <div className="reward-item">
-                  <span className="reward-icon">💎</span>
-                  <span className="reward-amount">+{claimedReward.gems}</span>
-                </div>
-              )}
-            </div>
-            <p className="reward-message">{claimedReward.bonus}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const streak = status.streak || 0;
+  const todayIndex = ((streak % 7) || 0) + 1;
 
-  const currentStreak = checkinStatus?.streak || 0;
-  const nextDay = ((currentStreak % 7) || 0) + 1;
-  const nextReward = DAILY_REWARDS[nextDay];
+  const dailyBoxes = [
+    { label: "Yesterday", day: todayIndex - 1 },
+    { label: "Today", day: todayIndex },
+    { label: "Tomorrow", day: todayIndex + 1 }
+  ];
+
+  const normalizeDay = (d) => {
+    if (d < 1) return 7;
+    if (d > 7) return 1;
+    return d;
+  };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content checkin-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>×</button>
-        
-        <div className="checkin-header">
-          <h2>🎁 Daily Check-In</h2>
-          <p className="checkin-subtitle">Claim your daily reward!</p>
+    <div className="checkin-overlay" onClick={onClose}>
+      <div className="checkin-box" onClick={(e) => e.stopPropagation()}>
+        <button className="checkin-close" onClick={onClose}>×</button>
+        <h2 className="checkin-title">🎁 Daily Check‑In</h2>
+
+        <div className="checkin-toggle">
+          <button className={view === "daily" ? "active" : ""} onClick={() => setView("daily")}>Daily</button>
+          <button className={view === "weekly" ? "active" : ""} onClick={() => setView("weekly")}>Weekly</button>
         </div>
 
-        <div className="streak-display">
-          <div className="streak-icon">🔥</div>
-          <div className="streak-info">
-            <span className="streak-label">Current Streak</span>
-            <span className="streak-value">{currentStreak} days</span>
-          </div>
-        </div>
+        {view === "daily" && (
+          <div className="daily-view">
+            {dailyBoxes.map((box, i) => {
+              const day = normalizeDay(box.day);
+              const reward = DAILY_REWARDS[day];
+              const isToday = box.label === "Today";
+              const isTomorrow = box.label === "Tomorrow";
+              const claimed = day < todayIndex;
+              const canClaim = isToday && status.canClaim;
 
-        <div className="weekly-calendar">
-          {[1, 2, 3, 4, 5, 6, 7].map((day) => {
-            const reward = DAILY_REWARDS[day];
-            const isClaimed = currentStreak >= day && (currentStreak % 7 >= day || currentStreak % 7 === 0);
-            const isCurrent = day === nextDay && checkinStatus?.canClaim;
-            
-            return (
-              <div 
-                key={day} 
-                className={`calendar-day ${isClaimed ? 'claimed' : ''} ${isCurrent ? 'current' : ''}`}
-              >
-                <div className="day-number">Day {day}</div>
-                <div className="day-reward">
-                  {isClaimed && <span className="check-mark">✓</span>}
-                  {!isClaimed && (
-                    <>
-                      <span>🪙 {reward.coins}</span>
-                      {reward.gems > 0 && <span>💎 {reward.gems}</span>}
-                    </>
-                  )}
+              return (
+                <div key={i} className={`daily-box ${claimed ? "claimed" : ""} ${isToday ? "today" : ""} ${isTomorrow ? "disabled" : ""}`}>
+                  <div className="daily-label">{box.label}</div>
+                  <div className="daily-reward">
+                    🪙 {reward.coins}
+                    {reward.gems > 0 && <> | 💎 {reward.gems}</>}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
 
-        {checkinStatus?.canClaim ? (
-          <div className="claim-section">
-            <div className="next-reward">
-              <h3>Today's Reward</h3>
-              <div className="reward-display">
-                <span className="reward-value">🪙 {nextReward.coins}</span>
-                {nextReward.gems > 0 && (
-                  <span className="reward-value">💎 {nextReward.gems}</span>
-                )}
-              </div>
-            </div>
-            <button 
-              className="claim-btn" 
-              onClick={claimReward}
-              disabled={claiming}
-            >
-              {claiming ? 'Claiming...' : 'Claim Reward'}
-            </button>
-          </div>
-        ) : (
-          <div className="already-claimed">
-            <p>✅ Already checked in today!</p>
-            <p className="come-back">Come back tomorrow for:</p>
-            <div className="tomorrow-reward">
-              <span>🪙 {nextReward.coins}</span>
-              {nextReward.gems > 0 && <span>💎 {nextReward.gems}</span>}
-            </div>
+            {status.canClaim && (
+              <button className="claim-btn" onClick={claimReward} disabled={claiming}>
+                {claiming ? "Claiming..." : "Claim Reward"}
+              </button>
+            )}
           </div>
         )}
 
-        <div className="checkin-stats">
-          <div className="stat">
-            <span className="stat-icon">📅</span>
-            <span>Total Check-ins: {checkinStatus?.totalCheckins || 0}</span>
+        {view === "weekly" && (
+          <div className="weekly-view">
+            {[1,2,3,4,5,6,7].map(day => {
+              const reward = DAILY_REWARDS[day];
+              const claimed = day < todayIndex;
+              const isToday = day === todayIndex;
+              const upcoming = day > todayIndex;
+
+              return (
+                <div key={day} className={`week-box ${claimed ? "claimed" : ""} ${isToday ? "today" : ""} ${upcoming ? "disabled" : ""}`}>
+                  <div className="week-day">Day {day}</div>
+                  <div className="week-reward">
+                    🪙 {reward.coins}
+                    {reward.gems > 0 && <> | 💎 {reward.gems}</>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

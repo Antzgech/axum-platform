@@ -1,417 +1,149 @@
-/* DailyCheckIn.css */
-
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Playfair+Display:wght@600;700&display=swap');
-
-.checkin-modal {
-  max-width: 500px !important;
-}
-
-.checkin-header {
-  text-align: center;
-  margin-bottom: 25px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid rgba(212, 175, 55, 0.3);
-}
-
-.checkin-header h2 {
-  margin: 0 0 8px 0;
-  font-size: 2.2rem;
-  color: #FFD700;
-  font-family: 'Cinzel Decorative', serif;
-  text-shadow: 0 2px 15px rgba(255, 215, 0, 0.6);
-}
-
-.checkin-subtitle {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1rem;
-  font-family: 'Playfair Display', serif;
-}
-
-/* Streak Display */
-.streak-display {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 20px;
-  background: linear-gradient(135deg, rgba(255, 69, 0, 0.2), rgba(255, 140, 0, 0.15));
-  border-radius: 20px;
-  border: 2px solid rgba(255, 69, 0, 0.4);
-  margin-bottom: 25px;
-  box-shadow: 0 5px 20px rgba(255, 69, 0, 0.3);
-}
-
-.streak-icon {
-  font-size: 3rem;
-  filter: drop-shadow(0 4px 12px rgba(255, 69, 0, 0.8));
-  animation: flicker 2s ease-in-out infinite;
-}
-
-@keyframes flicker {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.1); }
-}
-
-.streak-info {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.streak-label {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 600;
-}
-
-.streak-value {
-  font-size: 2rem;
-  font-weight: 900;
-  color: #FFD700;
-  font-family: 'Cinzel Decorative', serif;
-  text-shadow: 0 2px 10px rgba(255, 215, 0, 0.6);
-}
-
-/* Weekly Calendar */
-.weekly-calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  margin-bottom: 25px;
-}
-
-.calendar-day {
-  aspect-ratio: 1;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(212, 175, 55, 0.2);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.calendar-day::before {
-  content: '';
-  position: absolute;
+.checkin-overlay {
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, transparent, rgba(212, 175, 55, 0.1), transparent);
-  transform: translateX(-100%);
-  transition: transform 0.5s ease;
-}
-
-.calendar-day:hover::before {
-  transform: translateX(100%);
-}
-
-.calendar-day.claimed {
-  background: linear-gradient(135deg, rgba(30, 95, 62, 0.3), rgba(42, 122, 82, 0.2));
-  border-color: rgba(30, 95, 62, 0.5);
-}
-
-.calendar-day.current {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(255, 215, 0, 0.2));
-  border-color: #FFD700;
-  border-width: 3px;
-  animation: pulseGlow 1.5s ease-in-out infinite;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-}
-
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
-  50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.8); }
-}
-
-.day-number {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: 700;
-  margin-bottom: 4px;
-  font-family: 'Playfair Display', serif;
-}
-
-.day-reward {
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(6px);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #D4AF37;
+  justify-content: center;
+  z-index: 999999;
 }
 
-.check-mark {
-  font-size: 1.5rem;
-  color: #90EE90;
-  filter: drop-shadow(0 2px 8px rgba(144, 238, 144, 0.6));
-}
-
-/* Claim Section */
-.claim-section {
-  margin-top: 25px;
-}
-
-.next-reward {
-  text-align: center;
+.checkin-box {
+  background: linear-gradient(135deg, #524741, #62442fe4);
+  border: 2px solid #FFD700;
+  border-radius: 18px;
   padding: 20px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(30, 95, 62, 0.1));
-  border-radius: 20px;
-  border: 2px solid rgba(212, 175, 55, 0.4);
-  margin-bottom: 20px;
+  width: 90%;
+  max-width: 300px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 0 40px rgba(255,215,0,0.4);
+  position: relative;
+  animation: pop 0.25s ease-out;
 }
 
-.next-reward h3 {
-  margin: 0 0 15px 0;
-  font-size: 1.3rem;
-  color: #FFD700;
-  font-family: 'Cinzel Decorative', serif;
+@keyframes pop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-.reward-display {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.reward-value {
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: #FFD700;
-  padding: 10px 20px;
-  background: rgba(212, 175, 55, 0.1);
-  border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  font-family: 'Cinzel Decorative', serif;
-}
-
-.claim-btn {
-  width: 100%;
-  padding: 18px;
-  background: linear-gradient(135deg, #FFD700, #FFA500);
+.checkin-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
   border: none;
-  border-radius: 15px;
-  font-size: 1.2rem;
-  font-weight: 900;
-  color: #1A0F0A;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
-  font-family: 'Cinzel Decorative', serif;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.claim-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.7);
-}
-
-.claim-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Already Claimed */
-.already-claimed {
-  text-align: center;
-  padding: 30px 20px;
-  background: linear-gradient(135deg, rgba(30, 95, 62, 0.2), rgba(42, 122, 82, 0.15));
-  border-radius: 20px;
-  border: 2px solid rgba(30, 95, 62, 0.4);
-  margin-top: 20px;
-}
-
-.already-claimed p {
-  margin: 10px 0;
-  font-size: 1.1rem;
-  color: #90EE90;
-  font-weight: 700;
-}
-
-.come-back {
-  color: rgba(255, 255, 255, 0.7) !important;
-  font-size: 1rem !important;
-  margin-top: 15px !important;
-}
-
-.tomorrow-reward {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-top: 15px;
-  font-size: 1.3rem;
-  font-weight: 900;
+  font-size: 1.6rem;
   color: #FFD700;
+  cursor: pointer;
 }
 
-/* Check-in Stats */
-.checkin-stats {
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 2px solid rgba(212, 175, 55, 0.3);
+.checkin-title {
+  text-align: center;
+  color: #FFD700;
+  font-size: 1.6rem;
+  margin-bottom: 15px;
 }
 
-.stat {
+.checkin-toggle {
   display: flex;
-  align-items: center;
   justify-content: center;
   gap: 10px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.95rem;
+  margin-bottom: 15px;
+}
+
+.checkin-toggle button {
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid #FFD700;
+  background: transparent;
+  color: #FFD700;
+  cursor: pointer;
   font-weight: 600;
 }
 
-.stat-icon {
-  font-size: 1.5rem;
+.checkin-toggle .active {
+  background: #FFD700;
+  color: #1a0f0a;
 }
 
-/* Reward Celebration Modal */
-.reward-modal {
-  background: linear-gradient(135deg, rgba(30, 95, 62, 0.95), rgba(26, 15, 10, 0.95)) !important;
-  border: 3px solid #90EE90 !important;
-  box-shadow: 0 0 50px rgba(144, 238, 144, 0.6) !important;
-}
-
-.reward-celebration {
-  text-align: center;
-  padding: 20px;
-}
-
-.reward-celebration h2 {
-  margin: 0 0 30px 0;
-  font-size: 2.5rem;
-  color: #90EE90;
-  font-family: 'Cinzel Decorative', serif;
-  animation: celebrationBounce 1s ease-in-out infinite;
-}
-
-@keyframes celebrationBounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-.reward-items {
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  margin-bottom: 25px;
-}
-
-.reward-item {
+.daily-view {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 10px;
-  padding: 20px 30px;
-  background: rgba(212, 175, 55, 0.2);
-  border-radius: 20px;
-  border: 2px solid #FFD700;
-  box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
 }
 
-.reward-icon {
-  font-size: 3rem;
-  filter: drop-shadow(0 5px 15px rgba(255, 215, 0, 0.8));
-  animation: rewardFloat 2s ease-in-out infinite;
-}
-
-@keyframes rewardFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-.reward-amount {
-  font-size: 2rem;
-  font-weight: 900;
-  color: #FFD700;
-  font-family: 'Cinzel Decorative', serif;
-  text-shadow: 0 2px 15px rgba(255, 215, 0, 0.8);
-}
-
-.reward-message {
-  font-size: 1.3rem;
-  color: #FFD700;
-  font-weight: 700;
-  font-style: italic;
-  margin-top: 15px;
-}
-
-/* Loading State */
-.loading {
+.daily-box {
+  background: #2a1c10;
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 10px;
+  padding: 10px;
   text-align: center;
-  padding: 50px;
-  font-size: 1.2rem;
-  color: #D4AF37;
-  font-family: 'Playfair Display', serif;
+  color: #FFD700;
+  font-size: 0.9rem;
 }
 
-/* Mobile Responsive */
-@media (max-width: 480px) {
-  .checkin-header h2 {
-    font-size: 1.8rem;
-  }
+.daily-box.today {
+  border: 2px solid #FFD700;
+  background: rgba(255,215,0,0.15);
+}
 
-  .streak-display {
-    padding: 15px;
-  }
+.daily-box.claimed {
+  opacity: 0.6;
+}
 
-  .streak-icon {
-    font-size: 2.5rem;
-  }
+.daily-box.disabled {
+  opacity: 0.3;
+}
 
-  .streak-value {
-    font-size: 1.6rem;
-  }
+.weekly-view {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
 
-  .weekly-calendar {
-    gap: 5px;
-  }
+.week-box {
+  background: #7a6451;
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  color: #FFD700;
+  font-size: 0.8rem;
+}
 
-  .calendar-day {
-    padding: 5px;
-  }
+.week-box.today {
+  border: 2px solid #FFD700;
+  background: rgba(255,215,0,0.15);
+}
 
-  .day-number {
-    font-size: 0.65rem;
-  }
+.week-box.claimed {
+  opacity: 0.6;
+}
 
-  .day-reward {
-    font-size: 0.6rem;
-  }
+.week-box.disabled {
+  opacity: 0.3;
+}
 
-  .reward-value {
-    font-size: 1.2rem;
-    padding: 8px 15px;
-  }
+/* CLAIM BUTTON */
+.claim-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a0f0a;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
 
-  .claim-btn {
-    padding: 15px;
-    font-size: 1rem;
-  }
-
-  .reward-celebration h2 {
-    font-size: 2rem;
-  }
-
-  .reward-items {
-    flex-direction: column;
-    gap: 15px;
-  }
-
-  .reward-icon {
-    font-size: 2.5rem;
-  }
-
-  .reward-amount {
-    font-size: 1.6rem;
-  }
+.claim-btn:active {
+  transform: scale(0.96);
 }

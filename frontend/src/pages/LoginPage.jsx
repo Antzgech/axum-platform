@@ -1,9 +1,10 @@
 // src/pages/LoginPage.jsx
 import React, { useState } from "react";
+import { sendOtp, verifyOtp } from "../firebase";
 import "../Login.css";
 
 const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL || "http://localhost:8080";
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
 
 const LoginPage = ({ onLogin }) => {
   const [phone, setPhone] = useState("");
@@ -12,70 +13,52 @@ const LoginPage = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // ⭐ Send OTP
   const handleSendOtp = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      const ethiopiaRegex = /^\+2519\d{8}$/;
-      if (!ethiopiaRegex.test(phone.trim())) {
-        setError("Use Ethiopian format: +2519XXXXXXXX");
-        setLoading(false);
-        return;
-      }
+  try {
+    console.log("PHONE SENT TO FIREBASE:", phone, typeof phone);
+    const confirmation = await sendOtp(`${phone}`);
 
-      console.log("PHONE SENT TO BACKEND:", phone, typeof phone);
+    
 
-      const res = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phone.trim() }),
-      });
+    window.confirmationResult = confirmation;
+    setStep("otp");
+  } catch (err) {
+    console.error("Send OTP error:", err);
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
-      const data = await res.json();
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to send verification code");
-      }
-
-      setStep("otp");
-    } catch (err) {
-      console.error("Send OTP error:", err);
-      setError(err.message || "Failed to send verification code");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ⭐ Verify OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
+      const firebaseToken = await verifyOtp(otp);
+
+      const res = await fetch(`${BACKEND_URL}/api/auth/firebase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: phone.trim(),
-          otp: otp.trim(),
-        }),
+        body: JSON.stringify({ firebaseToken }),
       });
 
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Verification failed");
+      if (!data.success) {
+        throw new Error(data.error || "Backend auth failed");
       }
 
-      if (data.token) {
-        localStorage.setItem("axum_token", data.token);
-      }
-
-      if (onLogin && data.user) {
-        onLogin(data.user);
-      }
+      localStorage.setItem("axum_token", data.token);
+      onLogin(data.user);
     } catch (err) {
       console.error("Verify OTP error:", err);
       setError(err.message || "Verification failed");
@@ -86,6 +69,8 @@ const LoginPage = ({ onLogin }) => {
 
   return (
     <div className="login-container">
+      <div id="recaptcha-container"></div>
+
       <div className="login-card">
         <h1 className="login-title">Welcome to Saba Quest</h1>
         <p className="login-subtitle">Enter your phone number to begin.</p>
@@ -99,7 +84,7 @@ const LoginPage = ({ onLogin }) => {
               <input
                 type="tel"
                 className="login-input"
-                placeholder="+2519XXXXXXXX"
+                placeholder="+2519XXXXXXX"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required

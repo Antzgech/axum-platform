@@ -1,18 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './OnboardingPage.css';
-<div className="story-content" onClick={(e) => e.stopPropagation()}>
-  <button className="close-story" onClick={() => setShowStory(false)}>×</button>
 
-  <h1 style={{color: 'white'}}>TEST CONTENT</h1>
-
-  <OnboardingPage
-    onComplete={() => setShowStory(false)}
-    isModal={true}
-  />
-</div>
-
-function OnboardingPage({ onComplete, isModal = false }) {
+function OnboardingPage({ onComplete, isModal = false, onClose }) {
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
 
@@ -67,12 +57,20 @@ function OnboardingPage({ onComplete, isModal = false }) {
     }
   };
 
+  const handleClose = () => {
+    if (onClose) {
+      onClose(); // modal usage
+    } else {
+      navigate('/dashboard'); // fallback
+    }
+  };
+
   const handleComplete = () => {
     onComplete();
-
-    // Only redirect if this is NOT a modal
     if (!isModal) {
       navigate('/dashboard');
+    } else if (onClose) {
+      onClose();
     }
   };
 
@@ -81,28 +79,23 @@ function OnboardingPage({ onComplete, isModal = false }) {
   return (
     <div className="onboarding-page">
       <div className="onboarding-container">
-        <div 
-          className="story-background"
-          style={{ background: currentStory.background }}
-        ></div>
+
+        {/* Close Button */}
+        <button className="onboarding-close" onClick={handleClose}>×</button>
+
+        <div className="story-background" style={{ background: currentStory.background }}></div>
 
         <div className="story-progress">
           <div className="progress-bar">
-            <div 
-              className="progress-fill"
-              style={{ width: `${((currentStep + 1) / storySteps.length) * 100}%` }}
-            ></div>
+            <div className="progress-fill" style={{ width: `${((currentStep + 1) / storySteps.length) * 100}%` }}></div>
           </div>
-          <p className="progress-text">
-            {currentStep + 1} of {storySteps.length}
-          </p>
+          <p className="progress-text">{currentStep + 1} of {storySteps.length}</p>
         </div>
 
         <div className="story-card">
           <div className="story-icon">{currentStory.icon}</div>
-          
           <h1 className="story-title">{currentStory.title}</h1>
-          
+
           <div className="story-content">
             <p>{currentStory.content}</p>
           </div>
@@ -117,17 +110,11 @@ function OnboardingPage({ onComplete, isModal = false }) {
             </button>
 
             {currentStep < storySteps.length - 1 ? (
-              <button
-                className="btn btn-primary"
-                onClick={handleNext}
-              >
+              <button className="btn btn-primary" onClick={handleNext}>
                 Next →
               </button>
             ) : (
-              <button
-                className="btn btn-primary btn-complete"
-                onClick={handleComplete}
-              >
+              <button className="btn btn-primary btn-complete" onClick={handleComplete}>
                 Begin Quest ⚔️
               </button>
             )}
@@ -140,7 +127,6 @@ function OnboardingPage({ onComplete, isModal = false }) {
               key={index}
               className={`dot ${index === currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}`}
               onClick={() => setCurrentStep(index)}
-              aria-label={`Go to step ${index + 1}`}
             />
           ))}
         </div>

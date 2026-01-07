@@ -2,14 +2,13 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
+const crypto = require("crypto");
 require("dotenv").config();
 
-console.log("🔄 Starting Axum Backend...");
+console.log("🔄 Starting SabaQuest Backend...");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-
 
 // ---------------------------
 // CORS + JSON
@@ -20,10 +19,15 @@ console.log("🌐 FRONTEND_URL:", FRONTEND_URL || "not set ❌");
 app.use(
   cors({
     origin: [
-      process.env.FRONTEND_URL,
+      "http://localhost:3000",
       "http://localhost:5173",
-      "http://127.0.0.1:5173",
+      "https://axum-frontend-production.up.railway.app",
+      "https://web.telegram.org",
+      "https://telegram.org",
+      "https://t.me",
+      /\.telegram\.org$/,
     ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
@@ -31,68 +35,36 @@ app.use(
 app.use(express.json());
 app.set("trust proxy", 1);
 
-// // ---------------------------
-// // PostgreSQL
-// // ---------------------------
-// const DATABASE_URL = process.env.DATABASE_URL;
-// console.log("📡 DATABASE_URL:", DATABASE_URL ? "Found ✅" : "Missing ❌");
+app.use((req, res, next) => {
+  res.setHeader("X-Frame-Options", "ALLOWALL");
+  res.setHeader(
+    "Content-Security-Policy",
+    "frame-ancestors https://*.telegram.org https://web.telegram.org https://t.me 'self'"
+  );
+  next();
+});
 
-// const pool = new Pool({
-//   connectionString: DATABASE_URL,
-//   ssl: { rejectUnauthorized: false },
-// });
 // ---------------------------
 // PostgreSQL
 // ---------------------------
 const DATABASE_URL = process.env.DATABASE_URL;
 console.log("📡 DATABASE_URL:", DATABASE_URL ? "Found ✅" : "Missing ❌");
 
-// Detect local DB (no SSL)
-const isLocal =
-  DATABASE_URL.includes("localhost") ||
-  DATABASE_URL.includes("127.0.0.1");
+const isLocalDb =
+  DATABASE_URL && (DATABASE_URL.includes("localhost") || DATABASE_URL.includes("127.0.0.1"));
 
-// Create pool
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: isLocal ? false : { rejectUnauthorized: false },
+  ssl: isLocalDb ? false : { rejectUnauthorized: false },
 });
 
-
-// Init DB
+// DB sanity check
 (async () => {
   try {
-    const result = await pool.query("SELECT NOW()");
-    console.log("✅ PostgreSQL Connected:", result.rows[0].now);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        telegram_id BIGINT UNIQUE NOT NULL,
-        username VARCHAR(255) NOT NULL,
-        first_name VARCHAR(255) NOT NULL,
-        last_name VARCHAR(255) DEFAULT '',
-        photo_url TEXT DEFAULT '',
-        points INTEGER DEFAULT 0,
-        current_level INTEGER DEFAULT 1,
-        badges JSONB DEFAULT '[]'::jsonb,
-        completed_tasks TEXT[] DEFAULT '{}',
-        invited_friends INTEGER DEFAULT 0,
-        level_scores JSONB DEFAULT '{"1":0,"2":0,"3":0,"4":0,"5":0,"6":0}'::jsonb,
-        coins INTEGER DEFAULT 0,
-        gems INTEGER DEFAULT 0,
-        last_game_played TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    console.log("✅ Users table created/verified");
-
-    const count = await pool.query("SELECT COUNT(*) FROM users");
-    console.log(`📊 Current users in database: ${count.rows[0].count}`);
+    await pool.query("SELECT NOW()");
+    console.log("✅ PostgreSQL Connected:", new Date().toISOString());
   } catch (error) {
-    console.error("❌ Database error:", error.message);
+    console.error("❌ Database connection error:", error.message);
   }
 })();
 
@@ -101,58 +73,16 @@ const pool = new Pool({
 // ---------------------------
 const tasks = new Map();
 [
-  {
-    id: "1",
-    type: "youtube",
-    title: "Subscribe to Meten Official YouTube",
-    points: 50,
-    url: "https://www.youtube.com/@metenofficial",
-    icon: "▶️",
-  },
-  {
-    id: "2",
-    type: "telegram",
-    title: "Join Sabawians Telegram Group",
-    points: 30,
-    url: "https://t.me/+IoT_cwfs6EBjMTQ0",
-    icon: "✈️",
-  },
-  {
-    id: "3",
-    type: "facebook",
-    title: "Follow on Facebook",
-    points: 40,
-    url: "https://facebook.com/profile.php?id=61578048881192",
-    icon: "👍",
-  },
-  {
-    id: "4",
-    type: "tiktok",
-    title: "Follow on TikTok",
-    points: 40,
-    url: "https://tiktok.com/@metenofficials",
-    icon: "🎵",
-  },
-  {
-    id: "5",
-    type: "instagram",
-    title: "Follow on Instagram",
-    points: 40,
-    url: "https://instagram.com/metenofficial",
-    icon: "📸",
-  },
-  {
-    id: "6",
-    type: "invite",
-    title: "Invite 5 Friends",
-    points: 100,
-    url: null,
-    icon: "👥",
-  },
+  { id: "1", type: "youtube", title: "Subscribe to Meten Official YouTube", points: 50, url: "https://www.youtube.com/@metenofficial", icon: "▶️" },
+  { id: "2", type: "telegram", title: "Join Sabawians Telegram Group", points: 30, url: "https://t.me/+IoT_cwfs6EBjMTQ0", icon: "✈️" },
+  { id: "3", type: "facebook", title: "Follow on Facebook", points: 40, url: "https://facebook.com/profile.php?id=61578048881192", icon: "👍" },
+  { id: "4", type: "tiktok", title: "Follow on TikTok", points: 40, url: "https://tiktok.com/@metenofficials", icon: "🎵" },
+  { id: "5", type: "instagram", title: "Follow on Instagram", points: 40, url: "https://instagram.com/metenofficial", icon: "📸" },
+  { id: "6", type: "invite", title: "Invite 5 Friends", points: 100, url: null, icon: "👥" },
 ].forEach((t) => tasks.set(t.id, t));
 
 // ---------------------------
-// Auth middleware (JWT)
+// JWT Middleware
 // ---------------------------
 const JWT_SECRET = process.env.JWT_SECRET || "Saba1212";
 
@@ -171,48 +101,84 @@ const auth = (req, res, next) => {
 // Health
 // ---------------------------
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", database: "PostgreSQL", time: new Date() });
+  res.json({ status: "ok", time: new Date() });
 });
 
 // ---------------------------
-// Telegram Auth
+// Telegram Auth (with hash verification)
 // ---------------------------
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+function checkTelegramAuth(data, botToken) {
+  const { hash, ...rest } = data;
+
+  const dataCheckArr = Object.keys(rest)
+    .sort()
+    .map((key) => `${key}=${rest[key]}`);
+
+  const dataCheckString = dataCheckArr.join("\n");
+
+  const secretKey = crypto.createHash("sha256").update(botToken).digest();
+
+  const hmac = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
+
+  return hmac === hash;
+}
+
 app.post("/api/auth/telegram", async (req, res) => {
   try {
-    console.log("🔐 /api/auth/telegram called");
-    console.log("📥 Body:", req.body);
+    const { id, first_name, last_name, username, photo_url, auth_date, hash } = req.body || {};
 
-    const { id, first_name, last_name, username, photo_url } = req.body || {};
-
-    if (!id || !first_name) {
-      console.log("❌ Invalid Telegram user payload");
-      return res.status(400).json({ error: "Invalid Telegram user" });
+    if (!id || !first_name || !auth_date || !hash) {
+      return res.status(400).json({ error: "Invalid Telegram payload" });
     }
 
-    console.log(`🔐 Login attempt: ${first_name} (ID: ${id})`);
+    const isLocalRequest = req.headers.host?.includes("localhost");
 
-    let dbUser = await pool.query(
-      "SELECT * FROM users WHERE telegram_id = $1",
-      [id]
-    );
+    if (!isLocalRequest && TELEGRAM_BOT_TOKEN) {
+      const isValid = checkTelegramAuth(
+        {
+          id,
+          first_name,
+          last_name: last_name || "",
+          username: username || "",
+          photo_url: photo_url || "",
+          auth_date,
+          hash,
+        },
+        TELEGRAM_BOT_TOKEN
+      );
+
+      if (!isValid) {
+        return res.status(403).json({ error: "Invalid Telegram authentication" });
+      }
+    }
+
+    let dbUser = await pool.query("SELECT * FROM tuser WHERE telegram_id = $1", [id]);
 
     let user;
+
     if (dbUser.rows.length > 0) {
       await pool.query(
-        "UPDATE users SET last_active = NOW(), username = $2, first_name = $3, last_name = $4, photo_url = $5 WHERE telegram_id = $1",
+        `UPDATE tuser 
+         SET last_active = NOW(),
+             username = $2,
+             first_name = $3,
+             last_name = $4,
+             photo_url = $5
+         WHERE telegram_id = $1`,
         [id, username || first_name, first_name, last_name || "", photo_url || ""]
       );
-      dbUser = await pool.query(
-        "SELECT * FROM users WHERE telegram_id = $1",
-        [id]
-      );
+
+      dbUser = await pool.query("SELECT * FROM tuser WHERE telegram_id = $1", [id]);
       user = dbUser.rows[0];
-      console.log(`👋 Existing user: ${user.username}`);
     } else {
       const newUser = await pool.query(
-        `INSERT INTO users 
-         (telegram_id, username, first_name, last_name, photo_url) 
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        `INSERT INTO tuser 
+         (telegram_id, username, first_name, last_name, photo_url, current_level, coins, gems, points,
+          last_checkin, checkin_streak, total_checkins, weekly_chest_claimed_week, last_streak_restore)
+         VALUES ($1, $2, $3, $4, $5, 1, 0, 0, 0, NULL, 0, 0, NULL, NULL)
+         RETURNING *`,
         [
           id,
           username || first_name || "User",
@@ -221,8 +187,8 @@ app.post("/api/auth/telegram", async (req, res) => {
           photo_url || "",
         ]
       );
+
       user = newUser.rows[0];
-      console.log(`✨ NEW USER CREATED: ${user.username} (ID: ${id})`);
     }
 
     const token = jwt.sign(
@@ -238,35 +204,29 @@ app.post("/api/auth/telegram", async (req, res) => {
     res.json({
       success: true,
       token,
-      user: {
-        id: user.telegram_id,
-        username: user.username,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        photo_url: user.photo_url,
-        points: user.points,
-        current_level: user.current_level,
-        badges: user.badges || [],
-      },
+      user,
     });
   } catch (error) {
-    console.error("❌ Auth error:", error.message);
-    res.status(500).json({ error: "Auth failed", details: error.message });
+    res.status(500).json({ error: "Auth failed" });
   }
 });
 
 // ---------------------------
-// Stats
+// Get Authenticated User (full data for Dashboard)
 // ---------------------------
-app.get("/api/stats", async (req, res) => {
+app.get("/api/auth/me", auth, async (req, res) => {
   try {
-    const result = await pool.query("SELECT COUNT(*) FROM users");
-    res.json({
-      totalUsers: parseInt(result.rows[0].count),
-      database: "PostgreSQL Connected ✅",
-    });
-  } catch (error) {
-    res.json({ totalUsers: 0, database: "Error: " + error.message });
+    const { telegramId } = req.user;
+
+    const result = await pool.query("SELECT * FROM tuser WHERE telegram_id = $1", [telegramId]);
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -276,14 +236,18 @@ app.get("/api/stats", async (req, res) => {
 app.get("/api/tasks", auth, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT completed_tasks FROM users WHERE telegram_id = $1",
+      "SELECT completed_tasks FROM tuser WHERE telegram_id = $1",
       [req.user.telegramId]
     );
-    const completed = result.rows[0]?.completed_tasks || [];
+
+    const rawCompleted = result.rows[0]?.completed_tasks || {};
+    const completedIds = Object.keys(rawCompleted);
+
     const allTasks = Array.from(tasks.values()).map((t) => ({
       ...t,
-      completed: completed.includes(t.id),
+      completed: completedIds.includes(t.id),
     }));
+
     res.json({ tasks: allTasks });
   } catch (error) {
     res.json({
@@ -295,146 +259,302 @@ app.get("/api/tasks", auth, async (req, res) => {
   }
 });
 
-app.post("/api/tasks/:id/complete", auth, async (req, res) => {
-  try {
-    const taskId = req.params.id;
-    const task = tasks.get(taskId);
-    if (!task) return res.status(404).json({ error: "Task not found" });
-
-    const userRes = await pool.query(
-      "SELECT * FROM users WHERE telegram_id = $1",
-      [req.user.telegramId]
-    );
-    if (userRes.rows.length === 0)
-      return res.status(404).json({ error: "User not found" });
-
-    const u = userRes.rows[0];
-    const completed = u.completed_tasks || [];
-
-    if (completed.includes(taskId)) {
-      return res.status(400).json({ error: "Already completed" });
-    }
-
-    const newCompleted = [...completed, taskId];
-    const newPoints = u.points + task.points;
-    const levelScores = u.level_scores || {
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-      6: 0,
-    };
-    levelScores[u.current_level] =
-      (levelScores[u.current_level] || 0) + task.points;
-
-    await pool.query(
-      "UPDATE users SET completed_tasks = $1, points = $2, level_scores = $3 WHERE telegram_id = $4",
-      [newCompleted, newPoints, JSON.stringify(levelScores), req.user.telegramId]
-    );
-
-    console.log(
-      `✅ TASK COMPLETED: ${u.username} - ${task.title} (+${task.points} points)`
-    );
-
-    res.json({ success: true, points: task.points, totalPoints: newPoints });
-  } catch (error) {
-    console.error("Task error:", error.message);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
 // ---------------------------
-// Game: Dino-style 20s play + cooldown
-// ---------------------------
-const GAME_COOLDOWN_MS = 60 * 1000;
-
-app.post("/api/game/result", async (req, res) => {
-  try {
-    const { userId, coinReward = 0, gemReward = 0, score = 0, duration = 20 } =
-      req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: "Missing userId" });
-    }
-
-    const userRes = await pool.query(
-      "SELECT * FROM users WHERE telegram_id = $1",
-      [userId]
-    );
-
-    if (userRes.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const user = userRes.rows[0];
-
-    if (user.last_game_played) {
-      const last = new Date(user.last_game_played).getTime();
-      const now = Date.now();
-      if (now - last < GAME_COOLDOWN_MS) {
-        const wait = Math.ceil((GAME_COOLDOWN_MS - (now - last)) / 1000);
-        return res.status(429).json({
-          error: "Cooldown active",
-          waitSeconds: wait,
-        });
-      }
-    }
-
-    const coinsToAdd = Number(coinReward) || 0;
-    const gemsToAdd = Number(gemReward) || 0;
-
-    const updated = await pool.query(
-      `UPDATE users
-       SET coins = coins + $1,
-           gems = gems + $2,
-           last_game_played = NOW(),
-           last_active = NOW()
-       WHERE telegram_id = $3
-       RETURNING id, telegram_id, username, coins, gems`,
-      [coinsToAdd, gemsToAdd, userId]
-    );
-
-    return res.json({
-      success: true,
-      coinsAdded: coinsToAdd,
-      gemsAdded: gemsToAdd,
-      user: updated.rows[0],
-      cooldownSeconds: 60,
-    });
-  } catch (err) {
-    console.error("❌ Game result error:", err.message);
-    return res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ---------------------------
-// Add 1 coin when Makeda tapped
+// Add Coin (returns updated full user)
 // ---------------------------
 app.post("/api/user/add-coin", auth, async (req, res) => {
   try {
     const telegramId = req.user.telegramId;
 
     const updated = await pool.query(
-      `UPDATE users
+      `UPDATE tuser
        SET coins = coins + 1,
            last_active = NOW()
        WHERE telegram_id = $1
-       RETURNING coins, gems`,
+       RETURNING *`,
       [telegramId]
     );
 
-    if (updated.rowCount === 0) {
+    if (!updated.rowCount) {
       return res.status(404).json({ error: "User not found" });
     }
 
     res.json({
       success: true,
-      coins: updated.rows[0].coins,
-      gems: updated.rows[0].gems,
+      user: updated.rows[0],
     });
   } catch (err) {
-    console.error("Makeda coin error:", err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ---------------------------
+// Daily Check-In Rewards Table
+// ---------------------------
+const DAILY_REWARDS = {
+  1: { coins: 10, gems: 0 },
+  2: { coins: 20, gems: 0 },
+  3: { coins: 30, gems: 1 },
+  4: { coins: 40, gems: 1 },
+  5: { coins: 50, gems: 2 },
+  6: { coins: 60, gems: 2 },
+  7: { coins: 100, gems: 5 },
+};
+
+// Weekly chest rewards (triggered after 7-day streak)
+const WEEKLY_CHEST_REWARD = {
+  coins: 300,
+  gems: 10,
+};
+
+// Streak restore cost (in gems)
+const STREAK_RESTORE_COST = 5;
+
+// ---------------------------
+// Server time (for countdowns)
+// ---------------------------
+app.get("/api/time", (req, res) => {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  const msUntilMidnight = midnight.getTime() - now.getTime();
+
+  res.json({
+    serverTime: now.toISOString(),
+    msUntilMidnight,
+  });
+});
+
+// ---------------------------
+// Daily Check-In System
+// ---------------------------
+app.get("/api/checkin/status", auth, async (req, res) => {
+  try {
+    const telegramId = req.user.telegramId;
+
+    const result = await pool.query(
+      "SELECT last_checkin, checkin_streak, total_checkins, weekly_chest_claimed_week FROM tuser WHERE telegram_id = $1",
+      [telegramId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = result.rows[0];
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const lastCheckinStr = user.last_checkin ? new Date(user.last_checkin).toDateString() : null;
+
+    const canClaim = lastCheckinStr !== todayStr;
+
+    // Determine current week number (ISO week)
+    const getWeekNumber = (date) => {
+      const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = tmp.getUTCDay() || 7;
+      tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
+      return `${tmp.getUTCFullYear()}-W${weekNo}`;
+    };
+
+    const currentWeek = getWeekNumber(now);
+    const weeklyChestClaimedWeek = user.weekly_chest_claimed_week;
+
+    const canClaimWeeklyChest =
+      (user.checkin_streak || 0) >= 7 && weeklyChestClaimedWeek !== currentWeek;
+
+    res.json({
+      canClaim,
+      streak: user.checkin_streak || 0,
+      totalCheckins: user.total_checkins || 0,
+      canClaimWeeklyChest,
+      currentWeek,
+      weeklyChestClaimedWeek,
+    });
+  } catch (err) {
+    console.error("Check-in status error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/checkin/claim", auth, async (req, res) => {
+  try {
+    const telegramId = req.user.telegramId;
+
+    const result = await pool.query(
+      "SELECT last_checkin, checkin_streak, total_checkins, coins, gems FROM tuser WHERE telegram_id = $1",
+      [telegramId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = result.rows[0];
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const lastCheckinStr = user.last_checkin ? new Date(user.last_checkin).toDateString() : null;
+
+    if (lastCheckinStr === todayStr) {
+      return res.status(400).json({ error: "Already checked in today" });
+    }
+
+    // Calculate streak
+    let newStreak = user.checkin_streak || 0;
+    const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+
+    if (lastCheckinStr === yesterdayStr) {
+      newStreak += 1;
+    } else {
+      newStreak = 1;
+    }
+
+    const rewardDay = ((newStreak - 1) % 7) + 1;
+    const rewards = DAILY_REWARDS[rewardDay];
+
+    if (!rewards) {
+      return res.status(500).json({ error: "Invalid reward day" });
+    }
+
+    await pool.query(
+      `UPDATE tuser 
+       SET last_checkin = NOW(),
+           checkin_streak = $1,
+           total_checkins = total_checkins + 1,
+           coins = coins + $2,
+           gems = gems + $3
+       WHERE telegram_id = $4`,
+      [newStreak, rewards.coins, rewards.gems, telegramId]
+    );
+
+    res.json({
+      success: true,
+      rewards,
+      newStreak,
+    });
+  } catch (err) {
+    console.error("Check-in claim error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ---------------------------
+// Weekly chest claim
+// ---------------------------
+app.post("/api/checkin/weekly-chest", auth, async (req, res) => {
+  try {
+    const telegramId = req.user.telegramId;
+
+    const result = await pool.query(
+      "SELECT checkin_streak, weekly_chest_claimed_week, coins, gems FROM tuser WHERE telegram_id = $1",
+      [telegramId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = result.rows[0];
+    const now = new Date();
+
+    const getWeekNumber = (date) => {
+      const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = tmp.getUTCDay() || 7;
+      tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
+      return `${tmp.getUTCFullYear()}-W${weekNo}`;
+    };
+
+    const currentWeek = getWeekNumber(now);
+
+    if ((user.checkin_streak || 0) < 7) {
+      return res.status(400).json({ error: "Streak less than 7 days" });
+    }
+
+    if (user.weekly_chest_claimed_week === currentWeek) {
+      return res.status(400).json({ error: "Weekly chest already claimed this week" });
+    }
+
+    await pool.query(
+      `UPDATE tuser
+       SET weekly_chest_claimed_week = $1,
+           coins = coins + $2,
+           gems = gems + $3
+       WHERE telegram_id = $4`,
+      [currentWeek, WEEKLY_CHEST_REWARD.coins, WEEKLY_CHEST_REWARD.gems, telegramId]
+    );
+
+    res.json({
+      success: true,
+      rewards: WEEKLY_CHEST_REWARD,
+      week: currentWeek,
+    });
+  } catch (err) {
+    console.error("Weekly chest claim error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ---------------------------
+// Streak restore (using gems)
+// ---------------------------
+app.post("/api/checkin/restore-streak", auth, async (req, res) => {
+  try {
+    const telegramId = req.user.telegramId;
+
+    const result = await pool.query(
+      "SELECT last_checkin, checkin_streak, gems, last_streak_restore FROM tuser WHERE telegram_id = $1",
+      [telegramId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = result.rows[0];
+
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const lastCheckinStr = user.last_checkin ? new Date(user.last_checkin).toDateString() : null;
+
+    const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+    const twoDaysAgoStr = new Date(Date.now() - 2 * 86400000).toDateString();
+
+    // You can only restore if you missed exactly 1 day (gap of one day)
+    if (!(lastCheckinStr === twoDaysAgoStr && todayStr !== yesterdayStr)) {
+      return res.status(400).json({ error: "No restorable streak gap" });
+    }
+
+    if ((user.gems || 0) < STREAK_RESTORE_COST) {
+      return res.status(400).json({ error: "Not enough gems" });
+    }
+
+    // Optional: prevent multiple restores per day
+    if (user.last_streak_restore) {
+      const lastRestoreStr = new Date(user.last_streak_restore).toDateString();
+      if (lastRestoreStr === todayStr) {
+        return res.status(400).json({ error: "Streak already restored today" });
+      }
+    }
+
+    await pool.query(
+      `UPDATE tuser
+       SET gems = gems - $1,
+           checkin_streak = checkin_streak + 1,
+           last_streak_restore = NOW()
+       WHERE telegram_id = $2`,
+      [STREAK_RESTORE_COST, telegramId]
+    );
+
+    res.json({
+      success: true,
+      cost: STREAK_RESTORE_COST,
+      newStreak: (user.checkin_streak || 0) + 1,
+    });
+  } catch (err) {
+    console.error("Streak restore error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -449,12 +569,11 @@ app.use((req, res) => res.status(404).json({ error: "Not found" }));
 // ---------------------------
 app.listen(PORT, () => {
   console.log(`
-  ⚽️  Axum Backend - Sabawians Company
+  ⚜️  SabaQuest Backend
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🚀 Server: http://localhost:${PORT}
   💾 Database: PostgreSQL
   🤖 Bot: @SabaQuest_bot
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Test: /api/health | /api/stats
   `);
 });

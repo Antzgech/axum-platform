@@ -1,35 +1,26 @@
-/* GebetaGame.css */
+/* OVERLAY & MODAL */
 
 .gebeta-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85);
+  inset: 0;
+  background: rgba(0,0,0,0.85);
   backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
   padding: 20px;
-  animation: fadeIn 0.3s ease;
 }
 
 .gebeta-modal {
-  background: linear-gradient(135deg, #2D1B3A 0%, #1a1a1a 100%);
+  background: linear-gradient(135deg, #2D1B3A, #1a1a1a);
   border: 3px solid #D4AF37;
   border-radius: 20px;
-  padding: 0;
-  width: 600px;
-  max-width: 95%;
+  width: min(95%, 900px);
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.9),
-    0 0 80px rgba(212, 175, 55, 0.4);
-  animation: scaleIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.9);
 }
 
 .gebeta-close {
@@ -39,47 +30,178 @@
   width: 35px;
   height: 35px;
   border-radius: 50%;
-  background: rgba(212, 175, 55, 0.2);
-  border: 2px solid rgba(212, 175, 55, 0.5);
-  color: #D4AF37;
+  background: rgba(212,175,55,0.2);
+  border: 2px solid rgba(212,175,55,0.5);
+  color: #FFD700;
   font-size: 24px;
-  font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
-  line-height: 1;
-  z-index: 10;
+  transition: 0.3s ease;
 }
 
 .gebeta-close:hover {
-  background: rgba(212, 175, 55, 0.4);
+  background: rgba(212,175,55,0.4);
   transform: rotate(90deg) scale(1.1);
 }
+
+/* HEADER */
 
 .gebeta-header {
   text-align: center;
   padding: 25px 20px 15px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(30, 95, 62, 0.1));
-  border-bottom: 2px solid rgba(212, 175, 55, 0.3);
-  border-radius: 20px 20px 0 0;
+  background: linear-gradient(135deg, rgba(212,175,55,0.15), rgba(30,95,62,0.1));
+  border-bottom: 2px solid rgba(212,175,55,0.3);
 }
 
 .gebeta-header h2 {
-  margin: 0 0 5px 0;
+  margin: 0;
   font-size: 2rem;
   font-weight: 900;
   color: #FFD700;
   font-family: 'Georgia', serif;
-  text-shadow: 0 2px 10px rgba(255, 215, 0, 0.6);
 }
 
 .gebeta-subtitle {
   margin: 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255,255,255,0.7);
   font-size: 0.9rem;
 }
+
+/* TOP BAR: username, coins, invite */
+
+.gebeta-top-bar {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.25);
+}
+
+.gebeta-user {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #F4E4B8;
+  max-width: 33%;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gebeta-coins {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #FFD700;
+  text-align: center;
+  flex: 1;
+}
+
+.gebeta-invite-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #000;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  transition: 0.2s ease;
+  white-space: nowrap;
+}
+
+.gebeta-invite-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.6);
+}
+
+/* INVITE PANEL */
+
+.gebeta-invite-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.35s ease;
+  opacity: 0;
+  padding: 0 20px;
+}
+
+.gebeta-invite-panel.open {
+  max-height: 200px;
+  opacity: 1;
+  margin-top: 10px;
+}
+
+.invite-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 10px;
+}
+
+.invite-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.invite-column-button {
+  flex: 0 0 auto;
+}
+
+.invite-label {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.invite-select,
+.invite-input {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(212,175,55,0.5);
+  background: rgba(0,0,0,0.4);
+  color: #F4E4B8;
+  font-size: 0.85rem;
+}
+
+.invite-select:focus,
+.invite-input:focus {
+  outline: none;
+  border-color: #FFD700;
+}
+
+.invite-send-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #000;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.invite-send-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.invite-status {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #FFD700;
+}
+
+/* SCORES */
 
 .gebeta-scores {
   display: flex;
@@ -90,101 +212,107 @@
 
 .score-box {
   flex: 1;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(255, 215, 0, 0.1));
-  border: 2px solid rgba(212, 175, 55, 0.4);
+  background: rgba(255,215,0,0.1);
+  border: 2px solid rgba(212,175,55,0.4);
   border-radius: 12px;
   padding: 15px;
   text-align: center;
 }
 
 .score-box.computer {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.3), rgba(178, 34, 34, 0.2));
-  border-color: rgba(220, 20, 60, 0.4);
+  background: rgba(178,34,34,0.15);
+  border-color: rgba(178,34,34,0.4);
 }
 
 .score-label {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255,255,255,0.7);
   margin-bottom: 5px;
   font-weight: 600;
 }
 
 .score-value {
-  font-size: 2.5rem;
+  font-size: 2.4rem;
   font-weight: 900;
   color: #FFD700;
-  font-family: 'Georgia', serif;
-  text-shadow: 0 2px 8px rgba(255, 215, 0, 0.6);
 }
+
+/* MESSAGE */
 
 .gebeta-message {
   text-align: center;
   padding: 15px 20px;
   margin: 0 20px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255,255,255,0.05);
   border-radius: 10px;
   font-size: 1.1rem;
   font-weight: 700;
   color: #FFD700;
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
+
+/* BOARD */
 
 .gebeta-board {
   padding: 20px;
-  background: rgba(139, 111, 78, 0.2);
   margin: 20px;
   border-radius: 15px;
-  border: 3px solid rgba(139, 111, 78, 0.5);
+  border: 3px solid rgba(139,111,78,0.5);
+  background: linear-gradient(135deg, #5a3a1a, #3a2412);
 }
+
+/* ROWS */
 
 .board-row {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
-  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 0;
+  width: 100%;
 }
 
-.board-row:last-child {
-  margin-bottom: 0;
-}
+/* PIT WRAPPER */
 
-.pit {
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #8B6F47, #6B5437);
-  border: 3px solid #D4AF37;
+.pit-wrapper {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 70px;
+  max-width: 100px;
+}
+
+/* TOP row → number above */
+.computer-row .pit-wrapper .seeds-count {
+  order: -1;
+  margin-bottom: 4px;
+}
+
+/* BOTTOM row → number below */
+.player-row .pit-wrapper .seeds-count {
+  margin-top: 4px;
+}
+
+/* PITS (fixed 70px circles) */
+
+.pit {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: #8b5a2b;
+  border: 3px solid #D4AF37;
+  display: flex;
   justify-content: center;
-  position: relative;
-  transition: all 0.3s ease;
-  min-height: 70px;
+  align-items: center;
+  overflow: hidden;
+  transition: 0.2s ease;
 }
 
 .player-pit {
   cursor: pointer;
-  box-shadow: 
-    inset 0 4px 10px rgba(0, 0, 0, 0.4),
-    0 4px 10px rgba(212, 175, 55, 0.3);
 }
 
 .player-pit:hover {
-  transform: translateY(-5px);
-  box-shadow: 
-    inset 0 4px 10px rgba(0, 0, 0, 0.4),
-    0 6px 15px rgba(212, 175, 55, 0.5);
+  transform: translateY(-4px);
   border-color: #FFD700;
-}
-
-.player-pit.selected {
-  border-color: #FFD700;
-  box-shadow: 
-    inset 0 4px 10px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(255, 215, 0, 0.8);
 }
 
 .player-pit.empty {
@@ -193,28 +321,11 @@
 }
 
 .computer-pit {
-  box-shadow: 
-    inset 0 4px 10px rgba(0, 0, 0, 0.4),
-    0 4px 10px rgba(139, 0, 0, 0.3);
-  border-color: rgba(220, 20, 60, 0.5);
-  background: linear-gradient(135deg, #8B0000, #660000);
+  background: #660000;
+  border-color: rgba(220,20,60,0.7);
 }
 
-.seeds-count {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #FFD700;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 900;
-}
+/* SEEDS */
 
 .seeds {
   display: flex;
@@ -222,41 +333,48 @@
   gap: 2px;
   justify-content: center;
   align-items: center;
-  padding: 5px;
-  max-width: 100%;
+  padding: 4px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .seed {
+  font-size: 0.85rem;
   color: #F4E4B8;
-  font-size: 1rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  animation: seedPop 0.3s ease;
+  line-height: 1;
+  opacity: 0;
+  animation: dropSeed 0.25s ease forwards;
 }
 
-@keyframes seedPop {
-  from {
-    transform: scale(0);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+@keyframes dropSeed {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
+
+/* SEED COUNT */
+
+.seeds-count {
+  background: rgba(0,0,0,0.7);
+  color: #FFD700;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* GAME OVER */
 
 .game-over {
   margin: 20px;
   padding: 25px;
-  background: linear-gradient(135deg, rgba(0, 255, 0, 0.15), rgba(0, 200, 0, 0.1));
-  border: 3px solid rgba(0, 255, 0, 0.4);
+  background: rgba(0,255,0,0.1);
+  border: 3px solid rgba(0,255,0,0.4);
   border-radius: 15px;
   text-align: center;
-  animation: celebration 1s ease-in-out infinite;
-}
-
-@keyframes celebration {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.03); }
 }
 
 .game-over h3 {
@@ -273,10 +391,9 @@
 }
 
 .reward {
-  font-size: 1.3rem !important;
-  font-weight: 900 !important;
-  color: #FFD700 !important;
-  text-shadow: 0 2px 8px rgba(255, 215, 0, 0.6);
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #FFD700;
 }
 
 .play-again-btn {
@@ -289,57 +406,58 @@
   font-size: 1rem;
   font-weight: 900;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+  transition: 0.3s ease;
 }
 
 .play-again-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 215, 0, 0.6);
+  box-shadow: 0 6px 16px rgba(255,215,0,0.6);
 }
+
+/* FOOTER */
 
 .gebeta-footer {
   text-align: center;
   padding: 15px 20px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255,255,255,0.5);
   font-size: 0.8rem;
-  border-top: 1px solid rgba(212, 175, 55, 0.2);
+  border-top: 1px solid rgba(212,175,55,0.2);
 }
 
-/* Mobile */
+/* MOBILE */
+
 @media (max-width: 480px) {
-  .gebeta-modal {
-    width: 95%;
+  .gebeta-top-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .gebeta-header h2 {
-    font-size: 1.5rem;
+  .gebeta-user,
+  .gebeta-coins {
+    max-width: 100%;
+    text-align: center;
   }
 
-  .score-value {
-    font-size: 2rem;
+  .gebeta-invite-btn {
+    align-self: center;
   }
 
-  .gebeta-board {
-    padding: 15px;
-    margin: 15px;
-  }
-
-  .board-row {
-    gap: 6px;
+  .pit-wrapper {
+    min-width: 70px;
   }
 
   .pit {
-    min-height: 50px;
+    width: 55px;
+    height: 55px;
   }
 
   .seed {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
   }
 
   .seeds-count {
     width: 18px;
     height: 18px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
   }
 }
