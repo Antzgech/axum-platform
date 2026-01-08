@@ -1,34 +1,24 @@
-# Build stage
-FROM node:18-alpine as build
+# ---------- Build Stage ----------
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package files
+# Install dependencies
 COPY package*.json ./
+RUN npm install
 
-
-
-# Copy source code
+# Copy source
 COPY . .
 
-# Build the app
+# Build the React app
 RUN npm run build
 
-# Production stage
+# ---------- Production Stage ----------
 FROM nginx:alpine
 
-# Copy build files
+# Copy build output to Nginx
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy nginx config (if you create one)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose port
 EXPOSE 80
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
-
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
