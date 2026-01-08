@@ -5,7 +5,6 @@ const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
 const crypto = require("crypto");
 require("dotenv").config();
-const bot = require("./bot");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
