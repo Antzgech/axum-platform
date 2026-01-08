@@ -5,6 +5,7 @@ require("dotenv").config();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 const BACKEND_URL = process.env.BACKEND_URL;
+web_app: { url: process.env.FRONTEND_URL };
 
 if (!BOT_TOKEN) {
   console.error("❌ TELEGRAM_BOT_TOKEN missing");
