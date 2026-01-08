@@ -1,3 +1,4 @@
+// server.js — FINAL CLEAN VERSION
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -6,18 +7,16 @@ const crypto = require("crypto");
 require("dotenv").config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
-// ---------------------------
 // CORS
-// ---------------------------
 app.use(
   cors({
     origin: [
       process.env.FRONTEND_URL,
-      "https://web.telegram.org",
+      /\.telegram\.org$/,
       "https://t.me",
-      /\.telegram\.org$/
+      "https://web.telegram.org"
     ],
     credentials: true,
   })
@@ -26,28 +25,20 @@ app.use(
 app.use(express.json());
 app.set("trust proxy", 1);
 
-// ---------------------------
 // PostgreSQL
-// ---------------------------
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
-(async () => {
-  try {
-    await pool.query("SELECT NOW()");
-    console.log("✅ PostgreSQL Connected");
-  } catch (err) {
-    console.error("❌ DB Error:", err.message);
-  }
-})();
+// Test DB
+pool.query("SELECT NOW()")
+  .then(() => console.log("✅ PostgreSQL Connected"))
+  .catch((err) => console.error("❌ DB Error:", err.message));
 
-// ---------------------------
 // Telegram Auth
-// ---------------------------
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const JWT_SECRET = process.env.JWT_SECRET || "Saba1212";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function verifyTelegram(data) {
   const { hash, ...rest } = data;
@@ -73,7 +64,7 @@ app.post("/api/auth/telegram", async (req, res) => {
     if (!verifyTelegram(req.body))
       return res.status(403).json({ error: "Invalid Telegram authentication" });
 
-    let result = await pool.query("SELECT * FROM tuser WHERE telegram_id = $1", [id]);
+    let result = await pool.query("SELECT * FROM tuser WHERE telegram_id=$1", [id]);
 
     let user;
     if (result.rows.length) {
@@ -108,9 +99,7 @@ app.post("/api/auth/telegram", async (req, res) => {
   }
 });
 
-// ---------------------------
 // JWT Middleware
-// ---------------------------
 function auth(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token" });
@@ -122,52 +111,29 @@ function auth(req, res, next) {
   });
 }
 
-// ---------------------------
-// Get User
-// ---------------------------
+// Protected routes
 app.get("/api/auth/me", auth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      "SELECT * FROM tuser WHERE telegram_id=$1",
-      [req.user.telegramId]
-    );
-
-    if (!result.rows.length)
-      return res.status(404).json({ error: "User not found" });
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
+  const result = await pool.query(
+    "SELECT * FROM tuser WHERE telegram_id=$1",
+    [req.user.telegramId]
+  );
+  res.json(result.rows[0]);
 });
 
-// ---------------------------
-// Add Coin
-// ---------------------------
-app.post("/api/user/add-coin", auth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `UPDATE tuser SET coins = coins + 1, last_active = NOW()
-       WHERE telegram_id=$1 RETURNING *`,
-      [req.user.telegramId]
-    );
+// Telegram Webhook
+const bot = require("./bot");
 
-    res.json({ success: true, user: result.rows[0] });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
+app.post("/webhook", (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
 });
 
-// ---------------------------
 // Health
-// ---------------------------
 app.get("/", (req, res) => {
   res.send("SabaQuest Backend Running");
 });
 
-// ---------------------------
-// Start Server
-// ---------------------------
+// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on port ${PORT}`);
 });
