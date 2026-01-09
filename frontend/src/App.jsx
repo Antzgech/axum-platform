@@ -12,6 +12,12 @@ import GamePage from "./pages/GamePage";
 import RewardsPage from "./pages/RewardsPage";
 
 export default function App() {
+  fetch("https://axum-backend-production.up.railway.app/api/auth/telegram", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(telegramUserData),
+});
+
   const [user, setUser] = useState(null);
 
   const isAuthenticated = !!localStorage.getItem("axum_token");

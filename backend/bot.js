@@ -1,14 +1,18 @@
 const TelegramBot = require("node-telegram-bot-api");
 require("dotenv").config();
 
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
-  polling: false,
-});
+const token = process.env.TELEGRAM_BOT_TOKEN;
+
+if (!token) {
+  console.error("❌ TELEGRAM_BOT_TOKEN is missing");
+}
+
+const bot = new TelegramBot(token, { polling: false });
 
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
 
-  bot.sendMessage(chatId, "Welcome to SabaQuest! ⚜️", {
+  bot.sendMessage(chatId, "⚜️ Welcome to Axum Kingdom ⚜️", {
     reply_markup: {
       inline_keyboard: [
         [

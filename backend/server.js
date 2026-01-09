@@ -6,18 +6,24 @@ const crypto = require("crypto");
 require("dotenv").config();
 
 const app = express();
-
-// Railway injects PORT automatically
 const PORT = process.env.PORT;
 
-// ---------------------- CORS ----------------------
+// ---------- CORS ----------
 app.use(
   cors({
-    origin: [
-      process.env.FRONTEND_URL,
-      "https://t.me",
-      "https://web.telegram.org"
-    ],
+    origin: (origin, callback) => {
+      const allowed = [
+        process.env.FRONTEND_URL,
+        "https://t.me",
+        "https://web.telegram.org"
+      ];
+
+      if (!origin) return callback(null, true);
+      if (allowed.includes(origin)) return callback(null, true);
+      if (/\.telegram\.org$/.test(origin)) return callback(null, true);
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
@@ -25,17 +31,18 @@ app.use(
 app.use(express.json());
 app.set("trust proxy", 1);
 
-// ---------------------- PostgreSQL ----------------------
+// ---------- PostgreSQL ----------
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
-pool.query("SELECT NOW()")
+pool
+  .query("SELECT NOW()")
   .then(() => console.log("✅ PostgreSQL Connected"))
   .catch((err) => console.error("❌ DB Error:", err.message));
 
-// ---------------------- Telegram Auth ----------------------
+// ---------- Telegram Auth ----------
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -57,23 +64,35 @@ app.post("/api/auth/telegram", async (req, res) => {
   try {
     const { id, first_name, username, photo_url, auth_date, hash } = req.body;
 
-    if (!verifyTelegram(req.body))
-      return res.status(403).json({ error: "Invalid Telegram authentication" });
+    if (!id || !first_name || !auth_date || !hash) {
+      return res.status(400).json({ error: "Invalid Telegram payload" });
+    }
 
-    let result = await pool.query("SELECT * FROM tuser WHERE telegram_id=$1", [id]);
+    if (!verifyTelegram(req.body)) {
+      return res.status(403).json({ error: "Invalid Telegram authentication" });
+    }
+
+    let result = await pool.query(
+      "SELECT * FROM tuser WHERE telegram_id=$1",
+      [id]
+    );
 
     let user;
     if (result.rows.length) {
       await pool.query(
-        `UPDATE tuser SET username=$2, first_name=$3, photo_url=$4, last_active=NOW()
+        `UPDATE tuser
+         SET username=$2, first_name=$3, photo_url=$4, last_active=NOW()
          WHERE telegram_id=$1`,
         [id, username || first_name, first_name, photo_url || ""]
       );
-      result = await pool.query("SELECT * FROM tuser WHERE telegram_id=$1", [id]);
+      result = await pool.query(
+        "SELECT * FROM tuser WHERE telegram_id=$1",
+        [id]
+      );
       user = result.rows[0];
     } else {
       const insert = await pool.query(
-        `INSERT INTO tuser 
+        `INSERT INTO tuser
          (telegram_id, username, first_name, photo_url, current_level, coins, gems, points)
          VALUES ($1,$2,$3,$4,1,0,0,0)
          RETURNING *`,
@@ -95,7 +114,7 @@ app.post("/api/auth/telegram", async (req, res) => {
   }
 });
 
-// ---------------------- JWT Middleware ----------------------
+// ---------- JWT Middleware ----------
 function auth(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "No token" });
@@ -115,7 +134,7 @@ app.get("/api/auth/me", auth, async (req, res) => {
   res.json(result.rows[0]);
 });
 
-// ---------------------- Telegram Webhook ----------------------
+// ---------- Telegram Webhook ----------
 const bot = require("./bot");
 
 app.post("/webhook", express.json({ type: "*/*" }), (req, res) => {
@@ -128,12 +147,12 @@ app.post("/webhook", express.json({ type: "*/*" }), (req, res) => {
   }
 });
 
-// ---------------------- Health Check ----------------------
+// ---------- Health Check ----------
 app.get("/", (req, res) => {
   res.send("SabaQuest Backend Running");
 });
 
-// ---------------------- Start Server ----------------------
+// ---------- Start Server ----------
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on port ${PORT}`);
 });
