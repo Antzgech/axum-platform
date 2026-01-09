@@ -7,8 +7,9 @@ const crypto = require("crypto");
 require("dotenv").config();
 
 const app = express();
-const PORT = process.env.PORT;
 
+// Railway injects PORT — do NOT override it
+const PORT = process.env.PORT;
 
 // ---------------------- CORS ----------------------
 app.use(
@@ -21,7 +22,9 @@ app.use(
       ];
 
       // Allow Telegram Mini App iframe
-      if (/\.telegram\.org$/.test(origin)) return callback(null, true);
+      if (origin && /\.telegram\.org$/.test(origin)) {
+        return callback(null, true);
+      }
 
       if (!origin || allowed.includes(origin)) {
         return callback(null, true);
@@ -135,7 +138,8 @@ app.get("/api/auth/me", auth, async (req, res) => {
 // ---------------------- Telegram Webhook ----------------------
 const bot = require("./bot");
 
-app.post("/webhook", express.json(), (req, res) => {
+// Telegram requires raw JSON — ensure correct parsing
+app.post("/webhook", express.json({ type: "*/*" }), (req, res) => {
   try {
     bot.processUpdate(req.body);
     res.sendStatus(200);
