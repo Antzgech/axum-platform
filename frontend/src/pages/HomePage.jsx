@@ -1,9 +1,9 @@
-// src/pages/HomePage.jsx – CLEAN & PRODUCTION READY
+// src/pages/HomePage.jsx – FINAL PRODUCTION VERSION
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./HomePage.css";
 
-const API_URL = "https://axum-backend-production.up.railway.app";
+const API_URL = process.env.REACT_APP_API_URL || "https://axum-backend-production.up.railway.app";
 
 export default function HomePage({ setUser }) {
   const navigate = useNavigate();
@@ -15,15 +15,15 @@ export default function HomePage({ setUser }) {
     tg.ready();
     tg.expand();
 
-    const user = tg.initDataUnsafe?.user;
-    if (user) {
-      handleTelegramLogin(tg);
+    const init = tg.initDataUnsafe;
+    if (init?.user) {
+      handleTelegramLogin(init);
     }
   }, []);
 
-  const handleTelegramLogin = async (tg) => {
+  const handleTelegramLogin = async (init) => {
     try {
-      const u = tg.initDataUnsafe.user;
+      const u = init.user;
 
       const payload = {
         id: u.id,
@@ -31,8 +31,8 @@ export default function HomePage({ setUser }) {
         last_name: u.last_name || "",
         username: u.username || u.first_name || "User",
         photo_url: u.photo_url || "",
-        auth_date: tg.initDataUnsafe.auth_date,
-        hash: tg.initDataUnsafe.hash,
+        auth_date: init.auth_date,
+        hash: init.hash,
       };
 
       const response = await fetch(`${API_URL}/api/auth/telegram`, {
@@ -53,6 +53,7 @@ export default function HomePage({ setUser }) {
       const onboardingComplete = localStorage.getItem("axum_onboarding_complete");
       navigate(onboardingComplete ? "/dashboard" : "/onboarding");
     } catch (err) {
+      console.error("Telegram login error:", err);
       alert("Connection error. Please try again.");
     }
   };

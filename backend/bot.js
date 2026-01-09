@@ -1,14 +1,23 @@
-// bot.js — FINAL CLEAN VERSION
+// bot.js — FINAL PRODUCTION VERSION
 const TelegramBot = require("node-telegram-bot-api");
 require("dotenv").config();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 const BACKEND_URL = process.env.BACKEND_URL;
-web_app: { url: process.env.FRONTEND_URL };
 
 if (!BOT_TOKEN) {
   console.error("❌ TELEGRAM_BOT_TOKEN missing");
+  process.exit(1);
+}
+
+if (!FRONTEND_URL) {
+  console.error("❌ FRONTEND_URL missing");
+  process.exit(1);
+}
+
+if (!BACKEND_URL) {
+  console.error("❌ BACKEND_URL missing");
   process.exit(1);
 }
 
@@ -18,10 +27,11 @@ console.log("🤖 Initializing Telegram Bot...");
 const bot = new TelegramBot(BOT_TOKEN, { webHook: true });
 
 // Register webhook
-bot.setWebHook(`${BACKEND_URL}/webhook`);
-console.log("🔗 Webhook set:", `${BACKEND_URL}/webhook`);
+const webhookUrl = `${BACKEND_URL}/webhook`;
+bot.setWebHook(webhookUrl);
+console.log("🔗 Webhook set:", webhookUrl);
 
-// /start
+// ---------------------- /start ----------------------
 bot.onText(/\/start(.*)/, async (msg) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name || "Warrior";
@@ -51,10 +61,13 @@ bot.onText(/\/start(.*)/, async (msg) => {
   });
 });
 
-// Callback buttons
+// ---------------------- Callback Buttons ----------------------
 bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
+
+  // Always answer callback to remove Telegram loading spinner
+  bot.answerCallbackQuery(query.id);
 
   if (data === "tasks") {
     return bot.sendMessage(chatId, "📋 Opening tasks...", {
@@ -87,4 +100,5 @@ bot.on("callback_query", async (query) => {
   }
 });
 
+// Export bot for webhook processing in server.js
 module.exports = bot;
