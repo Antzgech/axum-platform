@@ -7,7 +7,8 @@ const crypto = require("crypto");
 require("dotenv").config();
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT;
+
 
 // ---------------------- CORS ----------------------
 app.use(
