@@ -114,35 +114,13 @@ app.post("/api/auth/telegram", async (req, res) => {
   }
 });
 
-// ---------- JWT Middleware ----------
-function auth(req, res, next) {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "No token" });
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: "Invalid token" });
-    req.user = user;
-    next();
-  });
-}
-
-app.get("/api/auth/me", auth, async (req, res) => {
-  const result = await pool.query(
-    "SELECT * FROM tuser WHERE telegram_id=$1",
-    [req.user.telegramId]
-  );
-  res.json(result.rows[0]);
-});
-
 // ---------- Telegram Webhook ----------
 const bot = require("./bot");
 
 app.post("/webhook", (req, res) => {
-  try {
-    // Always respond immediately
-    res.sendStatus(200);
+  res.status(200).send("OK"); // respond immediately
 
-    // Process update AFTER responding
+  try {
     bot.processUpdate(req.body);
   } catch (err) {
     console.error("Webhook error:", err);

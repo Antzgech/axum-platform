@@ -3,10 +3,6 @@ require("dotenv").config();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
-if (!token) {
-  console.error("❌ TELEGRAM_BOT_TOKEN is missing");
-}
-
 const bot = new TelegramBot(token, { polling: false });
 
 bot.onText(/\/start/, (msg) => {
