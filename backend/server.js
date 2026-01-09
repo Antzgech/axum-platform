@@ -1,4 +1,3 @@
-// server.js — FINAL PRODUCTION VERSION
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -8,30 +7,17 @@ require("dotenv").config();
 
 const app = express();
 
-// Railway injects PORT — do NOT override it
+// Railway injects PORT automatically
 const PORT = process.env.PORT;
 
 // ---------------------- CORS ----------------------
 app.use(
   cors({
-    origin: function (origin, callback) {
-      const allowed = [
-        process.env.FRONTEND_URL,
-        "https://t.me",
-        "https://web.telegram.org",
-      ];
-
-      // Allow Telegram Mini App iframe
-      if (origin && /\.telegram\.org$/.test(origin)) {
-        return callback(null, true);
-      }
-
-      if (!origin || allowed.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: [
+      process.env.FRONTEND_URL,
+      "https://t.me",
+      "https://web.telegram.org"
+    ],
     credentials: true,
   })
 );
@@ -54,8 +40,6 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 function verifyTelegram(data) {
-  if (!BOT_TOKEN) return false;
-
   const { hash, ...rest } = data;
 
   const checkString = Object.keys(rest)
@@ -72,9 +56,6 @@ function verifyTelegram(data) {
 app.post("/api/auth/telegram", async (req, res) => {
   try {
     const { id, first_name, username, photo_url, auth_date, hash } = req.body;
-
-    if (!id || !first_name || !auth_date || !hash)
-      return res.status(400).json({ error: "Invalid Telegram payload" });
 
     if (!verifyTelegram(req.body))
       return res.status(403).json({ error: "Invalid Telegram authentication" });
@@ -126,7 +107,6 @@ function auth(req, res, next) {
   });
 }
 
-// ---------------------- Protected Route ----------------------
 app.get("/api/auth/me", auth, async (req, res) => {
   const result = await pool.query(
     "SELECT * FROM tuser WHERE telegram_id=$1",
@@ -138,14 +118,13 @@ app.get("/api/auth/me", auth, async (req, res) => {
 // ---------------------- Telegram Webhook ----------------------
 const bot = require("./bot");
 
-// Telegram requires raw JSON — ensure correct parsing
 app.post("/webhook", express.json({ type: "*/*" }), (req, res) => {
   try {
     bot.processUpdate(req.body);
     res.sendStatus(200);
   } catch (err) {
     console.error("Webhook error:", err);
-    res.sendStatus(500);
+    res.sendStatus(200);
   }
 });
 
