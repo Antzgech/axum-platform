@@ -137,13 +137,15 @@ app.get("/api/auth/me", auth, async (req, res) => {
 // ---------- Telegram Webhook ----------
 const bot = require("./bot");
 
-app.post("/webhook", express.json({ type: "*/*" }), (req, res) => {
+app.post("/webhook", (req, res) => {
   try {
-    bot.processUpdate(req.body);
+    // Always respond immediately
     res.sendStatus(200);
+
+    // Process update AFTER responding
+    bot.processUpdate(req.body);
   } catch (err) {
     console.error("Webhook error:", err);
-    res.sendStatus(200);
   }
 });
 
